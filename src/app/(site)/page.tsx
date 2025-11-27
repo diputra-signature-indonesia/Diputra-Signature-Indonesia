@@ -1,3 +1,9 @@
+import { BrandButton } from "@/app/components/ui/button"
+
 export default function HomePage() {
-  return <div>Home Page (TODO)</div>;
+  return (
+    <div>
+      <BrandButton></BrandButton>
+    </div>
+  );
 }

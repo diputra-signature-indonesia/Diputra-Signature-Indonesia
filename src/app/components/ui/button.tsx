@@ -5,7 +5,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'ghost';
 };
 
-export function Button({ children, className, variant = 'primary', ...props }: PropsWithChildren<ButtonProps>) {
+export function BrandButton({ children, className, variant = 'primary', ...props }: PropsWithChildren<ButtonProps>) {
   return (
     <button
       className={cn(
