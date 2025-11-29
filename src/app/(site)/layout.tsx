@@ -1,7 +1,14 @@
+import { SiteNavbar } from "@/components/layout/site-navbar";
+import { SiteFooter } from "@/components/layout/site-footer"
+
 export default function SiteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <>
+          <SiteNavbar isHeroInView={false}/>
+          {children}
+          <SiteFooter/>
+        </>;
 }
