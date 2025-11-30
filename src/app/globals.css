@@ -34,11 +34,11 @@
 @layer components {
   /* Only one in every page #IMPORTANT */
   .brand-h1 {
-    @apply text-5xl;
+    @apply text-3xl sm:text-4xl lg:text-5xl font-semibold mb-5 sm:mb-6 lg:mb-7;
   }
 
   .brand-h1-semi {
-    @apply text-[40px];
+    @apply text-2xl sm:text-3xl lg:text-[40px] font-light mb-4 sm:mb-6 lg:mb-7;
   }
 
   /* Every Section Title */
@@ -48,16 +48,20 @@
 
   /* Every Card Title or Component*/
   .brand-h3 {
-    @apply text-[20px] max-sm:text-[16px];
+    @apply max-sm:text-sm lg:text-[20px] sm:text-base;
   }
 
   /* Every paragraf or text in this project */
+  .brand-p-desc {
+    @apply max-sm:text-xs sm:text-sm lg:text-base mb-10 sm:mb-12 lg:mb-14;
+  }
+
   .brand-p {
-    @apply text-base max-sm:text-[12px];
+    @apply max-sm:text-xs sm:text-sm lg:text-base;
   }
 
   .brand-section-px {
-    @apply px-5 sm:px-10 md:px-25;
+    @apply px-2.5 sm:px-10 lg:px-25;
   }
 
   .brand-section-py {
@@ -65,7 +69,7 @@
   }
 
   .brand-stretch {
-    @apply leading-[125%] tracking-wider;
+    @apply max-sm:leading-[100%] leading-[125%] tracking-wider;
   }
 }
 

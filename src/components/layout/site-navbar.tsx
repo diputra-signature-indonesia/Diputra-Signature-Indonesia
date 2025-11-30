@@ -23,9 +23,9 @@ export function SiteNavbar({ isHeroInView }: { isHeroInView: boolean }){
 
 
   return (
-    <header className="sticky top-0 z-50 px-5 lg:px-10 bg-transparent text-brand-yellow max-lg:**:text-sm">
+    <header className="sticky top-0 z-50 sm:px-5 lg:px-10 bg-transparent text-brand-yellow max-lg:**:text-sm">
         <div className="relative w-full flex flex-row justify-between items-center">
-            <Link href={"/"} className="px-5 pt-8 pb-5 flex items-center gap-4">
+            <Link href={"/"} className="px-5 pt-6 sm:pt-7 lg:pt-8 pb-5 flex items-center gap-4">
                 <span className="size-[1em] aspect-square">
                     <Image alt={'diputra-signature-indonesia'} src={'/vercel.svg'} width={20} height={20} className="size-full"/>
                 </span>
@@ -36,13 +36,13 @@ export function SiteNavbar({ isHeroInView }: { isHeroInView: boolean }){
                 {navItems.map((item)=>{
                     const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
                     return (
-                    <Link key={item.href} href={item.href} className={`px-5 pt-8 pb-5 font-raleway text-base ${isActive ? 'font-semibold' : 'font-normal'}`}>
+                    <Link key={item.href} href={item.href} className={`px-5 pt-6 sm:pt-7 lg:pt-8 pb-5 font-raleway text-base ${isActive ? 'font-semibold' : 'font-normal'}`}>
                         {item.label}
                     </Link>)
                 })}
             </nav>
-            <Link href="/#contact" className="hidden lg:block px-5 pt-8 pb-5 font-raleway text-base">Contact Us</Link>
-            <button className="lg:hidden px-5 pt-8 pb-5" onClick={() => setOpen(prev => !prev)} aria-label="Toggle navigation" aria-expanded={open}>
+            <Link href="/#contact" className="hidden lg:block px-5 pt-6 sm:pt-7 lg:pt-8 pb-5 font-raleway text-base">Contact Us</Link>
+            <button className="lg:hidden px-5 pt-6 sm:pt-7 lg:pt-8 pb-5" onClick={() => setOpen(prev => !prev)} aria-label="Toggle navigation" aria-expanded={open}>
                 <IconBurger className="size-6"/>
             </button>
 
@@ -54,7 +54,7 @@ export function SiteNavbar({ isHeroInView }: { isHeroInView: boolean }){
             )}
 
             <div className={`fixed inset-y-0 right-0 w-60 sm:w-80 bg-brand-white ${open ? 'translate-x-0' : 'translate-x-full'} transform transition-transform duration-300 ease-out`}>
-                <div className="flex items-center justify-between px-7 pt-8 pb-5">
+                <div className="flex items-center justify-between px-7 pt-6 sm:pt-7 lg:pt-8 pb-5">
                     <span className="font-raleway text-base tracking-wider">Menu</span>
                     <button onClick={() => setOpen((prev) => !prev)} aria-label="Close navigation">
                         <IconBurger className="size-6"/>
