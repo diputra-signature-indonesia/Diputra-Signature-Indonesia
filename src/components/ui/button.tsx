@@ -18,7 +18,7 @@ export function BrandButton({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center h-fit px-7 py-2.5 border rounded-xl text-black font-raleway font-light text-base tracking-wider leading-[125%] cursor-pointer transition-colors gap-2.5 focus-visible:outline-none focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-brand-maroon focus-visible:ring-offset-2',
+        'inline-flex items-center h-fit px-7 py-2 sm:py-2.5 border rounded-lg sm:rounded-xl text-black font-raleway font-light text-xs sm:text-sm lg:text-base tracking-wider leading-[125%] cursor-pointer transition-colors gap-2.5 focus-visible:outline-none focus-visible:rounded-xl focus-visible:ring-2 focus-visible:ring-brand-maroon focus-visible:ring-offset-2',
         variant === 'yellow' && 'border-brand-yellow bg-brand-yellow hover:bg-brand-yellow-semi font-semibold text-white',
         variant === 'white' && 'border-brand-black bg-brand-white hover:bg-brand-white-semi text-brand-black',
         variant === 'black' && 'border-brand-white bg-brand-black hover:bg-brand-black-semi text-brand-white',
