@@ -65,7 +65,7 @@
   }
 
   .brand-section-py {
-    @apply pt-30 pb-20;
+    @apply pt-14 pb-16 sm:pt-20 lg:pt-30 lg:pb-20;
   }
 
   .brand-stretch {
