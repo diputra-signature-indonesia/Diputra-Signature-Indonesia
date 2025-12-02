@@ -8,7 +8,9 @@ export default function SiteLayout({
 }) {
   return <>
           <SiteNavbar isHeroInView={false}/>
-          {children}
+          <main>
+            {children}
+          </main>
           <SiteFooter/>
         </>;
 }
