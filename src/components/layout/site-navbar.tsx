@@ -18,12 +18,8 @@ export function SiteNavbar({ isHeroInView }: { isHeroInView: boolean }){
         {href: "/services/real-estate", label: "Real Estate"},
     ]
 
-
-
-
-
   return (
-    <header className="sticky top-0 z-50 sm:px-5 lg:px-10 bg-transparent text-brand-yellow max-lg:**:text-sm">
+    <header className="fixed w-full top-0 z-50 sm:px-5 lg:px-10 bg-transparent text-brand-yellow max-lg:**:text-sm">
         <div className="relative w-full flex flex-row justify-between items-center">
             <Link href={"/"} className="px-5 pt-6 sm:pt-7 lg:pt-8 pb-5 flex items-center gap-4">
                 <span className="size-[1em] aspect-square">
