@@ -1,17 +1,17 @@
 // src/app/layout.tsx
-import type { Metadata } from "next";
-import { Raleway } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Raleway } from 'next/font/google';
+import './globals.css';
 
 export const raleway = Raleway({
-  subsets: ["latin"],
-  variable: "--font-raleway",
-  weight: ["100","200","300","400","500","600","700","800","900"], // lengkap
+  subsets: ['latin'],
+  variable: '--font-raleway',
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'], // lengkap
 });
 
 export const metadata: Metadata = {
-  title: "Diputra Signature Indonesia",
-  description: "Website resmi Diputra Signature Indonesia",
+  title: 'Diputra Signature Indonesia | Legal, Immigration, Real Estate Consultant',
+  description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.',
 };
 
 export default function RootLayout({
@@ -21,9 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${raleway.variable}`}>
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

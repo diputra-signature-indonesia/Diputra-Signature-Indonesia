@@ -26,8 +26,10 @@
   --color-brand-black-semi: #3b3b3b;
   --color-brand-gray: #bfbfbf;
 
+  --spacing-13: 60px;
   --spacing-25: 100px;
   --spacing-30: 120px;
+  --spacing-40: 160px;
   --spacing-40: 160px;
 }
 
@@ -53,7 +55,7 @@
 
   /* Every paragraf or text in this project */
   .brand-p-desc {
-    @apply mb-10 max-sm:text-xs sm:mb-12 sm:text-sm lg:mb-14 lg:text-base;
+    @apply mb-10 font-medium max-sm:text-xs sm:mb-12 sm:text-sm lg:mb-14 lg:text-base;
   }
 
   .brand-p {
@@ -83,3 +85,11 @@ html {
   scroll-behavior: smooth;
 }
 /* leading-[125%] tracking-wider */
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: 0px;
+}
