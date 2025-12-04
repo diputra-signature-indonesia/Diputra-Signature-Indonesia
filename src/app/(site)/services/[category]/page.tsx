@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
+import { HeroSection } from '@/components/layout/section-category-hero';
 
 export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
-  const category = params.category; // misalnya "visa", "legal"
+  const category = params.category;
 
   // Format agar lebih manusiawi → "Visa", "Real Estate", dsb.
   const formatted = category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -13,5 +14,10 @@ export async function generateMetadata({ params }: { params: { category: string 
 }
 
 export default function ServicesCategoryPage({ params }: { params: { category: string } }) {
-  return <div>Services Category Page (category: {params.category})</div>;
+  return (
+    <>
+      <div>Services Category Page (category: {params.category})</div>
+      {/* <HeroSection params={params} /> */}
+    </>
+  );
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import IconBurger from '@/icons/BrandIconBurger';
@@ -19,20 +19,17 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
 
   return (
     <header
-      className={
-        `text-brand-yellow fixed top-0 z-50 w-full max-lg:**:text-sm sm:px-5 lg:px-10` +
-        (isHeroInView ? 'text-brand-yellow bg-transparent shadow-md backdrop-blur' : 'bg-brand-white text-brand-black shadow-md backdrop-blur')
-      }
+      className={`text-brand-yellow fixed top-0 z-50 w-full transition-colors duration-500 max-lg:**:text-sm sm:px-5 lg:px-10 ${isHeroInView ? 'text-brand-yellow bg-transparent' : 'bg-brand-white text-brand-black shadow-md'}`}
     >
       <div className="relative flex w-full flex-row items-center justify-between">
-        <Link href={'/'} className="flex items-center gap-4 px-5 pt-6 pb-5 sm:pt-7 lg:pt-8">
+        <Link href={'/'} className={`flex items-center gap-4 px-5 pt-6 pb-5 sm:pt-7 lg:pt-8 ${isHeroInView ? '*:text-brand-yellow' : '*:text-brand-black'}`}>
           <span className="aspect-square size-[1em]">
             <Image alt={'diputra-signature-indonesia'} src={'/vercel.svg'} width={20} height={20} className="size-full" />
           </span>
           <span className="font-raleway hidden text-base tracking-wider sm:block">Diputra Signature Indonesia</span>
           <span className="font-raleway text-base tracking-wider sm:hidden">DSI</span>
         </Link>
-        <nav className="hidden flex-row lg:flex" aria-label="Primary navigation">
+        <nav className={`${!isHeroInView ? 'hidden' : 'flex'} flex-row max-lg:hidden`} aria-label="Primary navigation">
           {navItems.map((item) => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
@@ -42,16 +39,25 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
             );
           })}
         </nav>
-        <Link href="/#contact" className="font-raleway hidden px-5 pt-6 pb-5 text-base sm:pt-7 lg:block lg:pt-8">
+        <Link href="/#contact" className={`${!isHeroInView ? 'hidden' : 'block'} font-raleway px-5 pt-6 pb-5 text-base max-lg:hidden sm:pt-7 lg:pt-8`}>
           Contact Us
         </Link>
-        <button aria-label="Toggle navigation" aria-expanded={open} aria-controls="site-mobile-nav" className="px-5 pt-6 pb-5 sm:pt-7 lg:hidden lg:pt-8" onClick={() => setOpen((prev) => !prev)}>
-          <IconBurger className="size-6" />
+        <button
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+          aria-controls="site-mobile-nav"
+          className={`px-5 pt-6 pb-5 sm:pt-7 ${isHeroInView && 'hidden'} max-lg:block lg:pt-8`}
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          <IconBurger className={`size-6 ${isHeroInView ? 'max-lg:text-brand-yellow' : 'text-brand-black'}`} />
         </button>
 
-        {open && <div className="fixed inset-0 bg-black/30" onClick={() => setOpen(false)} />}
+        {open && <div className="fixed inset-0 h-screen bg-black/30" onClick={() => setOpen(false)} />}
 
-        <div id="site-mobile-nav" className={`bg-brand-white fixed inset-y-0 right-0 w-60 sm:w-80 ${open ? 'translate-x-0' : 'translate-x-full'} transform transition-transform duration-300 ease-out`}>
+        <div
+          id="site-mobile-nav"
+          className={`bg-brand-white text-brand-black fixed inset-y-0 right-0 h-screen w-60 sm:w-80 ${open ? 'translate-x-0' : 'translate-x-full'} transform transition-transform duration-300 ease-out`}
+        >
           <div className="flex items-center justify-between px-7 pt-6 pb-5 sm:pt-7 lg:pt-8">
             <span className="font-raleway text-base tracking-wider">Menu</span>
             <button onClick={() => setOpen((prev) => !prev)} aria-label="Close navigation">
