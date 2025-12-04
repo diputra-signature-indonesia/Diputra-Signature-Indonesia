@@ -3,7 +3,7 @@ import { BrandButton } from '../ui/button';
 
 export function HeroSection() {
   return (
-    <section className="*:brand-stretch *:font-raleway relative flex min-h-svh">
+    <section id="hero-section" className="*:brand-stretch *:font-raleway relative flex min-h-svh">
       <Image src={'/image/home-hero-section.jpg'} alt="team from Diputra Signature Indonesia" fill priority={true} sizes="100vw" className="-z-10 object-cover brightness-50" />
       <div className="brand-section-px brand-section-py mx-auto flex max-w-[1440px] flex-col">
         <div className="mx-auto mt-auto flex flex-col gap-0 max-sm:w-full md:w-2xl xl:w-full xl:flex-row xl:gap-16">

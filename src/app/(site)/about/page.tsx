@@ -1,3 +1,7 @@
+import { HeroSection } from '@/components/layout/section-about-hero';
+import { CompanyOverviewSection } from '@/components/layout/section-company-overview';
+import { TeamSection } from '@/components/layout/team-section';
+
 export const metadata = {
   title: 'About Us | Diputra Signature Indonesia',
   description:
@@ -5,5 +9,11 @@ export const metadata = {
 };
 
 export default function AboutPage() {
-  return <div>About Page (TODO)</div>;
+  return (
+    <>
+      <HeroSection />
+      <CompanyOverviewSection />
+      <TeamSection />
+    </>
+  );
 }
