@@ -4,6 +4,7 @@ import 'swiper/css/pagination';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import { useState } from 'react';
+import IconQuote from '@/icons/BrandIconQuote';
 
 export function ReviewSection() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,7 +31,7 @@ export function ReviewSection() {
   ];
 
   return (
-    <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col">
+    <section className="brand-section-px brand-section-py bg-brand-white **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col">
       <div className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 text-brand-maroon text-center">
           Client <span className="brand-h1-semi text-black">Stories & Experience</span>
@@ -47,19 +48,20 @@ export function ReviewSection() {
         centeredSlides
         slidesPerView={'auto'}
         onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
-        className="flex! h-64! w-full! flex-row! sm:h-72! lg:h-80!"
+        className="flex! h-64! w-full! flex-row! pb-7! sm:h-72! lg:h-80!"
       >
         {testimonials.map((item, index) => {
           const isActive = index === activeIndex;
-          const cardBase = 'bg-brand-burgundy! flex! size-64! h-full! flex-col! overflow-hidden! rounded-2xl! sm:w-xs! lg:w-sm! transition-all! duration-300!';
-          const cardState = isActive ? 'bg-brand-burgundy! scale-100! text-brand-white! shadow-xl!' : 'bg-gray-200! scale-75! text-brand-black!';
+          const cardBase = 'flex! size-64! h-full! flex-col! overflow-hidden!  sm:w-xs! lg:w-sm! transition-all! duration-300!';
+          const cardState = isActive ? 'border-t-4 border-brand-yellow scale-100! text-brand-black! shadow-xl!' : 'border-t-4 border-brand-burgundy bg-gray-100! scale-75! text-brand-black!';
           return (
             <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto p-5`}>
+              <IconQuote className="text-brand-yellow size-6" />
               <div className="hide-scrollbar h-full overflow-y-scroll">
                 <p className="brand-p">{item.message}</p>
               </div>
-              <div className="flex flex-col rounded-b-2xl py-5">
-                <h3 className="brand-h3 font-semibold">{item.name}</h3>
+              <div className="flex flex-col py-5">
+                <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
                 <p className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">{item.date}</p>
               </div>
             </SwiperSlide>

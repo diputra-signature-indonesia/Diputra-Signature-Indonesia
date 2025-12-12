@@ -43,7 +43,7 @@ export function BlogSection() {
     <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col gap-7">
       <div className="flex w-full flex-col items-end">
         <div className="flex w-xs flex-col items-end sm:w-sm lg:w-lg">
-          <h2 className="brand-h1-semi">
+          <h2 className="brand-h1-semi border-brand-yellow border-r-4 pr-7">
             Latest <span className="brand-h1 text-brand-maroon">News</span>
           </h2>
           <p className="brand-p-desc text-right text-balance"> Stay updated with the latest legal, government regulation, immigration, and business insights relevant to Bali and Indonesia.</p>
@@ -56,7 +56,7 @@ export function BlogSection() {
           </BrandButton>
         </div>
       </div>
-      <div className="mx-auto w-full lg:columns-2 xl:max-w-7xl xl:columns-3">
+      <div className="mx-auto grid w-full gap-10 lg:grid-cols-2 xl:max-w-7xl xl:grid-cols-3">
         {posts.map((post) => (
           <article key={post.id} className="mb-3 flex h-fit w-full gap-2.5 sm:mb-5 lg:mb-10">
             <div className="flex w-fit flex-col text-[14px] max-lg:hidden">
@@ -64,7 +64,7 @@ export function BlogSection() {
               <p className="border-b py-2.5">{post.date.slice(3, 5)}</p>
               <p className="pt-2.5">{post.date.slice(6)}</p>
             </div>
-            <div className="sm:border-brand-gray flex w-full overflow-hidden sm:border lg:flex-col">
+            <div className="flex w-full lg:flex-col">
               <Image
                 alt={`${post.title} – legal and visa update for Indonesia`}
                 src={'/image/news_image.png'}
@@ -75,7 +75,10 @@ export function BlogSection() {
                 className="max-h-44 object-cover max-sm:h-20 max-sm:w-36 sm:w-2/5 lg:h-[200px] lg:w-full"
               />
               <div className="flex w-full flex-col gap-1 p-2 sm:gap-2.5 lg:p-5">
-                <h3 className="brand-h3 line-clamp-2 font-normal sm:text-balance lg:min-h-13">{post.title}</h3>
+                <div className="relative w-full">
+                  <div className="border-brand-yellow absolute -z-10 aspect-square h-full -translate-x-1/2 border-2" />
+                  <h3 className="brand-h3 text-brand-burgundy line-clamp-2 font-semibold sm:text-balance lg:min-h-13">{post.title}</h3>
+                </div>
                 <p className="line-clamp-3 font-light max-sm:hidden sm:text-sm lg:line-clamp-4 lg:min-h-20">{post.excerpt}</p>
                 <p className="text-[9px] sm:text-[12px] lg:hidden">{post.date}</p>
               </div>

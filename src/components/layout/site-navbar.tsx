@@ -18,11 +18,9 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
   ];
 
   return (
-    <header
-      className={`text-brand-yellow fixed top-0 z-50 w-full transition-colors duration-500 max-lg:**:text-sm sm:px-5 lg:px-10 ${isHeroInView ? 'text-brand-yellow bg-transparent' : 'bg-brand-white text-brand-black shadow-md'}`}
-    >
+    <header className={`bg-brand-white text-brand-black fixed top-0 z-50 w-full shadow-md transition-colors duration-500 max-lg:**:text-sm`}>
       <div className="relative flex w-full flex-row items-center justify-between">
-        <Link href={'/'} className={`flex items-center gap-4 px-5 pt-6 pb-5 sm:pt-7 lg:pt-8 ${isHeroInView ? '*:text-brand-yellow' : '*:text-brand-black'}`}>
+        <Link href={'/'} className={`flex items-center gap-4 pt-6 pb-5 pl-5 sm:pt-7 sm:pl-10 lg:pt-8 lg:pl-13 ${isHeroInView ? '*:text-brand-yellow' : '*:text-brand-black'}`}>
           <span className="aspect-square size-[1em]">
             <Image alt={'diputra-signature-indonesia'} src={'/vercel.svg'} width={20} height={20} className="size-full" />
           </span>
@@ -39,14 +37,14 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
             );
           })}
         </nav>
-        <Link href="/#contact" className={`${!isHeroInView ? 'hidden' : 'block'} font-raleway px-5 pt-6 pb-5 text-base max-lg:hidden sm:pt-7 lg:pt-8`}>
+        <Link href="/#contact" className={`${!isHeroInView ? 'hidden' : 'block'} font-raleway pt-6 pr-5 pb-5 text-base max-lg:hidden sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13`}>
           Contact Us
         </Link>
         <button
           aria-label="Toggle navigation"
           aria-expanded={open}
           aria-controls="site-mobile-nav"
-          className={`px-5 pt-6 pb-5 sm:pt-7 ${isHeroInView && 'hidden'} max-lg:block lg:pt-8`}
+          className={`pt-6 pr-5 pb-5 sm:pt-7 sm:pr-10 lg:pr-13 ${isHeroInView && 'hidden'} max-lg:block lg:pt-8`}
           onClick={() => setOpen((prev) => !prev)}
         >
           <IconBurger className={`size-6 ${isHeroInView ? 'max-lg:text-brand-yellow' : 'text-brand-black'}`} />
@@ -58,7 +56,7 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
           id="site-mobile-nav"
           className={`bg-brand-white text-brand-black fixed inset-y-0 right-0 h-screen w-60 sm:w-80 ${open ? 'translate-x-0' : 'translate-x-full'} transform transition-transform duration-300 ease-out`}
         >
-          <div className="flex items-center justify-between px-7 pt-6 pb-5 sm:pt-7 lg:pt-8">
+          <div className="flex items-center justify-between pt-6 pr-5 pb-5 pl-7 sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13">
             <span className="font-raleway text-base tracking-wider">Menu</span>
             <button onClick={() => setOpen((prev) => !prev)} aria-label="Close navigation">
               <IconBurger className="size-6" />
