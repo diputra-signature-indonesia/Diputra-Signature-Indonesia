@@ -18,7 +18,7 @@ export function ContactSection() {
       </div>
       <div className="flex flex-col gap-10 sm:gap-14 md:flex-row md:gap-20">
         <div className="flex flex-col gap-7 px-5 py-5 max-md:order-2 sm:px-10 sm:py-10 md:px-0 md:py-0 lg:w-full">
-          <h3 className="brand-h2 text-brand-maroon font-semibold">Information</h3>
+          <h3 className="brand-h2 text-brand-maroon border-brand-yellow border-l-4 pl-5 font-semibold">Information</h3>
           <div className="flex h-full flex-col gap-3 sm:gap-4">
             <address className="flex flex-row items-center gap-2.5 not-italic">
               <IconMap className="size-5 text-black" />
