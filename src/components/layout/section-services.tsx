@@ -42,11 +42,11 @@ export function ServicesSection() {
           communication at every stage.
         </p>
       </div>
-      <div className="flex w-full flex-col gap-3 text-white sm:gap-5 xl:flex-row">
+      <div className="grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
         {services.map((item) => {
           const Icon = item.icon;
           return (
-            <article key={item.id} className="relative z-10 flex w-full flex-col gap-7 overflow-hidden px-5 py-13">
+            <article key={item.id} className="relative z-10 flex w-full flex-col gap-7 overflow-hidden p-5 md:py-10 lg:py-13">
               <Image
                 src={item.image}
                 alt={`${item.title} services in Bali by Diputra Signature Indonesia`}
@@ -63,8 +63,8 @@ export function ServicesSection() {
                 <h3 className="brand-h3 w-full">{item.title}</h3>
               </div>
               <div className="flex h-full flex-col gap-14">
-                <p className="brand-p mt-auto sm:text-balance xl:text-pretty">{item.description}</p>
-                <BrandButton asChild variant="ghost" className="w-full justify-end px-0 text-white">
+                <p className="brand-p md:text-balance xl:text-pretty">{item.description}</p>
+                <BrandButton asChild variant="ghost" className="mt-auto w-full justify-end px-0 text-white">
                   <a href={`/services/${item.title.toLowerCase()}`}>
                     Learn More{' '}
                     <span>

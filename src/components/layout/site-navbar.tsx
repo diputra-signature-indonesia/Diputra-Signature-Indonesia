@@ -18,7 +18,7 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
   ];
 
   return (
-    <header className={`bg-brand-white text-brand-black fixed top-0 z-50 w-full shadow-md transition-colors duration-500 max-lg:**:text-sm`}>
+    <header className={`bg-brand-white text-brand-black sticky top-0 z-50 w-full shadow-md transition-colors duration-500 max-lg:**:text-sm`}>
       <div className="relative flex w-full flex-row items-center justify-between">
         <Link href={'/'} className={`flex items-center gap-4 pt-6 pb-5 pl-5 sm:pt-7 sm:pl-10 lg:pt-8 lg:pl-13 ${isHeroInView ? '*:text-brand-yellow' : '*:text-brand-black'}`}>
           <span className="aspect-square size-[1em]">

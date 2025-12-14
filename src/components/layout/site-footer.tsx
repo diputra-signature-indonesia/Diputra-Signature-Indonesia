@@ -19,10 +19,10 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="bg-brand-black brand-section-px **:font-raleway **:brand-stretch flex w-full flex-col gap-5 py-20 text-white">
-      <p className="text-brand-yellow text-2xl font-semibold sm:text-3xl">
+    <footer className="brand-section-px **:font-raleway **:brand-stretch text-brand-black flex w-full flex-col gap-5 bg-white py-20 drop-shadow-lg">
+      <p className="text-brand-burgundy border-brand-yellow border-l-4 pl-7 text-2xl font-semibold sm:text-3xl">
         Diputra
-        <span className="brand-h3 text-brand-white font-light"> Signature Indonesia</span>
+        <span className="brand-h3 text-brand-black font-light"> Signature Indonesia</span>
       </p>
       <div className="flex flex-col gap-20 lg:flex-row xl:gap-40">
         <div className="flex w-full flex-col gap-5">
@@ -58,7 +58,7 @@ export function SiteFooter() {
         </div>
         <div className="flex w-full flex-row max-md:justify-between md:gap-36">
           <div className="flex flex-col gap-5 max-md:w-full">
-            <p className="brand-h3 text-brand-yellow">Our Services</p>
+            <p className="brand-h3 text-brand-burgundy">Our Services</p>
             <div className="flex w-full flex-col gap-4">
               {servicesItems.map((item) => {
                 const isActive = pathname.startsWith(item.href);
@@ -71,7 +71,7 @@ export function SiteFooter() {
             </div>
           </div>
           <div className="flex flex-col gap-5 max-md:w-full">
-            <p className="brand-h3 text-brand-yellow">Navigation</p>
+            <p className="brand-h3 text-brand-burgundy">Navigation</p>
             <div className="flex w-full flex-col gap-4">
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href} className={`brand-p ${pathname === item.href ? 'font-semibold' : 'font-normal'}`}>

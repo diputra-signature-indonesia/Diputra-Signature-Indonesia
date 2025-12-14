@@ -16,17 +16,27 @@ export const metadata = {
 export default function HomePage() {
   return (
     <>
-      <HeroSection />
-      <AboutSection />
-      <ServicesSection />
-      <div className="absolute top-0 left-1/2 -z-20 w-[1440px] -translate-x-1/2">
-        <Image src={'/image/landing_page_building_paralax.webp'} alt="Diputra Signature Indonesia Building Home Paralax" width={1440} height={2794} className="w-full opacity-6" />
+      <div className="relative mx-auto max-w-[1440px]">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-7" />
+        <div className="relative z-10">
+          <HeroSection />
+          <AboutSection />
+          <ServicesSection />
+        </div>
       </div>
-      <AdvantageSection />
+      <div className="bg-brand-white relative">
+        <img src="/linecurve.svg" alt="diputra signature indonesia line decoration" className="absolute size-full opacity-75" />
+        <AdvantageSection />
+      </div>
       <CtaSection />
-      <ReviewSection />
-      <ContactSection />
-      <BlogSection />
+      <div className="relative mx-auto max-w-[1440px]">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/writing_with_red_pen.webp')] bg-cover bg-top bg-no-repeat opacity-10" />
+        <div className="relative z-10">
+          <ReviewSection />
+          <ContactSection />
+          <BlogSection />
+        </div>
+      </div>
     </>
   );
 }
