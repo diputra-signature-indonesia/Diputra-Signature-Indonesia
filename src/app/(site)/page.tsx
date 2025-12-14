@@ -6,7 +6,6 @@ import { AdvantageSection } from '@/components/layout/section-advantage';
 import { AboutSection } from '@/components/layout/section-about';
 import { HeroSection } from '@/components/layout/section-home-hero';
 import { CtaSection } from '@/components/layout/section-cta';
-import Image from 'next/image';
 
 export const metadata = {
   title: 'Diputra Signature Indonesia – Legal, Visa, and Business Consulting in Bali',
