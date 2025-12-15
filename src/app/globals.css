@@ -54,7 +54,7 @@
 
   /* Every Card Title or Component*/
   .brand-h3 {
-    @apply font-medium max-sm:text-sm sm:text-base lg:text-[20px];
+    @apply text-base font-medium lg:text-[20px];
   }
 
   /* Every paragraf or text in this project */

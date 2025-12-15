@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <>
       <div className="relative mx-auto max-w-[1440px]">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-7" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-5" />
         <div className="relative z-10">
           <HeroSection />
           <AboutSection />
