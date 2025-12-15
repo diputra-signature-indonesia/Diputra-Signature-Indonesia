@@ -7,15 +7,20 @@ export function TeamSection() {
   const teamList = [
     { position: 'Founder/COO', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
     { position: 'Founder/COO', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
-    { position: 'Senior Consultant', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
-    { position: 'Associate', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
+    { position: 'Senior Associate', name: 'I Putu Gede Dalem,S.H.', img: '/image/developer-face.png' },
+    { position: 'Associate', name: 'I Made Mahendraputra Utama,S.H.', img: '/image/developer-face.png' },
+    { position: 'Associate', name: 'Loedwig Guntur Naftali Sojuaon Hasugian,S.H.', img: '/image/developer-face.png' },
+    { position: 'Junior Associate', name: 'Anak Agung Ayu Agung Devi Anjani Jelantik, S.H.', img: '/image/developer-face.png' },
   ];
   return (
-    <section id="hero-section" className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto mb-20 flex max-w-[1440px] flex-col">
+    <section id="hero-section" className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col">
       <div className="flex flex-col sm:w-xl lg:w-2xl xl:w-3xl">
-        <h2 className="brand-h1-semi text-brand-black">
-          Our <span className="brand-h1 text-brand-burgundy">Team</span>
-        </h2>
+        <div className="flex w-fit flex-col items-end gap-2.5">
+          <h2 className="brand-h1-semi text-brand-black">
+            Our <span className="brand-h1 text-brand-burgundy">Team</span>
+          </h2>
+          <div className="bg-brand-yellow brand-h1-mb h-0.5 w-20 md:h-1" />
+        </div>
         <p className="brand-p-desc text-left text-balance sm:border-l sm:pl-5 lg:pl-10">
           We provide legal, visa, and real estate services tailored for individuals and businesses operating in Bali, Indonesia.{' '}
         </p>

@@ -44,7 +44,7 @@
   }
 
   .brand-h1-semi {
-    @apply mb-4 text-2xl font-normal sm:mb-6 sm:text-3xl lg:mb-7 lg:text-[40px];
+    @apply text-2xl font-normal sm:text-3xl lg:text-[40px];
   }
 
   /* Every Section Title */
@@ -75,7 +75,7 @@
   }
 
   .brand-section-py {
-    @apply pt-14 pb-16 sm:pt-20 lg:pt-30 lg:pb-20;
+    @apply pt-30 pb-20 sm:pt-20 lg:pt-30 lg:pb-20;
   }
 
   .brand-stretch {

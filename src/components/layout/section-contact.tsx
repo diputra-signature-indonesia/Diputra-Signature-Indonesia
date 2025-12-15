@@ -8,7 +8,7 @@ export function ContactSection() {
   return (
     <section id="contact-section" className="brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col md:px-10 lg:px-25">
       <div className="flex flex-col items-center px-5 sm:px-10 md:px-0">
-        <h2 className="brand-h1 text-brand-maroon text-center text-balance">
+        <h2 className="brand-h1 brand-h1-mb text-brand-maroon text-center text-balance">
           Diputra <span className="brand-h1-semi text-brand-black">Signature Indonesia</span>
         </h2>
         <p className="brand-p mb-5 sm:mb-6 lg:mb-7">Contact Us</p>
