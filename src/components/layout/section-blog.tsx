@@ -43,7 +43,7 @@ export function BlogSection() {
     <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col gap-7">
       <div className="flex w-full flex-col items-end">
         <div className="flex w-xs flex-col items-end sm:w-sm lg:w-lg">
-          <h2 className="brand-h1-semi border-brand-yellow border-r-4 pr-7">
+          <h2 className="brand-h1-semi brand-h1-mb border-brand-yellow border-r-4 pr-7">
             Latest <span className="brand-h1 text-brand-maroon">News</span>
           </h2>
           <p className="brand-p-desc text-right text-balance"> Stay updated with the latest legal, government regulation, immigration, and business insights relevant to Bali and Indonesia.</p>
