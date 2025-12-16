@@ -17,7 +17,6 @@ export function ContactForm() {
     <>
       <div className="flex w-full flex-col gap-7 px-5 sm:px-10 md:px-0">
         <div className="flex flex-col gap-5">
-          <h3 className="brand-h2 text-brand-maroon border-brand-yellow border-l-4 pl-5 font-semibold">Message</h3>
           <div className="border-brand-burgundy flex overflow-hidden rounded-lg border *:rounded-none sm:rounded-xl sm:*:rounded-none">
             <BrandButton onClick={() => setContact('message')} variant={contact === 'message' ? `red` : `white`} className="w-1/2 justify-center border-0">
               Send Message

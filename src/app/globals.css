@@ -67,14 +67,14 @@
   }
 
   .brand-section-px {
-    @apply px-5 sm:px-10 lg:px-25;
+    @apply px-5 sm:px-10 lg:px-13;
   }
 
   .brand-section-mpx {
     @apply sm:px-10 lg:px-25;
   }
 
-  .brand-section-py {
+  .brand-section-my {
     @apply pt-30 pb-20 sm:pt-20 lg:pt-30 lg:pb-20;
   }
 

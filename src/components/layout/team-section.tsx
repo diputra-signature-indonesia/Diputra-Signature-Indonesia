@@ -13,7 +13,7 @@ export function TeamSection() {
     { position: 'Junior Associate', name: 'Anak Agung Ayu Agung Devi Anjani Jelantik, S.H.', img: '/image/developer-face.png' },
   ];
   return (
-    <section id="hero-section" className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col">
+    <section id="hero-section" className="brand-section-px **:brand-stretch **:font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col">
       <div className="flex flex-col sm:w-xl lg:w-2xl xl:w-3xl">
         <div className="flex w-fit flex-col items-end gap-2.5">
           <h2 className="brand-h1-semi text-brand-black">

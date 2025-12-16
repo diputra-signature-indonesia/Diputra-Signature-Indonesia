@@ -23,30 +23,16 @@ export function BlogSection() {
       excerpt: 'The latest OSS RBA features automatic validation to make licensing more accurate and efficient. This article explains key changes and how business owners in Bali can prepare.',
       date: '08/11/2025',
     },
-    {
-      id: 4,
-      title: 'Regional Tax Harmonization for Businesses in Bali',
-      excerpt:
-        'Local authorities in Bali have introduced new policies for regional taxes and levies. The goal is to simplify administration and improve compliance for both local and foreign businesses.',
-      date: '01/11/2025',
-    },
-    {
-      id: 5,
-      title: 'Updates on Foreign Manpower Regulations in 2025',
-      excerpt:
-        'The Ministry of Manpower has issued new regulations on the use of foreign workers, including RPTKA procedures and work notifications. These updates aim to improve legal certainty for companies operating in Indonesia.',
-      date: '25/10/2025',
-    },
   ];
 
   return (
-    <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col gap-7">
-      <div className="flex w-full flex-col items-end">
+    <section className="brand-section-px brand-stretch font-raleway bg-brand-white mx-auto mt-30 flex flex-col justify-center gap-7 xl:h-[700px] xl:max-w-[1440px]">
+      <div className="flex w-full flex-col items-end gap-7">
         <div className="flex w-xs flex-col items-end sm:w-sm lg:w-lg">
           <h2 className="brand-h1-semi brand-h1-mb border-brand-yellow border-r-4 pr-7">
             Latest <span className="brand-h1 text-brand-maroon">News</span>
           </h2>
-          <p className="brand-p-desc text-right text-balance"> Stay updated with the latest legal, government regulation, immigration, and business insights relevant to Bali and Indonesia.</p>
+          <p className="brand-p text-right text-balance"> Stay updated with the latest legal, government regulation, immigration, and business insights relevant to Bali and Indonesia.</p>
         </div>
 
         <div className="flex w-full justify-end gap-2.5">

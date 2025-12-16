@@ -6,23 +6,23 @@ import { ContactForm } from './form-contact';
 
 export function ContactSection() {
   return (
-    <section id="contact-section" className="brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col md:px-10 lg:px-25">
-      <div className="flex flex-col items-center px-5 sm:px-10 md:px-0">
-        <h2 className="brand-h1 brand-h1-mb text-brand-maroon text-center text-balance">
-          Diputra <span className="brand-h1-semi text-brand-black">Signature Indonesia</span>
+    <section id="contact-section" className="brand-stretch font-raleway mx-auto flex flex-col md:px-10 lg:px-25 xl:max-w-[1440px]">
+      <div className="px-5 sm:px-10 md:px-0">
+        <h2 className="brand-h1 text-brand-maroon border-brand-yellow brand-h1-mb border-l-4 pl-7">
+          Contact <span className="brand-h1-semi text-black">Us</span>
         </h2>
-        <p className="brand-p mb-5 sm:mb-6 lg:mb-7">Contact Us</p>
-        <p className="brand-p-desc text-center lg:w-3xl">
-          Contact us for consultations or inquiries regarding legal, visa, or business services in Bali. Our team is ready to provide fast responses and clear, reliable solutions.
-        </p>
       </div>
-      <div className="flex flex-col gap-10 sm:gap-14 md:flex-row md:gap-20">
-        <div className="flex flex-col gap-7 px-5 py-5 max-md:order-2 sm:px-10 sm:py-10 md:px-0 md:py-0 lg:w-full">
-          <h3 className="brand-h2 text-brand-maroon border-brand-yellow border-l-4 pl-5 font-semibold">Information</h3>
-          <div className="flex h-full flex-col gap-3 sm:gap-4">
+      <div className="md-13 flex flex-col gap-10 sm:gap-14 md:flex-row xl:gap-20">
+        <div className="flex w-full flex-col gap-7 px-5 py-5 sm:px-10 sm:py-10 md:px-0 md:py-0">
+          <div className="flex flex-col">
+            <p className="brand-p">
+              Contact us for consultations or inquiries regarding legal, visa, or business services in Bali. Our team is ready to provide fast responses and clear, reliable solutions.
+            </p>
+          </div>
+          <div className="flex h-full flex-col gap-3 sm:gap-2.5">
             <address className="flex flex-row items-center gap-2.5 not-italic">
               <IconMap className="size-5 text-black" />
-              <span className="brand-p">Jalan Gunung Bahlil, Denpasar, Bali, Indonesia</span> {/* Next penulisannya harus gini untuk SEO*/}
+              <span className="brand-p">Jalan Gunung Bahlil, Denpasar, Bali, Indonesia</span>
             </address>
             <a href="mailto:DSIInfo@diputraSignature.com" className="flex flex-row items-center gap-2.5">
               <IconEmail className="size-5 text-black" />

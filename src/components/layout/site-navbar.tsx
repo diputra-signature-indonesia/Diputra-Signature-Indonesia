@@ -37,7 +37,7 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
             );
           })}
         </nav>
-        <Link href="/#contact" className={`${!isHeroInView ? 'hidden' : 'block'} font-raleway pt-6 pr-5 pb-5 text-base max-lg:hidden sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13`}>
+        <Link href="/contact" className={`${!isHeroInView ? 'hidden' : 'block'} font-raleway pt-6 pr-5 pb-5 text-base max-lg:hidden sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13`}>
           Contact Us
         </Link>
         <button
@@ -70,7 +70,7 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
             ))}
           </div>
           <div className="mt-7 flex">
-            <Link href="/#contact" onClick={() => setOpen(false)} className="font-raleway px-7 py-5 text-base">
+            <Link href="/contact" onClick={() => setOpen(false)} className="font-raleway px-7 py-5 text-base">
               Contact Us
             </Link>
           </div>

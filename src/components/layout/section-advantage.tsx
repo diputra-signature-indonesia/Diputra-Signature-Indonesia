@@ -45,27 +45,26 @@ export function AdvantageSection() {
   ];
 
   return (
-    <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway relative mx-auto flex max-w-[1440px] flex-col">
-      <div className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
-        <div className="flex flex-col items-center gap-3">
+    <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px]">
+      <div className="mx-auto flex flex-col items-center md:w-3xl lg:w-4xl">
+        <div className="flex flex-col items-center gap-5">
           <h2 className="brand-h1 text-brand-maroon">
             Diputra <span className="brand-h1-semi text-black">Advantage</span>
           </h2>
-          <p className="brand-p text-brand-black mb-7">Why Choose Us?</p>
+          <p className="brand-p text-brand-black mb-5">Why Choose Us?</p>
         </div>
-        <p className="brand-p-desc text-center text-balance">
+        <p className="brand-p text-center">
           We are committed to delivering trustworthy legal, visa, and real estate services through experienced professionals, transparent processes, and solutions tailored to each client in Bali,
           Indonesia.
         </p>
       </div>
-      <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-3 md:gap-y-7 lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">
+      <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-3 md:gap-y-2.5 lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">
         {advantageContent.map((item, idx) => {
           return (
-            <div key={idx} className={`flex w-full flex-col gap-2.5 border-b border-gray-300 py-5 text-left lg:flex-col lg:gap-7`}>
+            <div key={idx} className={`flex w-full flex-col gap-2.5 border-b border-gray-300 py-5 text-left lg:flex-col lg:gap-4`}>
               <div className="border-brand-yellow border-l-2 px-5">
                 <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.title}</h3>
-
-                <h3 className="brand-h3 text-brand-black font-light">{item.subTitle}</h3>
+                <h3 className="brand-h3 text-brand-black font-normal">{item.subTitle}</h3>
               </div>
               <p className={`brand-p text-brand-black px-5`}>
                 <span className="hidden md:inline">{item.description}</span>

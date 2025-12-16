@@ -31,7 +31,7 @@ export function ReviewSection() {
   ];
 
   return (
-    <section className="brand-section-px brand-section-py **:brand-stretch **:font-raleway mx-auto flex max-w-[1440px] flex-col">
+    <section className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
       <div className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 brand-h1-mb text-brand-maroon text-center">
           Client <span className="brand-h1-semi text-black">Stories & Experience</span>

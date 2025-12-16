@@ -1,4 +1,5 @@
 import { HeroSection } from '@/components/layout/section-about-hero';
+import { AdvantageSection } from '@/components/layout/section-advantage';
 import { CompanyOverviewSection } from '@/components/layout/section-company-overview';
 import { TeamSection } from '@/components/layout/team-section';
 
@@ -13,6 +14,7 @@ export default function AboutPage() {
     <>
       <HeroSection />
       <CompanyOverviewSection />
+      <AdvantageSection />
       <TeamSection />
     </>
   );
