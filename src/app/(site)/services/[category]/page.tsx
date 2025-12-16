@@ -1,23 +1,41 @@
 import type { Metadata } from 'next';
-import { HeroSection } from '@/components/layout/section-category-hero';
+import { notFound } from 'next/navigation';
+import { SERVICES_CATEGORY } from '@/data/dsi-services';
+import { CategoryHeroSection } from '@/components/layout/category-hero-section';
+import { CategoryServicesSection } from '@/components/layout/category-services-section';
+import { Category } from '@/types/dsi-services';
+import { BlogSection } from '@/components/layout/section-blog';
 
-export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
-  const category = params.category;
+export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
+  const { category } = await params;
 
-  // Format agar lebih manusiawi → "Visa", "Real Estate", dsb.
-  const formatted = category.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  if (!(category in SERVICES_CATEGORY)) {
+    return {
+      title: 'Services | Diputra Signature Indonesia',
+      description: 'Explore our services in Bali.',
+    };
+  }
+
+  const data = SERVICES_CATEGORY[category as Category];
 
   return {
-    title: `${formatted} Services | Diputra Signature Indonesia`,
-    description: `Learn more about our ${formatted.toLowerCase()} services in Bali, including professional support, documentation, compliance, and consulting.`,
+    title: `${data.hero.heading} Services | Diputra Signature Indonesia`,
+    description: data.hero.short_description,
   };
 }
 
-export default function ServicesCategoryPage({ params }: { params: { category: string } }) {
+export default async function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
+  const { category } = await params;
+
+  if (!(category in SERVICES_CATEGORY)) notFound();
+
+  const data = SERVICES_CATEGORY[category as Category];
+
   return (
     <>
-      <div>Services Category Page (category: {params.category})</div>
-      {/* <HeroSection params={params} /> */}
+      <CategoryHeroSection {...data.hero} />
+      <CategoryServicesSection title={data.hero.heading} services={data.services} />
+      <BlogSection />
     </>
   );
 }
