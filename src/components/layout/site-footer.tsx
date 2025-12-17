@@ -27,7 +27,7 @@ export function SiteFooter() {
       <div className="flex flex-col gap-20 lg:flex-row xl:gap-40">
         <div className="flex w-full flex-col gap-5">
           <p className="brand-p">We are a team of legal professionals dedicated to providing reliable business and immigration solutions in Indonesia</p>
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-2.5">
             <div className="flex h-fit flex-col">
               <address className="not-italic">
                 <div className="flex flex-row items-center gap-2.5">
@@ -59,7 +59,7 @@ export function SiteFooter() {
         <div className="flex w-full flex-row max-md:justify-between md:gap-36">
           <div className="flex flex-col gap-5 max-md:w-full">
             <p className="brand-h3 text-brand-burgundy">Our Services</p>
-            <div className="flex w-full flex-col gap-4">
+            <div className="flex w-full flex-col gap-2.5">
               {servicesItems.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
@@ -72,7 +72,7 @@ export function SiteFooter() {
           </div>
           <div className="flex flex-col gap-5 max-md:w-full">
             <p className="brand-h3 text-brand-burgundy">Navigation</p>
-            <div className="flex w-full flex-col gap-4">
+            <div className="flex w-full flex-col gap-2.5">
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href} className={`brand-p ${pathname === item.href ? 'font-semibold' : 'font-normal'}`}>
                   {item.label}

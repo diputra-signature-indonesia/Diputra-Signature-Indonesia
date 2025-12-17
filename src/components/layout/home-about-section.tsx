@@ -4,7 +4,7 @@ import IconArrow from '@/icons/BrandIconArrow';
 
 export function AboutSection() {
   return (
-    <section id="hero-section" className="brand-stretch font-raleway brand-section-px mx-auto mt-25 flex max-h-[700px] max-w-[1440px] max-md:flex-col sm:gap-10 lg:gap-20">
+    <section id="hero-section" className="brand-stretch font-raleway brand-section-px mx-auto mt-30 flex max-h-[700px] max-w-[1440px] max-md:flex-col sm:gap-10 lg:gap-20">
       <div className="my-auto aspect-square w-full max-w-3xl overflow-hidden rounded-sm max-md:mb-7 md:min-h-[420px]">
         <Image
           src={'/image/businessman-examining-papers-table.webp'}

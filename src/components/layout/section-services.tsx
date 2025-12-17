@@ -1,37 +1,25 @@
 import Image from 'next/image';
 import { BrandButton } from '../ui/button';
+import { SERVICES_LIST } from '@/data/dsi-services';
+import type { ServiceIconKey } from '@/data/dsi-services';
 import IconArrow from '@/icons/BrandIconArrow';
 import IconLawBuilding from '@/icons/BrandIconLawBuilding';
 import IconVisaLaw from '@/icons/BrandIconVisaLaw';
 import IconTwoBuilding from '@/icons/BrandIconTwoBuilding';
-export function ServicesSection() {
-  const services = [
-    {
-      id: 0,
-      title: 'Legal',
-      description: 'Legal consulting for businesses and individuals in Bali, including contract and agreement drafting, document review, and ongoing compliance with Indonesian regulations.',
-      image: '/image/services-legal-image.png',
-      icon: IconLawBuilding,
-    },
-    {
-      id: 1,
-      title: 'Visa',
-      description: 'End-to-end support for visas, stay permits (KITAS/KITAP), work permits, and other immigration matters for expatriates living, working, or investing in Bali.',
-      image: '/image/services-visa-image.png',
-      icon: IconVisaLaw,
-    },
-    {
-      id: 2,
-      title: 'Real Estate',
-      description: 'Legal assistance for property transactions in Bali—from land and building due diligence and document verification to guiding you through purchase or lease agreements.',
-      image: '/image/services-realestate-image.jpg',
-      icon: IconTwoBuilding,
-    },
-  ];
 
+const ICONS: Record<ServiceIconKey, React.ElementType> = {
+  law: IconLawBuilding,
+  visa: IconVisaLaw,
+  realestate: IconTwoBuilding,
+};
+
+interface category {
+  heading?: string;
+}
+
+export function ServicesSection({ heading }: category) {
   return (
-    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px] xl:gap-14">
-      <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-white/0" />
+    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px] xl:gap-14">
       <div className="flex flex-col sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 text-brand-maroon border-brand-yellow brand-h1-mb border-l-4 pl-7">
           Diputra <span className="brand-h1-semi text-black">Services</span>
@@ -41,9 +29,9 @@ export function ServicesSection() {
           communication at every stage.
         </p>
       </div>
-      <div className="grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {services.map((item) => {
-          const Icon = item.icon;
+      <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${heading ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+        {SERVICES_LIST.filter((item) => item.title !== heading).map((item, idx) => {
+          const Icon = ICONS[item.iconKey];
           return (
             <article key={item.id} className="relative z-10 flex w-full flex-col gap-5 overflow-hidden p-5 xl:gap-7">
               <Image
@@ -64,7 +52,7 @@ export function ServicesSection() {
               <div className="flex h-full flex-col gap-7">
                 <p className="brand-p md:text-balance xl:text-pretty">{item.description}</p>
                 <BrandButton asChild variant="ghost" className="mt-auto w-full justify-end px-0 text-white">
-                  <a href={`/services/${item.title.toLowerCase()}`}>
+                  <a href={`/services/${item.slug.toLowerCase()}`}>
                     Learn More{' '}
                     <span>
                       <IconArrow className="text-white" />

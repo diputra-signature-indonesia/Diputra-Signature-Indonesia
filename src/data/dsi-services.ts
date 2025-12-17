@@ -1,3 +1,32 @@
+export type ServiceIconKey = 'law' | 'visa' | 'realestate';
+
+export const SERVICES_LIST = [
+  {
+    id: 0,
+    slug: 'legal',
+    title: 'Legal',
+    description: 'Legal consulting for businesses and individuals in Bali, including contract and agreement drafting, document review, and ongoing compliance with Indonesian regulations.',
+    image: '/image/services-legal-image.png',
+    iconKey: 'law',
+  },
+  {
+    id: 1,
+    slug: 'visa',
+    title: 'Visa',
+    description: 'End-to-end support for visas, stay permits (KITAS/KITAP), work permits, and other immigration matters for expatriates living, working, or investing in Bali.',
+    image: '/image/services-visa-image.png',
+    iconKey: 'visa',
+  },
+  {
+    id: 2,
+    slug: 'real-estate',
+    title: 'Real Estate',
+    description: 'Legal assistance for property transactions in Bali—from land and building due diligence and document verification to guiding you through purchase or lease agreements.',
+    image: '/image/services-realestate-image.jpg',
+    iconKey: 'realestate',
+  },
+] as const;
+
 export const SERVICES_CATEGORY = {
   legal: {
     hero: {

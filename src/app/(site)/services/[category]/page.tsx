@@ -5,6 +5,9 @@ import { CategoryHeroSection } from '@/components/layout/category-hero-section';
 import { CategoryServicesSection } from '@/components/layout/category-services-section';
 import { Category } from '@/types/dsi-services';
 import { BlogSection } from '@/components/layout/section-blog';
+import { CtaSection } from '@/components/layout/section-cta';
+import { QnaSection } from '@/components/layout/section-qna';
+import { ServicesSection } from '@/components/layout/section-services';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
   const { category } = await params;
@@ -35,6 +38,9 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
     <>
       <CategoryHeroSection {...data.hero} />
       <CategoryServicesSection title={data.hero.heading} services={data.services} />
+      <CtaSection />
+      <QnaSection />
+      <ServicesSection heading={data.hero.heading} />
       <BlogSection />
     </>
   );

@@ -1,4 +1,4 @@
-import { HeroSection } from '@/components/layout/section-about-hero';
+import { HeroSection } from '@/components/layout/about-hero-section';
 import { AdvantageSection } from '@/components/layout/section-advantage';
 import { CompanyOverviewSection } from '@/components/layout/section-company-overview';
 import { TeamSection } from '@/components/layout/team-section';

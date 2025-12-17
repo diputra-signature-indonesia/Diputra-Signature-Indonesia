@@ -4,9 +4,9 @@ import IconArrow from '@/icons/BrandIconArrow';
 
 export function HeroSection() {
   return (
-    <section id="hero-section" className="brand-stretch *:font-raleway brand-section-px h-svh max-h-[600px] pb-16 lg:pb-20">
-      <div className="relative mx-auto flex h-full max-w-[1440px] flex-col gap-14 md:flex-row md:gap-10 lg:gap-13 xl:gap-25">
-        <div className="relative w-full max-md:flex-1 md:w-xs md:shrink-0 xl:basis-lg">
+    <section id="hero-section" className="brand-stretch *:font-raleway brand-section-px h-svh max-h-[700px] pb-16 lg:pb-20">
+      <div className="relative mx-auto flex h-full max-w-[1440px] flex-col gap-14 md:gap-10 lg:gap-13 xl:gap-14">
+        <div className="relative min-h-0 w-full flex-1">
           <Image
             src="/image/about-section.png"
             alt="Diputra Signature Indonesia team which handles legal, business and immigration consulting services"
@@ -16,7 +16,7 @@ export function HeroSection() {
             className="object-cover brightness-90"
           />
         </div>
-        <div className="my-auto flex flex-col max-md:items-center md:flex-1">
+        <div className="my-auto flex w-3xl flex-col max-md:items-center md:flex-1">
           <p className="brand-p text-brand-black max-md:mb-4 max-md:text-center">— Company Overview</p>
           <h1 className="brand-h1 brand-h1-mb text-brand-burgundy w-full leading-[125%] text-balance max-md:text-center">
             Diputra <span className="brand-h1-semi text-brand-black font-medium">Signature Indonesia</span>

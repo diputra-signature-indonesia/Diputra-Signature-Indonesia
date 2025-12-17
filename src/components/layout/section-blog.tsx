@@ -26,7 +26,7 @@ export function BlogSection() {
   ];
 
   return (
-    <section className="brand-section-px brand-stretch font-raleway bg-brand-white mx-auto mt-30 flex flex-col justify-center gap-7 xl:h-[700px] xl:max-w-[1440px]">
+    <section className="brand-section-px brand-stretch font-raleway mx-auto flex flex-col justify-center gap-7 bg-white xl:h-[700px] xl:max-w-[1440px]">
       <div className="flex w-full flex-col items-end gap-7">
         <div className="flex w-xs flex-col items-end sm:w-sm lg:w-lg">
           <h2 className="brand-h1-semi brand-h1-mb border-brand-yellow border-r-4 pr-7">
