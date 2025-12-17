@@ -19,7 +19,7 @@ interface category {
 
 export function ServicesSection({ heading }: category) {
   return (
-    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px] xl:gap-14">
+    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:gap-14">
       <div className="flex flex-col sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 text-brand-maroon border-brand-yellow brand-h1-mb border-l-4 pl-7">
           Diputra <span className="brand-h1-semi text-black">Services</span>
@@ -32,6 +32,8 @@ export function ServicesSection({ heading }: category) {
       <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${heading ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
         {SERVICES_LIST.filter((item) => item.title !== heading).map((item, idx) => {
           const Icon = ICONS[item.iconKey];
+          console.log(item.title);
+
           return (
             <article key={item.id} className="relative z-10 flex w-full flex-col gap-5 overflow-hidden p-5 xl:gap-7">
               <Image
@@ -49,7 +51,7 @@ export function ServicesSection({ heading }: category) {
                 </div>
                 <h3 className="brand-h3 w-full">{item.title}</h3>
               </div>
-              <div className="flex h-full flex-col gap-7">
+              <div className="mt-auto flex h-full flex-col gap-7">
                 <p className="brand-p md:text-balance xl:text-pretty">{item.description}</p>
                 <BrandButton asChild variant="ghost" className="mt-auto w-full justify-end px-0 text-white">
                   <a href={`/services/${item.slug.toLowerCase()}`}>

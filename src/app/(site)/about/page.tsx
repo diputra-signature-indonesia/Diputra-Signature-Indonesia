@@ -1,7 +1,7 @@
 import { HeroSection } from '@/components/layout/about-hero-section';
-import { AdvantageSection } from '@/components/layout/section-advantage';
-import { CompanyOverviewSection } from '@/components/layout/section-company-overview';
-import { TeamSection } from '@/components/layout/team-section';
+import { AdvantageSection } from '@/components/layout/about-advantage-section';
+import { CompanyOverviewSection } from '@/components/layout/about-approach-section';
+import { TeamSection } from '@/components/layout/about-team-section';
 
 export const metadata = {
   title: 'About Us | Diputra Signature Indonesia',

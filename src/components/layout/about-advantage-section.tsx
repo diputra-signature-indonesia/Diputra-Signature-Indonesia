@@ -46,7 +46,7 @@ export function AdvantageSection() {
 
   return (
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px]">
-      <div className="mx-auto flex flex-col items-center md:w-3xl lg:w-4xl">
+      <div className="mx-auto flex flex-col items-center lg:w-4xl">
         <div className="flex flex-col items-center gap-5">
           <h2 className="brand-h1 text-brand-maroon">
             Diputra <span className="brand-h1-semi text-black">Advantage</span>

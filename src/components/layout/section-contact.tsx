@@ -2,7 +2,7 @@ import IconEmail from '@/icons/BrandIconEmail';
 import IconMap from '@/icons/BrandIconMap';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import IconInstagram from '@/icons/BrandIconInstagram';
-import { ContactForm } from './form-contact';
+import { ContactForm } from './section-contact-form';
 
 export function ContactSection() {
   return (

@@ -4,11 +4,13 @@ import IconArrow from '@/icons/BrandIconArrow';
 import { ServicesIcon } from '@/icons/service-icons';
 
 interface CategoryServicesSectionProps {
+  categorySlug: string;
   title: string;
+  short_description: string;
   services: ServiceItem[];
 }
 
-export function CategoryServicesSection({ title, services }: CategoryServicesSectionProps) {
+export function CategoryServicesSection({ categorySlug, title, short_description, services }: CategoryServicesSectionProps) {
   return (
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-14">
       <div className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
@@ -17,10 +19,7 @@ export function CategoryServicesSection({ title, services }: CategoryServicesSec
             {title} <span className="brand-h1-semi text-black">Services</span>
           </h2>
         </div>
-        <p className="brand-p text-center">
-          We are committed to delivering trustworthy legal, visa, and real estate services through experienced professionals, transparent processes, and solutions tailored to each client in Bali,
-          Indonesia.
-        </p>
+        <p className="brand-p text-center">{short_description}</p>
       </div>
       <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-2 md:gap-y-2.5 lg:grid-cols-3 lg:gap-x-2.5 xl:grid-cols-3">
         {services.map((item, idx) => {
@@ -37,7 +36,7 @@ export function CategoryServicesSection({ title, services }: CategoryServicesSec
               <p className="brand-p group-hover:text-brand-white font-normal transition-colors duration-200">{item.description}</p>
               <div className="mt-auto flex justify-end">
                 <BrandButton asChild variant="ghost" className="brand-p group-hover:text-brand-white mt-auto w-fit bg-transparent px-5 transition-colors duration-200">
-                  <a href={item.cta}>
+                  <a href={item.services_detail.length > 0 ? `/services/${categorySlug}/${item.slug}` : `${item.cta}`}>
                     {item.cta_description}
                     <span>
                       <IconArrow className="text-brand-black group-hover:text-brand-white size-5 transition-colors duration-200" />

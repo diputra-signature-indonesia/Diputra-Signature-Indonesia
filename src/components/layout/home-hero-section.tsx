@@ -13,7 +13,7 @@ export function HeroSection() {
           <div className="bg-brand-yellow h-1 w-25 max-md:mx-auto" />
         </div>
         <div className="mx-auto flex w-full flex-col gap-5 max-md:items-center sm:mb-6 sm:gap-7 lg:mb-7 lg:gap-14 xl:border-l xl:border-white">
-          <p className="brand-p text-brand-black max-md:max-w-lg max-md:text-center xl:text-balance">
+          <p className="brand-p text-brand-black font-medium max-md:max-w-lg max-md:text-center xl:text-balance">
             Menyederhanakan kebutuhan bisnis, legal, dan imigrasi secara profesional, transparan, dan berintegritas.
           </p>
           <div className="flex w-full justify-center gap-3 sm:mx-auto sm:w-fit sm:gap-5 md:w-full md:flex-wrap md:justify-start">

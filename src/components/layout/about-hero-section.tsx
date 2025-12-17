@@ -16,7 +16,7 @@ export function HeroSection() {
             className="object-cover brightness-90"
           />
         </div>
-        <div className="my-auto flex w-3xl flex-col max-md:items-center md:flex-1">
+        <div className="my-auto flex flex-col max-md:items-center md:flex-1 lg:w-3xl">
           <p className="brand-p text-brand-black max-md:mb-4 max-md:text-center">— Company Overview</p>
           <h1 className="brand-h1 brand-h1-mb text-brand-burgundy w-full leading-[125%] text-balance max-md:text-center">
             Diputra <span className="brand-h1-semi text-brand-black font-medium">Signature Indonesia</span>

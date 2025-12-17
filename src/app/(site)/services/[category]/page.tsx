@@ -37,11 +37,15 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
   return (
     <>
       <CategoryHeroSection {...data.hero} />
-      <CategoryServicesSection title={data.hero.heading} services={data.services} />
+      <CategoryServicesSection categorySlug={category} title={data.hero.heading} short_description={data.hero.short_description} services={data.services} />
       <CtaSection />
       <QnaSection />
-      <ServicesSection heading={data.hero.heading} />
-      <BlogSection />
+      <div className="pb-13">
+        <ServicesSection heading={data.hero.heading} />
+      </div>
+      <div className="w-full bg-white pt-13 drop-shadow-lg">
+        <BlogSection />
+      </div>
     </>
   );
 }

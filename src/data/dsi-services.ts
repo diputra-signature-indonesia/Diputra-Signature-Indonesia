@@ -25,13 +25,28 @@ export const SERVICES_LIST = [
     image: '/image/services-realestate-image.jpg',
     iconKey: 'realestate',
   },
+  {
+    id: 3,
+    slug: 'insurance',
+    title: 'Insurance (ALLIANZ)	',
+    description: 'Insurance solutions for property, assets, and health protection tailored for companies, PT PMA, and individuals in Indonesia.',
+    image: '/image/services-realestate-image.jpg',
+    iconKey: 'realestate',
+  },
+  {
+    id: 4,
+    slug: 'intellectual-property-and-trademark-registration-services',
+    title: 'IP & Trademark Registration Services',
+    description: 'Protect your brand and creative assets through professional IP and trademark registration services in Indonesia.',
+    image: '/image/services-realestate-image.jpg',
+    iconKey: 'realestate',
+  },
 ] as const;
 
 export const SERVICES_CATEGORY = {
   legal: {
     hero: {
       heading: 'Legal',
-      subheading: 'Trusted legal solutions for businesses and individuals',
       short_description: 'Legal consulting for businesses and individuals in Bali, including contract and agreement drafting, document review, and ongoing compliance with Indonesian regulations.',
       description:
         'We are a team of legal professionals dedicated to providing reliable business and immigration solutions in Indonesia. With years of experience, we help clients navigate complex regulations with confidence and ease.',
@@ -40,8 +55,9 @@ export const SERVICES_CATEGORY = {
     services: [
       {
         title: 'Corporate & Business',
+        slug: 'corporate-business',
         icon: 'IconCorporateBusiness',
-        description: 'Company establishment, revisions, licensing, and compliance reporting for businesses operating in Indonesia.”',
+        description: 'Company establishment, revisions, licensing, and compliance reporting for businesses operating in Indonesia.',
         cta: '/services/legal/corporate-business',
         cta_description: 'Read Detail',
         services_detail: [
@@ -79,6 +95,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Contract Advisory',
+        slug: 'contract-advisory',
         icon: 'IconContractAdvisory',
         description: 'Drafting, reviewing, and negotiating contracts with legally sound guidance to protect your business interests.',
         cta: '/services/legal/contract-advisory',
@@ -112,6 +129,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Building Permit',
+        slug: 'building-permit',
         icon: 'IconBuildingPermit',
         description: 'PKKPR, UKL-UPL, PBG, and SLF permitting to ensure full regulatory compliance.',
         cta: '/services/legal/building-permit',
@@ -148,7 +166,6 @@ export const SERVICES_CATEGORY = {
   visa: {
     hero: {
       heading: 'Visa',
-      subheading: 'Immigration solutions made simple',
       short_description: 'End-to-end support for visas, stay permits (KITAS/KITAP), work permits, and other immigration matters for expatriates living, working, or investing in Bali.',
       description:
         'Our immigration specialists provide clear guidance and hands-on assistance throughout every stage of the visa and stay permit process. We help individuals, professionals, and investors navigate Indonesian immigration regulations with confidence and compliance.',
@@ -157,6 +174,7 @@ export const SERVICES_CATEGORY = {
     services: [
       {
         title: 'Visa',
+        slug: 'visa',
         icon: 'IconBuildingPermit',
         description: 'Visa application assistance for tourism, business, investment, social visits, and remote work purposes in Indonesia.',
         cta: '/services/visa/visa',
@@ -194,6 +212,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'KITAS',
+        slug: 'kitas',
         icon: 'IconBuildingPermit',
         description: 'Residence permit services for investors, workers, families, retirees, and foreign spouses living in Indonesia.',
         cta: '/services/visa/kitas',
@@ -235,6 +254,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'KITAP',
+        slug: 'kitap',
         icon: 'IconBuildingPermit',
         description: 'Long-term residency permission for eligible foreign nationals wishing to stay in Indonesia. Contact our team for tailored assistance.',
         cta: '/contact',
@@ -243,6 +263,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Exit Permit Only (EPO)',
+        slug: 'exit-permit-only',
         icon: 'IconBuildingPermit',
         description: 'Required for foreign residents leaving Indonesia permanently or changing sponsorship. We assist to ensure a smooth and compliant exit process.',
         cta: '/contact',
@@ -251,6 +272,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Termination Stay Permit (TSP)',
+        slug: 'termination-stay-permit',
         icon: 'IconBuildingPermit',
         description: 'Issued when ending a stay permit or employment in Indonesia. Our team helps manage the process to keep your immigration status compliant.',
         cta: '/contact',
@@ -262,7 +284,6 @@ export const SERVICES_CATEGORY = {
   'real-estate': {
     hero: {
       heading: 'Real Estate',
-      subheading: 'Secure and compliant property transactions',
       short_description: 'Legal assistance for property transactions in Bali—from land and building due diligence and document verification to guiding you through purchase or lease agreements.',
       description:
         'We provide legal support for property transactions to help clients minimize risks and ensure regulatory compliance. Our team assists with document verification, transaction procedures, and coordination with relevant authorities to support secure and transparent property dealings.',
@@ -271,6 +292,7 @@ export const SERVICES_CATEGORY = {
     services: [
       {
         title: 'Property Due Diligence',
+        slug: 'property-due-diligence',
         icon: 'IconBuildingPermit',
         description: 'Comprehensive verification of property documents, ownership status, and regulatory compliance before purchase or lease.',
         cta: '/contact',
@@ -279,6 +301,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Sale and Purchase Assistance',
+        slug: 'sale-and-purchase-assistance',
         icon: 'IconBuildingPermit',
         description: 'Legal guidance throughout property sale or purchase transactions to ensure clarity, safety, and proper documentation.',
         cta: '/contact',
@@ -287,6 +310,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Lease Agreement Preparation',
+        slug: 'lease-agreement-preparation',
         icon: 'IconBuildingPermit',
         description: 'Drafting and reviewing lease agreements to protect your rights and ensure compliance with local regulations.',
         cta: '/contact',
@@ -295,6 +319,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Land Title Verification',
+        slug: 'land-title-verification',
         icon: 'IconBuildingPermit',
         description: 'Verification of land certificates and ownership records to ensure the property is legally valid and dispute-free.',
         cta: '/contact',
@@ -303,6 +328,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Notary and Land Office Coordination',
+        slug: 'notary-and-land-office-coordination',
         icon: 'IconBuildingPermit',
         description: 'Assistance with notarial processes and land office submissions to ensure smooth documentation and legal compliance.',
         cta: '/contact',
@@ -311,6 +337,7 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Property Transaction Advisory',
+        slug: 'property-transaction-advisory',
         icon: 'IconBuildingPermit',
         description: 'Professional advice on property transactions, risks, and legal obligations for secure and informed decision-making.',
         cta: '/contact',
@@ -319,8 +346,139 @@ export const SERVICES_CATEGORY = {
       },
       {
         title: 'Power of Attorney Handling',
+        slug: 'power-of-attorney-handling',
         icon: 'IconBuildingPermit',
         description: 'Preparation and management of Power of Attorney documents for property-related matters, ensuring accuracy and legal validity.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+    ],
+  },
+  insurance: {
+    hero: {
+      heading: 'Insurance (ALLIANZ)	',
+      short_description: 'Insurance solutions for property, assets, and health protection tailored for companies, PT PMA, and individuals in Indonesia.',
+      description:
+        'We provide insurance solutions in partnership with ALLIANZ to help individuals and companies protect their assets, health, and business continuity. Our team assists clients in selecting suitable coverage for property, health, and operational risks with clear guidance and professional support.',
+      image: '/image/realestate.webp',
+    },
+    services: [
+      {
+        title: 'Property Insurance (PT PMA)',
+        slug: 'property-insurance',
+        icon: 'IconBuildingPermit',
+        description: 'Comprehensive insurance protection for company-owned buildings against major physical risks to support asset security and business continuity.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Contents Insurance (PT PMA)',
+        slug: 'content-insurance',
+        icon: 'IconBuildingPermit',
+        description: 'Insurance coverage for movable business assets such as equipment, machinery, and interior items to reduce financial loss from damage or loss.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'All Risks Property Insurance (PT PMA)',
+        slug: 'all-risks-property-insurance',
+        icon: 'IconBuildingPermit',
+        description: 'Extended property insurance coverage protecting high-value assets against a wide range of physical loss or damage.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Health Insurance',
+        slug: 'health-insurance',
+        icon: 'IconBuildingPermit',
+        description: 'Health insurance coverage to support medical expenses, including hospitalization and treatment, for individuals and employees.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'International Health Insurance Coverage',
+        slug: 'international-health-insurance-coverage',
+        icon: 'IconBuildingPermit',
+        description: 'Worldwide health insurance coverage designed for expatriates and international employees requiring cross-border medical protection.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Health Risk Assessment & Consultation',
+        slug: 'health-risk-assessment-and-consultation',
+        icon: 'IconBuildingPermit',
+        description: 'Professional consultation to assess healthcare risks and recommend suitable health insurance solutions for corporate needs.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+    ],
+  },
+  'intellectual-property-and-trademark-registration-services': {
+    hero: {
+      heading: 'Intellectual Property & Trademark Registration ',
+      short_description: 'Protect your brand and creative assets through professional IP and trademark registration services in Indonesia.',
+      description:
+        'We assist individuals and businesses in protecting their brands and creative assets through intellectual property and trademark registration services in Indonesia. Our team provides guidance on registration, protection strategies, and administrative processes to help minimize legal risks and safeguard long-term business value.',
+      image: '/image/realestate.webp',
+    },
+    services: [
+      {
+        title: 'Copyright Registration',
+        slug: 'copyrights-registration',
+        icon: 'IconBuildingPermit',
+        description: 'Legal registration to protect copyrights for creative and intellectual works as officially recognized proof of ownership.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Trademark Registration',
+        slug: 'trademark-registration',
+        icon: 'IconBuildingPermit',
+        description: 'Trademark registration services to secure exclusive commercial rights for brand names, logos, and slogans.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Trademark Search & Analysis',
+        slug: 'trademark-search-and-analysis',
+        icon: 'IconBuildingPermit',
+        description: 'Trademark search and analysis to ensure availability and reduce the risk of conflicts or application rejection.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Intellectual Property (IP) Consultation',
+        slug: 'intellectual-property-consultation',
+        icon: 'IconBuildingPermit',
+        description: 'Professional consultation to determine suitable intellectual property protection and registration strategies.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'Administrative & Legal Assistance',
+        slug: 'administrative-and-legal-assistance',
+        icon: 'IconBuildingPermit',
+        description: 'Administrative and legal support for document preparation, application submission, and certification processes.',
+        cta: '/contact',
+        cta_description: 'Contact Us',
+        services_detail: [],
+      },
+      {
+        title: 'IP Protection for Foreign Investment Companies (PT PMA)',
+        slug: 'ip-protection-for-foreign-investment-companies',
+        icon: 'IconBuildingPermit',
+        description: 'Intellectual property protection services tailored for PT PMA to support business legality and investor confidence.',
         cta: '/contact',
         cta_description: 'Contact Us',
         services_detail: [],

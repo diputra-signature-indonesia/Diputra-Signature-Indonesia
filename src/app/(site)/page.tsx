@@ -2,8 +2,8 @@ import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
 import { ServicesSection } from '@/components/layout/section-services';
 import { ReviewSection } from '@/components/layout/section-review';
-import { AdvantageSection } from '@/components/layout/section-advantage';
-import { HeroSection } from '@/components/layout/section-home-hero';
+import { AdvantageSection } from '@/components/layout/about-advantage-section';
+import { HeroSection } from '@/components/layout/home-hero-section';
 import { AboutSection } from '@/components/layout/home-about-section';
 import { CtaSection } from '@/components/layout/section-cta';
 
