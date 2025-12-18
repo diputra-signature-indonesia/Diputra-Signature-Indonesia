@@ -15,7 +15,7 @@ export function CategoryServicesSection({ categorySlug, title, short_description
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-14">
       <div className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
         <div className="flex flex-col items-center gap-5">
-          <h2 className="brand-h1 brand-h1-mb text-brand-maroon">
+          <h2 className="brand-h1 brand-h1-mb text-brand-maroon text-center">
             {title} <span className="brand-h1-semi text-black">Services</span>
           </h2>
         </div>

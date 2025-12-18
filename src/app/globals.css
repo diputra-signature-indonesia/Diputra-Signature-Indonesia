@@ -101,3 +101,7 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: 0px;
 }
+
+details > :not(summary) {
+  display: block;
+}

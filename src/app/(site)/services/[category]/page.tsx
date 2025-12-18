@@ -38,7 +38,7 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
     <>
       <CategoryHeroSection {...data.hero} />
       <CategoryServicesSection categorySlug={category} title={data.hero.heading} short_description={data.hero.short_description} services={data.services} />
-      <CtaSection />
+      <CtaSection heading="Request a Consultation" description="Start Your Legal Process Today" />
       <QnaSection />
       <div className="pb-13">
         <ServicesSection heading={data.hero.heading} />

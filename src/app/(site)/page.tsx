@@ -27,7 +27,7 @@ export default function HomePage() {
         </div>
       </div>
       <div className="relative mx-auto max-w-[1440px] pb-30">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/writing_with_red_pen.webp')] bg-cover bg-[50%_70%] bg-no-repeat opacity-10" />
+        {/* <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/writing_with_red_pen.webp')] bg-cover bg-[50%_70%] bg-no-repeat opacity-10" /> */}
         <div className="relative z-10">
           <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-white/0" />
           <ReviewSection />
