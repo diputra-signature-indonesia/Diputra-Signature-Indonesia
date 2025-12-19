@@ -7,6 +7,7 @@ export type BlogPost = {
   slug: string;
   title: string;
   excerpt: string;
+  authorName: string;
   date: string; // ISO: "2025-01-10"
   updatedAt?: string;
   readingTimeMin?: number;
@@ -19,6 +20,7 @@ export const DSI_BLOG_POSTS: BlogPost[] = [
     slug: 'perubahan-regulasi-kitas-2025',
     title: 'Perubahan Regulasi KITAS 2025: Apa yang Berubah?',
     excerpt: 'Ringkasan pembaruan regulasi KITAS yang mulai berlaku di 2025, dampaknya bagi perusahaan, dan langkah praktis untuk ekspatriat.',
+    authorName: 'Ngurah Dhananjaya',
     date: '2025-01-10',
     readingTimeMin: 6,
     cover: {

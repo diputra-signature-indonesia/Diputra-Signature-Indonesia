@@ -155,7 +155,7 @@ export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; con
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`font-raleway hover:bg-brand-black/10 hover:text-brand-burgundy relative px-7 py-4 text-base text-balance ${isChildActive ? 'font-semibold' : 'font-normal'}`}
+                  className={`font-raleway hover:bg-brand-black/10 relative px-7 py-4 text-base text-balance ${isChildActive ? 'font-semibold' : 'font-normal'}`}
                 >
                   {item.label}
                   <span className="absolute bottom-0 left-1/2 h-0.5 w-[90%] -translate-x-1/2 bg-red-900" />

@@ -5,7 +5,6 @@ import { DSI_BLOG_POSTS } from '@/data/dsi-blog';
 
 type BlogSectionProps = {
   limit?: number; // berapa item yang tampil
-  showSearch?: boolean;
 };
 
 function formatDateParts(iso: string) {
@@ -14,8 +13,8 @@ function formatDateParts(iso: string) {
   return { d, m, y };
 }
 
-export function BlogSection({ limit = 3, showSearch = true }: BlogSectionProps) {
-  const posts = DSI_BLOG_POSTS.slice(0, limit);
+export function BlogSection({ limit = 3 }: BlogSectionProps) {
+  const posts = [...DSI_BLOG_POSTS].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
 
   return (
     <section className="brand-section-px brand-stretch font-raleway mx-auto flex flex-col justify-center gap-7 bg-white xl:h-[700px] xl:max-w-[1440px]">
@@ -28,7 +27,7 @@ export function BlogSection({ limit = 3, showSearch = true }: BlogSectionProps) 
         </div>
 
         <div className="flex w-full justify-end gap-2.5">
-          <input type="text" placeholder="Search articles" className="w-full rounded-xl border px-5 py-2 text-xs font-light max-sm:max-w-3xs sm:max-w-80 sm:text-sm lg:max-w-96 lg:text-base" />
+          <input type="text" placeholder="Coming soon!" disabled className="w-full rounded-xl border px-5 py-2 text-xs font-light max-sm:max-w-3xs sm:max-w-80 sm:text-sm lg:max-w-96 lg:text-base" />
           <BrandButton variant="white" className="my-auto px-5 font-light sm:px-7 lg:px-10">
             Find
           </BrandButton>
@@ -37,6 +36,7 @@ export function BlogSection({ limit = 3, showSearch = true }: BlogSectionProps) 
       <div className="mx-auto grid w-full gap-x-10 lg:grid-cols-2 xl:max-w-7xl xl:grid-cols-3 xl:gap-y-10">
         {posts.map((post) => {
           const { d, m, y } = formatDateParts(post.date);
+          const coverSrc = post.cover?.src ?? '/image/news_image.png';
           return (
             <article key={post.slug} className="mb-3 flex h-fit w-full gap-2.5 sm:mb-5 lg:mb-10">
               <div className="flex w-fit flex-col text-[14px] max-lg:hidden">
@@ -45,10 +45,10 @@ export function BlogSection({ limit = 3, showSearch = true }: BlogSectionProps) 
                 <p className="pt-2.5">{y}</p>
               </div>
               <div className="flex w-full lg:flex-col">
-                <Link href={`/blog/${post.slug}`} className="w-fit">
+                <Link href={`/blog/${post.slug}`} className="block w-full">
                   <Image
-                    alt={`${post.title} – legal and visa update for Indonesia`}
-                    src={'/image/news_image.png'}
+                    alt={`${post.title} cover image`}
+                    src={coverSrc}
                     width={300}
                     quality={75}
                     height={200}

@@ -1,32 +1,38 @@
 // src/lib/meta-helpers.ts
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site-config';
 
-// sesuaikan dengan bentuk minimal object "post" yang kamu punya sekarang
 type BlogMetaInput = {
+  slug: string;
   title: string;
   description: string;
   image?: string;
   date?: string;
+  updatedAt?: string;
 };
 
 const SITE_NAME = 'Diputra Signature Indonesia';
-const SITE_URL = 'https://diputrasignature.com'; // ganti nanti
-const DEFAULT_OG_IMAGE = '/image/og-default.jpg';
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og/og-default.jpg`;
 
-export function buildBlogPostMetadata({ title, description, image, date }: BlogMetaInput): Metadata {
+export function buildBlogPostMetadata({ slug, title, description, image, date, updatedAt }: BlogMetaInput): Metadata {
   const fullTitle = `${title} | ${SITE_NAME}`;
-  const ogImage = image ?? DEFAULT_OG_IMAGE;
+  const ogImage = image ? (image.startsWith('http') ? image : `${SITE_URL}${image}`) : DEFAULT_OG_IMAGE;
+  const canonicalUrl = `${SITE_URL}/blog/${slug}`;
 
   return {
     title: fullTitle,
     description,
+
+    alternates: {
+      canonical: canonicalUrl,
+    },
 
     openGraph: {
       title: fullTitle,
       description,
       type: 'article',
       siteName: SITE_NAME,
-      url: SITE_URL,
+      url: canonicalUrl,
       images: [
         {
           url: ogImage,
@@ -35,7 +41,8 @@ export function buildBlogPostMetadata({ title, description, image, date }: BlogM
           alt: title,
         },
       ],
-      publishedTime: date,
+      ...(date && { publishedTime: date }),
+      ...(updatedAt && { modifiedTime: updatedAt }),
     },
 
     twitter: {
