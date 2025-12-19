@@ -6,6 +6,7 @@ import IconArrow from '@/icons/BrandIconArrow';
 import IconLawBuilding from '@/icons/BrandIconLawBuilding';
 import IconVisaLaw from '@/icons/BrandIconVisaLaw';
 import IconTwoBuilding from '@/icons/BrandIconTwoBuilding';
+import Link from 'next/link';
 
 const ICONS: Record<ServiceIconKey, React.ElementType> = {
   law: IconLawBuilding,
@@ -14,10 +15,10 @@ const ICONS: Record<ServiceIconKey, React.ElementType> = {
 };
 
 interface category {
-  heading?: string;
+  excludeSlug?: string;
 }
 
-export function ServicesSection({ heading }: category) {
+export function ServicesSection({ excludeSlug }: category) {
   return (
     <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:gap-14">
       <div className="flex flex-col sm:w-xl lg:w-2xl xl:w-3xl">
@@ -31,17 +32,16 @@ export function ServicesSection({ heading }: category) {
       </div>
       <div className="border-brand-black/10 flex flex-col gap-7 border-b-2 pb-14">
         <h3 className="brand-h2 text-brand-burgundy text-center font-medium">Main Services</h3>
-        <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${heading ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
-          {SERVICES_LIST.filter((item) => item.title !== heading && item.type === 'primary').map((item, idx) => {
+        <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+          {SERVICES_LIST.filter((item) => item.slug !== excludeSlug && item.type === 'primary').map((item, idx) => {
             const Icon = ICONS[item.iconKey];
-            console.log(item.title);
             return (
               <article key={item.id} className="relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-sm p-5 transition-all duration-500 hover:scale-100 xl:gap-7">
                 <Image
                   src={item.image}
-                  alt={`${item.title} services in Bali by Diputra Signature Indonesia`}
+                  alt={`${item.title} – Diputra Signature Indonesia`}
                   fill
-                  sizes="(min-width: 1280px) 33vw, 100vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   quality={75}
                   className="-z-20 object-cover brightness-75"
                 />
@@ -50,12 +50,12 @@ export function ServicesSection({ heading }: category) {
                   <div className="border-brand-yellow border-l-4 pt-5 pl-5">
                     <Icon className="size-10" />
                   </div>
-                  <h3 className="brand-h3 w-full">{item.title}</h3>
+                  <h4 className="brand-h3 w-full">{item.title}</h4>
                 </div>
                 <div className="mt-auto flex h-full flex-col items-end gap-7">
                   <p className="brand-p md:text-balance xl:text-pretty">{item.description}</p>
                   <BrandButton asChild variant="ghost" className="group mt-auto w-fit justify-end overflow-hidden px-0 pl-7 text-white">
-                    <a href={`/services/${item.slug.toLowerCase()}`} className="relative">
+                    <Link href={`/services/${item.slug.toLowerCase()}`} className="relative">
                       Learn More{' '}
                       <span>
                         <IconArrow className="text-white" />
@@ -63,7 +63,7 @@ export function ServicesSection({ heading }: category) {
                       <div className="border-brand-yellow absolute left-0 -z-10 aspect-square h-full -translate-x-[120%] scale-75 rotate-45 overflow-hidden rounded-full border transition-all duration-700 group-hover:translate-x-0">
                         <div className="bg-brand-yellow aspect-square w-[50px] -translate-x-full translate-y-full rotate-45 transition-transform delay-700 duration-700 group-hover:-translate-x-[40%] group-hover:translate-y-[30%]" />
                       </div>
-                    </a>
+                    </Link>
                   </BrandButton>
                 </div>
               </article>
@@ -73,17 +73,16 @@ export function ServicesSection({ heading }: category) {
       </div>
       <div className="border-brand-black/10 flex flex-col gap-7 border-b-2 pb-14">
         <h3 className="brand-h2 text-brand-burgundy text-center font-medium">Additional Services</h3>
-        <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${heading ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
-          {SERVICES_LIST.filter((item) => item.title !== heading && item.type === 'secondary').map((item, idx) => {
+        <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
+          {SERVICES_LIST.filter((item) => item.slug !== excludeSlug && item.type === 'secondary').map((item, idx) => {
             const Icon = ICONS[item.iconKey];
-            console.log(item.title);
             return (
               <article key={item.id} className="relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-sm p-5 transition-all duration-500 hover:scale-100 xl:gap-7">
                 <Image
                   src={item.image}
-                  alt={`${item.title} services in Bali by Diputra Signature Indonesia`}
+                  alt={`${item.title} – Diputra Signature Indonesia `}
                   fill
-                  sizes="(min-width: 1280px) 33vw, 100vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   quality={75}
                   className="-z-20 object-cover brightness-75"
                 />
@@ -92,12 +91,12 @@ export function ServicesSection({ heading }: category) {
                   <div className="border-brand-yellow border-l-4 pt-5 pl-5">
                     <Icon className="size-10" />
                   </div>
-                  <h3 className="brand-h3 w-full">{item.title}</h3>
+                  <h4 className="brand-h3 w-full">{item.title}</h4>
                 </div>
                 <div className="mt-auto flex h-full flex-col items-end gap-7">
                   <p className="brand-p md:text-balance xl:text-pretty">{item.description}</p>
                   <BrandButton asChild variant="ghost" className="group mt-auto w-fit justify-end overflow-hidden px-0 pl-7 text-white">
-                    <a href={`/services/${item.slug.toLowerCase()}`} className="relative">
+                    <Link href={`/services/${item.slug.toLowerCase()}`} className="relative">
                       Learn More{' '}
                       <span>
                         <IconArrow className="text-white" />
@@ -105,7 +104,7 @@ export function ServicesSection({ heading }: category) {
                       <div className="border-brand-yellow absolute left-0 -z-10 aspect-square h-full -translate-x-[120%] scale-75 rotate-45 overflow-hidden rounded-full border transition-all duration-700 group-hover:translate-x-0">
                         <div className="bg-brand-yellow aspect-square w-[50px] -translate-x-full translate-y-full rotate-45 transition-transform delay-700 duration-700 group-hover:-translate-x-[40%] group-hover:translate-y-[30%]" />
                       </div>
-                    </a>
+                    </Link>
                   </BrandButton>
                 </div>
               </article>

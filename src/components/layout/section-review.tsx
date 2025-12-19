@@ -31,14 +31,13 @@ export function ReviewSection() {
   ];
 
   return (
-    <section className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
+    <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
       <div className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
-        <h2 className="brand-h1 brand-h1-mb text-brand-maroon text-center">
+        <h2 id="reviews-heading" className="brand-h1 brand-h1-mb text-brand-maroon text-center">
           Client <span className="brand-h1-semi text-black">Stories & Experience</span>
         </h2>
         <p className="brand-p-desc text-center text-balance">
-          Kami berkomitmen memberikan layanan legal, bisnis, dan imigrasi yang terpercaya melalui tenaga ahli berpengalaman, proses yang transparan, serta solusi yang disesuaikan dengan kebutuhan
-          setiap klien.
+          We are committed to delivering trusted legal, business, and immigration services through experienced professionals, transparent processes, and solutions tailored to each client’s needs.
         </p>
       </div>
 
@@ -57,13 +56,15 @@ export function ReviewSection() {
           return (
             <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto p-5`}>
               <IconQuote className="text-brand-yellow size-6" />
-              <div className="hide-scrollbar h-full overflow-y-scroll">
-                <p className="brand-p">{item.message}</p>
-              </div>
-              <div className="flex flex-col py-5">
-                <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
-                <p className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">{item.date}</p>
-              </div>
+              <figure className="hide-scrollbar h-full overflow-y-scroll">
+                <blockquote className="brand-p">“{item.message}”</blockquote>
+                <figcaption className="flex flex-col py-5">
+                  <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
+                  <time dateTime={item.date} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
+                    {item.date}
+                  </time>
+                </figcaption>
+              </figure>
             </SwiperSlide>
           );
         })}
