@@ -4,7 +4,7 @@ import IconArrow from '@/icons/BrandIconArrow';
 
 export function HeroSection() {
   return (
-    <section id="hero-section" className="brand-stretch font-raleway brand-section-px mx-auto flex h-[95svh] max-w-[1440px] max-md:flex-col sm:h-svh sm:max-h-[650px] sm:gap-10 lg:gap-20">
+    <section id="hero-section" className="brand-stretch font-raleway brand-section-px mx-auto flex h-[85svh] max-w-[1440px] max-md:flex-col sm:h-svh sm:max-h-[650px] sm:gap-10 lg:gap-20">
       <div className="mx-auto my-auto flex w-full max-w-[550px] min-w-[280px] flex-col max-md:order-2 sm:min-w-[380px] lg:min-w-[450px]">
         <div className="brand-h1-mb flex w-full flex-col gap-2.5">
           <h1 className="brand-h1 text-brand-black w-full leading-[125%] text-balance max-md:text-center">

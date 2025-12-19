@@ -102,6 +102,12 @@ html {
   scrollbar-width: 0px;
 }
 
-details > :not(summary) {
+.blog-content img {
+  width: 100%;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 4px;
   display: block;
+  aspect-ratio: 16/8;
+  margin: 18px auto; /* center */
 }

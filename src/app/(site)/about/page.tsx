@@ -13,7 +13,7 @@ export default function AboutPage() {
   return (
     <>
       <HeroSection />
-      <CompanyOverviewSection />
+      {/* <CompanyOverviewSection /> */}
       <AdvantageSection />
       <TeamSection />
     </>

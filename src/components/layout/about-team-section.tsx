@@ -5,12 +5,12 @@ export function TeamSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const teamList = [
-    { position: 'Founder/COO', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
-    { position: 'Founder/COO', name: 'Anak Agung Ngurah Gede Dhananjaya', img: '/image/developer-face.png' },
-    { position: 'Senior Associate', name: 'I Putu Gede Dalem,S.H.', img: '/image/developer-face.png' },
+    { position: 'Managing Partner', name: 'Anak Agung Gede Bagus Rahardiputra, S.H., M.Kn.', img: '/image/developer-face.png' },
+    { position: 'IT Partner', name: 'Anak Agung Ngurah Gede Dhananjaya, S.Kom.', img: '/image/developer-face.png' },
+    { position: 'Senior Associate', name: 'I Putu Gede Dalem, S.H.', img: '/image/developer-face.png' },
     { position: 'Junior Associate', name: 'Anak Agung Ayu Agung Devi Anjani Jelantik, S.H.', img: '/image/developer-face.png' },
-    { position: 'Associate', name: 'I Made Mahendraputra Utama,S.H.', img: '/image/developer-face.png' },
-    { position: 'Associate', name: 'Loedwig Guntur Naftali Sojuaon Hasugian,S.H.', img: '/image/developer-face.png' },
+    { position: 'Associate', name: 'I Made Mahendraputra Utama, S.H.', img: '/image/developer-face.png' },
+    { position: 'Associate', name: 'Loedwig Guntur Naftali Sojuaon Hasugian, S.H.', img: '/image/developer-face.png' },
   ];
   return (
     <section id="hero-section" className="brand-section-px **:brand-stretch **:font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col pb-20">

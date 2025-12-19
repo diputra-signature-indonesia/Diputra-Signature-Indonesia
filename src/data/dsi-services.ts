@@ -3,8 +3,9 @@ export type ServiceIconKey = 'law' | 'visa' | 'realestate';
 export const SERVICES_LIST = [
   {
     id: 0,
-    slug: 'legal',
-    title: 'Legal',
+    slug: 'legal-and-corporate',
+    type: 'primary',
+    title: 'Legal & Corporate',
     description: 'Legal consulting for businesses and individuals in Bali, including contract and agreement drafting, document review, and ongoing compliance with Indonesian regulations.',
     image: '/image/services-legal-image.png',
     iconKey: 'law',
@@ -12,6 +13,7 @@ export const SERVICES_LIST = [
   {
     id: 1,
     slug: 'visa',
+    type: 'primary',
     title: 'Visa',
     description: 'End-to-end support for visas, stay permits (KITAS/KITAP), work permits, and other immigration matters for expatriates living, working, or investing in Bali.',
     image: '/image/services-visa-image.png',
@@ -20,6 +22,7 @@ export const SERVICES_LIST = [
   {
     id: 2,
     slug: 'real-estate',
+    type: 'primary',
     title: 'Real Estate',
     description: 'Legal assistance for property transactions in Bali—from land and building due diligence and document verification to guiding you through purchase or lease agreements.',
     image: '/image/services-realestate-image.jpg',
@@ -28,6 +31,7 @@ export const SERVICES_LIST = [
   {
     id: 3,
     slug: 'insurance',
+    type: 'secondary',
     title: 'Insurance (ALLIANZ)	',
     description: 'Insurance solutions for property, assets, and health protection tailored for companies, PT PMA, and individuals in Indonesia.',
     image: '/image/services-realestate-image.jpg',
@@ -36,6 +40,7 @@ export const SERVICES_LIST = [
   {
     id: 4,
     slug: 'intellectual-property-and-trademark-registration-services',
+    type: 'secondary',
     title: 'IP & Trademark Registration Services',
     description: 'Protect your brand and creative assets through professional IP and trademark registration services in Indonesia.',
     image: '/image/services-realestate-image.jpg',
@@ -44,9 +49,10 @@ export const SERVICES_LIST = [
 ] as const;
 
 export const SERVICES_CATEGORY = {
-  legal: {
+  'legal-and-corporate': {
     hero: {
-      heading: 'Legal',
+      heading: 'Legal & Corporate',
+      type: 'primary',
       short_description: 'Legal consulting for businesses and individuals in Bali, including contract and agreement drafting, document review, and ongoing compliance with Indonesian regulations.',
       description:
         'We are a team of legal professionals dedicated to providing reliable business and immigration solutions in Indonesia. With years of experience, we help clients navigate complex regulations with confidence and ease.',
@@ -74,6 +80,13 @@ export const SERVICES_CATEGORY = {
             detail_cta_description: 'Contact our team to review your planned company changes.',
           },
           {
+            //New
+            detail_title: 'Company Dissolution',
+            detail_description:
+              'Investment activity reporting in Indonesia is mandatory and may vary depending on your business sector and structure. Our team assists you in preparing and submitting LKPM reports in line with the latest regulations.',
+            detail_cta_description: 'Contact our team for tailored LKPM support.',
+          },
+          {
             detail_title: 'LKPM',
             detail_description:
               'Investment activity reporting in Indonesia is mandatory and may vary depending on your business sector and structure. Our team assists you in preparing and submitting LKPM reports in line with the latest regulations.',
@@ -85,8 +98,14 @@ export const SERVICES_CATEGORY = {
               'A compliant business address is often required for licensing and day-to-day operations. We help you arrange virtual office solutions that match your business model and regulatory needs.',
             detail_cta_description: 'Contact our team for personalized assistance.',
           },
+          // {
+          //   detail_title: 'Yearly Tax Report',
+          //   detail_description:
+          //     'Annual tax reporting obligations differ based on your company type, size, and activities. We coordinate with trusted tax professionals to help ensure your yearly reports meet regulatory expectations.',
+          //   detail_cta_description: 'Contact our team for coordinated yearly tax assistance.',
+          // },
           {
-            detail_title: 'Yearly Tax Report',
+            detail_title: 'Share Sale & Purchase',
             detail_description:
               'Annual tax reporting obligations differ based on your company type, size, and activities. We coordinate with trusted tax professionals to help ensure your yearly reports meet regulatory expectations.',
             detail_cta_description: 'Contact our team for coordinated yearly tax assistance.',
@@ -128,7 +147,7 @@ export const SERVICES_CATEGORY = {
         ],
       },
       {
-        title: 'Building Permit',
+        title: 'Legal Due Diligence',
         slug: 'building-permit',
         icon: 'IconBuildingPermit',
         description: 'PKKPR, UKL-UPL, PBG, and SLF permitting to ensure full regulatory compliance.',
@@ -161,11 +180,46 @@ export const SERVICES_CATEGORY = {
           },
         ],
       },
+      // {
+      //   title: 'Building Permit',
+      //   slug: 'building-permit',
+      //   icon: 'IconBuildingPermit',
+      //   description: 'PKKPR, UKL-UPL, PBG, and SLF permitting to ensure full regulatory compliance.',
+      //   cta: '/services/legal/building-permit',
+      //   cta_description: 'Read Detail',
+      //   services_detail: [
+      //     {
+      //       detail_title: 'PKKPR',
+      //       detail_description:
+      //         'We assist in obtaining PKKPR, ensuring your land-use plan aligns with spatial regulations. Our guidance helps you meet zoning requirements before proceeding with development or licensing.',
+      //       detail_cta_description: 'Check PKKPR requirements',
+      //     },
+      //     {
+      //       detail_title: 'UKL-UPL',
+      //       detail_description:
+      //         'We help prepare and submit UKL-UPL documents to ensure your business activities comply with environmental standards. Our team coordinates requirements so your operations remain legally compliant.',
+      //       detail_cta_description: 'Prepare UKL-UPL documents',
+      //     },
+      //     {
+      //       detail_title: 'PBG',
+      //       detail_description:
+      //         'We support the application process for PBG by ensuring your building design and documentation meet technical, architectural, and safety regulations. This approval is required before construction can begin.',
+      //       detail_cta_description: 'Review PBG requirements',
+      //     },
+      //     {
+      //       detail_title: 'SLF',
+      //       detail_description:
+      //         'We guide you through obtaining the SLF, confirming that your completed building meets all functional, safety, and regulatory standards. This certificate is necessary before the property can be used or operated.',
+      //       detail_cta_description: 'Process SLF approval',
+      //     },
+      //   ],
+      // },
     ],
   },
   visa: {
     hero: {
-      heading: 'Visa',
+      heading: 'VISA',
+      type: 'primary',
       short_description: 'End-to-end support for visas, stay permits (KITAS/KITAP), work permits, and other immigration matters for expatriates living, working, or investing in Bali.',
       description:
         'Our immigration specialists provide clear guidance and hands-on assistance throughout every stage of the visa and stay permit process. We help individuals, professionals, and investors navigate Indonesian immigration regulations with confidence and compliance.',
@@ -173,8 +227,8 @@ export const SERVICES_CATEGORY = {
     },
     services: [
       {
-        title: 'Visa',
-        slug: 'visa',
+        title: 'VISA',
+        slug: 'VISA',
         icon: 'IconBuildingPermit',
         description: 'Visa application assistance for tourism, business, investment, social visits, and remote work purposes in Indonesia.',
         cta: '/services/visa/visa',
@@ -284,6 +338,7 @@ export const SERVICES_CATEGORY = {
   'real-estate': {
     hero: {
       heading: 'Real Estate',
+      type: 'primary',
       short_description: 'Legal assistance for property transactions in Bali—from land and building due diligence and document verification to guiding you through purchase or lease agreements.',
       description:
         'We provide legal support for property transactions to help clients minimize risks and ensure regulatory compliance. Our team assists with document verification, transaction procedures, and coordination with relevant authorities to support secure and transparent property dealings.',
@@ -300,7 +355,7 @@ export const SERVICES_CATEGORY = {
         services_detail: [],
       },
       {
-        title: 'Sale and Purchase Assistance',
+        title: 'Transaction & Agreement Assistance',
         slug: 'sale-and-purchase-assistance',
         icon: 'IconBuildingPermit',
         description: 'Legal guidance throughout property sale or purchase transactions to ensure clarity, safety, and proper documentation.',
@@ -308,17 +363,17 @@ export const SERVICES_CATEGORY = {
         cta_description: 'Contact Us',
         services_detail: [],
       },
+      // {
+      //   title: 'Lease Agreement Preparation',
+      //   slug: 'lease-agreement-preparation',
+      //   icon: 'IconBuildingPermit',
+      //   description: 'Drafting and reviewing lease agreements to protect your rights and ensure compliance with local regulations.',
+      //   cta: '/contact',
+      //   cta_description: 'Contact Us',
+      //   services_detail: [],
+      // },
       {
-        title: 'Lease Agreement Preparation',
-        slug: 'lease-agreement-preparation',
-        icon: 'IconBuildingPermit',
-        description: 'Drafting and reviewing lease agreements to protect your rights and ensure compliance with local regulations.',
-        cta: '/contact',
-        cta_description: 'Contact Us',
-        services_detail: [],
-      },
-      {
-        title: 'Land Title Verification',
+        title: 'Building Permit',
         slug: 'land-title-verification',
         icon: 'IconBuildingPermit',
         description: 'Verification of land certificates and ownership records to ensure the property is legally valid and dispute-free.',
@@ -326,38 +381,39 @@ export const SERVICES_CATEGORY = {
         cta_description: 'Contact Us',
         services_detail: [],
       },
-      {
-        title: 'Notary and Land Office Coordination',
-        slug: 'notary-and-land-office-coordination',
-        icon: 'IconBuildingPermit',
-        description: 'Assistance with notarial processes and land office submissions to ensure smooth documentation and legal compliance.',
-        cta: '/contact',
-        cta_description: 'Contact Us',
-        services_detail: [],
-      },
-      {
-        title: 'Property Transaction Advisory',
-        slug: 'property-transaction-advisory',
-        icon: 'IconBuildingPermit',
-        description: 'Professional advice on property transactions, risks, and legal obligations for secure and informed decision-making.',
-        cta: '/contact',
-        cta_description: 'Contact Us',
-        services_detail: [],
-      },
-      {
-        title: 'Power of Attorney Handling',
-        slug: 'power-of-attorney-handling',
-        icon: 'IconBuildingPermit',
-        description: 'Preparation and management of Power of Attorney documents for property-related matters, ensuring accuracy and legal validity.',
-        cta: '/contact',
-        cta_description: 'Contact Us',
-        services_detail: [],
-      },
+      // {
+      //   title: 'Notary and Land Office Coordination',
+      //   slug: 'notary-and-land-office-coordination',
+      //   icon: 'IconBuildingPermit',
+      //   description: 'Assistance with notarial processes and land office submissions to ensure smooth documentation and legal compliance.',
+      //   cta: '/contact',
+      //   cta_description: 'Contact Us',
+      //   services_detail: [],
+      // },
+      // {
+      //   title: 'Property Transaction Advisory',
+      //   slug: 'property-transaction-advisory',
+      //   icon: 'IconBuildingPermit',
+      //   description: 'Professional advice on property transactions, risks, and legal obligations for secure and informed decision-making.',
+      //   cta: '/contact',
+      //   cta_description: 'Contact Us',
+      //   services_detail: [],
+      // },
+      // {
+      //   title: 'Power of Attorney Handling',
+      //   slug: 'power-of-attorney-handling',
+      //   icon: 'IconBuildingPermit',
+      //   description: 'Preparation and management of Power of Attorney documents for property-related matters, ensuring accuracy and legal validity.',
+      //   cta: '/contact',
+      //   cta_description: 'Contact Us',
+      //   services_detail: [],
+      // },
     ],
   },
   insurance: {
     hero: {
       heading: 'Insurance (ALLIANZ)	',
+      type: 'secondary',
       short_description: 'Insurance solutions for property, assets, and health protection tailored for companies, PT PMA, and individuals in Indonesia.',
       description:
         'We provide insurance solutions in partnership with ALLIANZ to help individuals and companies protect their assets, health, and business continuity. Our team assists clients in selecting suitable coverage for property, health, and operational risks with clear guidance and professional support.',
@@ -423,6 +479,7 @@ export const SERVICES_CATEGORY = {
   'intellectual-property-and-trademark-registration-services': {
     hero: {
       heading: 'Intellectual Property & Trademark Registration ',
+      type: 'secondary',
       short_description: 'Protect your brand and creative assets through professional IP and trademark registration services in Indonesia.',
       description:
         'We assist individuals and businesses in protecting their brands and creative assets through intellectual property and trademark registration services in Indonesia. Our team provides guidance on registration, protection strategies, and administrative processes to help minimize legal risks and safeguard long-term business value.',
@@ -485,4 +542,14 @@ export const SERVICES_CATEGORY = {
       },
     ],
   },
+  // '': {
+  //   hero: {
+  //     heading: 'Intellectual Property & Trademark Registration ',
+  //     short_description: 'Protect your brand and creative assets through professional IP and trademark registration services in Indonesia.',
+  //     description:
+  //       'We assist individuals and businesses in protecting their brands and creative assets through intellectual property and trademark registration services in Indonesia. Our team provides guidance on registration, protection strategies, and administrative processes to help minimize legal risks and safeguard long-term business value.',
+  //     image: '/image/realestate.webp',
+  //   },
+  //   services: [],
+  // },
 };

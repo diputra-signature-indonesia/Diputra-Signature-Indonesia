@@ -85,7 +85,7 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-      <div className="border-brand-gray brand-p mt-20 border-t pt-2.5">
+      <div className="border-brand-gray brand-p mt-7 border-t pt-2.5">
         <p>© {new Date().getFullYear()} Diputra Signature Indonesia. All rights reserved.</p>
       </div>
     </footer>
