@@ -1,6 +1,7 @@
 'use client';
 
 import Script from 'next/script';
+import { NAV_ITEMS, CONTACT_LINK } from '@/data/navigation';
 import { SiteNavbar } from '@/components/layout/site-navbar';
 import { SiteFooter } from '@/components/layout/site-footer';
 import RootClient from '@/components/root-client';
@@ -45,9 +46,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           __html: JSON.stringify(dsiLocalBusinessJsonLd),
         }}
       />
-      <SiteNavbar isHeroInView={isHeroInView} />
+      <SiteNavbar navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
       <main>{children}</main>
-      <SiteFooter />
+      <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
     </RootClient>
   );
 }

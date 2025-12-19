@@ -5,18 +5,10 @@ import IconEmail from '@/icons/BrandIconEmail';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { isDropdown, NavDropdownItem, NavItem, NavLinkItem } from '@/data/navigation';
 
-export function SiteFooter() {
+export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
   const pathname = usePathname();
-  const navItems = [
-    { href: '/', label: 'Home' },
-    { href: '/about', label: 'About' },
-  ];
-  const servicesItems = [
-    { href: '/services/legal', label: 'Legal' },
-    { href: '/services/visa', label: 'Visa' },
-    { href: '/services/real-estate', label: 'Real Estate' },
-  ];
 
   return (
     <footer className="brand-section-px **:font-raleway **:brand-stretch text-brand-black flex w-full flex-col gap-5 bg-white py-20 drop-shadow-lg">
@@ -24,7 +16,7 @@ export function SiteFooter() {
         Diputra
         <span className="brand-h3 text-brand-black font-light"> Signature Indonesia</span>
       </p>
-      <div className="flex flex-col gap-20 lg:flex-row xl:gap-40">
+      <div className="flex flex-col gap-20 lg:flex-row xl:gap-30">
         <div className="flex w-full flex-col gap-5">
           <p className="brand-p">We are a team of legal professionals dedicated to providing reliable business and immigration solutions in Indonesia</p>
           <div className="flex w-full flex-col gap-2.5">
@@ -56,29 +48,34 @@ export function SiteFooter() {
             </div>
           </div>
         </div>
-        <div className="flex w-full flex-row max-md:justify-between md:gap-36">
+        <div className="flex w-full flex-row max-md:justify-between md:gap-20">
           <div className="flex flex-col gap-5 max-md:w-full">
             <p className="brand-h3 text-brand-burgundy">Our Services</p>
             <div className="flex w-full flex-col gap-2.5">
-              {servicesItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-                return (
-                  <Link key={item.href} href={item.href} className={`brand-p ${isActive ? 'font-semibold' : 'font-normal'}`}>
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {navItems
+                .filter((item): item is NavDropdownItem => item.slug === 'services' && isDropdown(item))
+                .flatMap((item) => item.children)
+                .map((child) => {
+                  const isActive = pathname === child.href || pathname.startsWith(child.href + '/');
+                  return (
+                    <Link key={child.slug} href={child.href} className={`brand-p hover:text-brand-burgundy ${isActive ? 'font-semibold' : 'font-normal'}`}>
+                      {child.label}
+                    </Link>
+                  );
+                })}
             </div>
           </div>
           <div className="flex flex-col gap-5 max-md:w-full">
             <p className="brand-h3 text-brand-burgundy">Navigation</p>
             <div className="flex w-full flex-col gap-2.5">
-              {navItems.map((item) => (
-                <Link key={item.href} href={item.href} className={`brand-p ${pathname === item.href ? 'font-semibold' : 'font-normal'}`}>
-                  {item.label}
-                </Link>
-              ))}
-              <Link href="/#contact" className="brand-p">
+              {navItems
+                .filter((item): item is NavLinkItem => item.slug !== 'services')
+                .map((item) => (
+                  <Link key={item.slug} href={item.href} className={`brand-p hover:text-brand-burgundy ${pathname === item.href ? 'text-brand-burgundy font-semibold' : 'font-normal'}`}>
+                    {item.label}
+                  </Link>
+                ))}
+              <Link href={contactLink.href} className={`brand-p hover:text-brand-burgundy ${pathname === contactLink.href && 'font-semibold'}`}>
                 Contact Us
               </Link>
             </div>

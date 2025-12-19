@@ -6,26 +6,10 @@ import Image from 'next/image';
 import IconBurger from '@/icons/BrandIconBurger';
 import { usePathname } from 'next/navigation';
 import IconArrow from '@/icons/BrandIconArrow';
+import type { NavItem, NavLinkItem } from '@/data/navigation';
+import { isDropdown } from '@/data/navigation';
 
-type NavLinkItem = {
-  href: string;
-  label: string;
-  slug: string; // aku bikin wajib biar konsisten
-};
-
-type NavDropdownItem = {
-  label: string;
-  slug: string; // dropdown juga punya slug (mis. 'services')
-  children: NavLinkItem[];
-};
-
-type NavItem = NavLinkItem | NavDropdownItem;
-
-function isDropdown(item: NavItem): item is NavDropdownItem {
-  return 'children' in item;
-}
-
-export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
+export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
   const [open, setOpen] = useState(false);
   const [serviceDropDown, setServiceDropDown] = useState(false);
   const pathname = usePathname();
@@ -45,27 +29,6 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
     document.addEventListener('mousedown', onDocDown);
     return () => document.removeEventListener('mousedown', onDocDown);
   }, []);
-
-  const navItems: NavItem[] = [
-    { href: '/', label: 'Home', slug: 'home' },
-    { href: '/about', label: 'About', slug: 'about' },
-    {
-      label: 'Services',
-      slug: 'services',
-      children: [
-        { href: '/services/legal-and-corporate', label: 'Legal', slug: 'legal-and-corporate' },
-        { href: '/services/visa', label: 'Visa', slug: 'visa' },
-        { href: '/services/real-estate', label: 'Real Estate', slug: 'real-estate' },
-        { href: '/services/insurance', label: 'Insurance', slug: 'insurance' },
-        {
-          href: '/services/intellectual-property-and-trademark-registration-services',
-          label: 'Intellectual Property & Trademark Registration',
-          slug: 'intellectual-property-and-trademark-registration-services',
-        },
-      ],
-    },
-    { href: '/blog', label: 'Blog', slug: 'blog' },
-  ];
 
   // untuk mobile menu (biar tetap sederhana: semua link tampil)
   const mobileNavItems: NavLinkItem[] = navItems.flatMap((item) => (isDropdown(item) ? item.children : [item]));
@@ -146,12 +109,12 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
               </div>
             );
           })}
-          <Link href="/contact" className={`hidden`}>
+          <Link href={contactLink.href} className={`hidden`}>
             Contact Us
           </Link>
         </nav>
 
-        <Link href="/contact" className={`font-raleway group relative pt-6 pb-5 text-base max-lg:hidden sm:pt-7 lg:pt-8`}>
+        <Link href={contactLink.href} className={`font-raleway group relative pt-6 pb-5 text-base max-lg:hidden sm:pt-7 lg:pt-8 ${pathname === contactLink.href && 'font-semibold'}`}>
           {/* */}
           Contact Us
           <span className={`group-hover:bg-brand-yellow absolute bottom-0 left-1/2 h-0.5 w-0 -translate-x-1/2 transition-all duration-300 group-hover:w-full`} />
@@ -162,7 +125,7 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
           aria-label="Toggle navigation"
           aria-expanded={open}
           aria-controls="site-mobile-nav"
-          className={`pt-6 pr-5 pb-5 sm:pt-7 sm:pr-10 lg:hidden lg:pt-8 lg:pr-13`}
+          className={`cursor-pointer pt-6 pr-5 pb-5 sm:pt-7 sm:pr-10 lg:hidden lg:pt-8 lg:pr-13`}
           onClick={() => setOpen((prev) => !prev)}
         >
           <IconBurger className={`text-brand-black size-6`} />
@@ -173,18 +136,18 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
         {/* MOBILE DRAWER */}
         <div
           id="site-mobile-nav"
-          className={`bg-brand-white text-brand-black fixed inset-y-0 right-0 h-screen w-60 sm:w-80 ${
+          className={`bg-brand-burgundy text-brand-white fixed inset-y-0 right-0 flex h-screen w-72 flex-col sm:w-80 ${
             open ? 'translate-x-0' : 'translate-x-full'
           } transform transition-transform duration-300 ease-out`}
         >
-          <div className="flex items-center justify-between pt-6 pr-5 pb-5 pl-7 sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13">
+          <div className="bg-brand-black/50 flex items-center justify-between pt-6 pr-5 pb-5 pl-7 sm:pt-7 sm:pr-10 lg:pt-8 lg:pr-13">
             <span className="font-raleway text-base tracking-wider">Menu</span>
-            <button onClick={() => setOpen(false)} aria-label="Close navigation">
+            <button onClick={() => setOpen(false)} aria-label="Close navigation" className="cursor-pointer">
               <IconBurger className="size-6" />
             </button>
           </div>
 
-          <div className="mt-7 mb-4 flex flex-col">
+          <div className="hide-scrollbar mt-7 mb-4 flex h-full flex-col overflow-y-scroll">
             {mobileNavItems.map((item) => {
               const isChildActive = pathname === item.href || pathname.startsWith(item.href + '/');
               return (
@@ -192,16 +155,17 @@ export function SiteNavbar({ isHeroInView = true }: { isHeroInView: boolean }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`font-raleway px-7 py-5 text-base hover:bg-gray-200 ${isChildActive ? 'font-semibold' : 'font-normal'}`}
+                  className={`font-raleway hover:bg-brand-black/10 hover:text-brand-burgundy relative px-7 py-4 text-base text-balance ${isChildActive ? 'font-semibold' : 'font-normal'}`}
                 >
                   {item.label}
+                  <span className="absolute bottom-0 left-1/2 h-0.5 w-[90%] -translate-x-1/2 bg-red-900" />
                 </Link>
               );
             })}
           </div>
 
-          <div className="mt-7 flex">
-            <Link href="/contact" onClick={() => setOpen(false)} className="font-raleway px-7 py-5 text-base hover:bg-gray-200">
+          <div className="mt-7 flex w-full border-t-2 border-red-900">
+            <Link href={contactLink.href} onClick={() => setOpen(false)} className="font-raleway hover:bg-brand-black/10 w-full px-7 py-4 text-base">
               Contact Us
             </Link>
           </div>
