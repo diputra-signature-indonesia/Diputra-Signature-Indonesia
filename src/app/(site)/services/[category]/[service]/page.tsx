@@ -15,7 +15,7 @@ type PageProps = {
   };
 };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ category: string; service: string }> }): Promise<Metadata> {
   const { category, service } = await params;
 
   if (!(category in SERVICES_CATEGORY)) {
@@ -30,12 +30,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${serviceData.title} | ${categoryData.hero.heading} Services`,
+    title: `${serviceData.title} in Bali | ${categoryData.hero.heading} Services`,
     description: serviceData.description,
+    alternates: {
+      canonical: `/services/${category}/${service}`,
+    },
+    openGraph: {
+      title: `${serviceData.title} in Bali`,
+      description: serviceData.description,
+      type: 'article',
+      url: `/services/${category}/${service}`,
+    },
   };
 }
 
-export default async function ServicesDetailsPage({ params }: { params: { category: string; service: string } }) {
+export default async function ServicesDetailsPage({ params }: { params: Promise<{ category: string; service: string }> }) {
   const { category, service } = await params;
   if (!(category in SERVICES_CATEGORY)) notFound();
   const categoryData = SERVICES_CATEGORY[category as Category];
@@ -48,7 +57,7 @@ export default async function ServicesDetailsPage({ params }: { params: { catego
       <CtaSection heading="Didn’t find what you need?" description="Some legal and corporate matters require personalized guidance." />
       <QnaSection />
       <div className="pb-13">
-        <ServicesSection heading={categoryData.hero.heading} />
+        <ServicesSection excludeSlug={category} />
       </div>
       <div className="w-full bg-white pt-13 drop-shadow-lg">
         <BlogSection />

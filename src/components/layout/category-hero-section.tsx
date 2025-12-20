@@ -1,41 +1,35 @@
 import Image from 'next/image';
 import { BrandButton } from '../ui/button';
 import IconArrow from '@/icons/BrandIconArrow';
+import Link from 'next/link';
 
 interface CategoryHeroSectionProps {
   heading: string;
-  subheading?: string;
   image: string;
   short_description?: string;
   description?: string;
 }
 
-export function CategoryHeroSection({ heading, image, subheading, short_description, description }: CategoryHeroSectionProps) {
+export function CategoryHeroSection({ heading, image, short_description, description }: CategoryHeroSectionProps) {
   return (
-    <section id="hero-section" className="brand-stretch *:font-raleway brand-section-px h-svh max-h-[600px] pb-16 lg:pb-20">
+    <section id={`category-hero`} aria-labelledby="category-hero-title" className="brand-stretch *:font-raleway brand-section-px h-svh max-h-[600px] pb-16 lg:pb-20">
       <div className="relative mx-auto flex h-full max-w-[1440px] flex-col gap-14 md:flex-row md:gap-10 lg:gap-13 xl:gap-25">
         <div className="relative w-full max-md:flex-1 md:w-xs md:shrink-0 xl:basis-lg">
-          <Image
-            src={image}
-            alt="Diputra Signature Indonesia team which handles legal, business and immigration consulting services"
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw"
-            className="object-cover"
-          />
+          <Image src={image} alt={`${heading} services in Bali by Diputra Signature Indonesia`} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
         </div>
         <div className="my-auto flex flex-col max-md:items-center md:flex-1">
-          <h1 className="brand-h1 brand-h1-mb text-brand-burgundy w-full leading-[125%] text-balance max-md:text-center">
+          <h1 id="category-hero-title" className="brand-h1 brand-h1-mb text-brand-burgundy w-full leading-[125%] text-balance max-md:text-center">
             {heading} <span className="brand-h1-semi text-brand-black font-medium">— Overview</span>
+            {/*Overview bisa ganti ke “Services in Bali” atau “Consulting Services in Bali” sangat penting untuk category SEO*/}
           </h1>
-          <p className="brand-p-desc text-brand-black max-md:text-center">{description}</p>
+          <p className="brand-p-desc text-brand-black max-md:text-center">{description ?? short_description}</p>
           <BrandButton asChild variant="yellow" className="mt-auto w-fit bg-transparent">
-            <a href="/contact">
+            <Link href="/contact">
               Contact Us
               <span>
                 <IconArrow className="text-brand-black size-5" />
               </span>
-            </a>
+            </Link>
           </BrandButton>
         </div>
       </div>

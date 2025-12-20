@@ -15,15 +15,24 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   if (!(category in SERVICES_CATEGORY)) {
     return {
       title: 'Services | Diputra Signature Indonesia',
-      description: 'Explore our services in Bali.',
+      description: 'Explore our professional legal, visa, and business services in Bali.',
     };
   }
 
   const data = SERVICES_CATEGORY[category as Category];
 
   return {
-    title: `${data.hero.heading} Services | Diputra Signature Indonesia`,
+    title: `${data.hero.heading} Services in Bali | Diputra Signature Indonesia`,
     description: data.hero.short_description,
+    alternates: {
+      canonical: `/services/${category}`,
+    },
+    openGraph: {
+      title: `${data.hero.heading} Services in Bali`,
+      description: data.hero.short_description,
+      type: 'website',
+      url: `/services/${category}`,
+    },
   };
 }
 
@@ -41,7 +50,7 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
       <CtaSection heading="Request a Consultation" description="Start Your Legal Process Today" />
       <QnaSection />
       <div className="pb-13">
-        <ServicesSection heading={data.hero.heading} />
+        <ServicesSection excludeSlug={category} />
       </div>
       <div className="w-full bg-white pt-13 drop-shadow-lg">
         <BlogSection />
