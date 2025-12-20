@@ -25,7 +25,7 @@ export function DetailServiceSection({ categoryTitle, serviceTitle, serviceDescr
       <div className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
         <div className="flex flex-col items-center gap-5">
           <h2 className="brand-h3">{categoryTitle}</h2>
-          <h1 id="service-detail-title" className="brand-h1 brand-h1-mb text-brand-maroon">
+          <h1 id="service-detail-title" className="brand-h1 brand-h1-mb text-brand-maroon text-center">
             {serviceTitle}{' '}
             {/* <span className="brand-h1-semi text-black">
               <br /> {'in bali'}

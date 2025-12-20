@@ -26,12 +26,12 @@ export function QnaSection() {
             <article key={idx} className={`border-b transition-all duration-300 ${isOpen ? 'bg-brand-burgundy hover:bg-brand-burgundy px-5' : 'px-2.5 hover:bg-gray-200'}`}>
               <button type="button" className="flex w-full cursor-pointer flex-col py-5 text-left" onClick={() => setOpenIndex((prev) => (prev === idx ? null : idx))} aria-expanded={isOpen}>
                 <div className="flex w-full justify-between">
-                  <h3 className={`w-full ${isOpen && 'text-brand-white'}`}>{item.question}</h3>
+                  <h3 className={`brand-p w-full ${isOpen && 'text-brand-white'}`}>{item.question}</h3>
                   <IconAnswer className={`mx-5 size-5 shrink-0 transition-transform duration-300 ${isOpen ? 'text-brand-yellow rotate-360' : ''}`} />
                 </div>
-                <div className={`grid w-1/2 transition-[grid-template-rows] duration-400 ease-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className={`grid w-full transition-[grid-template-rows] duration-400 ease-out lg:w-[640px] ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                   <div className="overflow-hidden">
-                    <p className={`mt-5 ${isOpen && 'text-brand-white border-brand-yellow border-l-4 pl-2.5'}`}>{item.answer}</p>
+                    <p className={`brand-p mt-5 ${isOpen && 'text-brand-white border-brand-yellow border-l-4 pl-2.5'}`}>{item.answer}</p>
                   </div>
                 </div>
               </button>

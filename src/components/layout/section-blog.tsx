@@ -44,8 +44,8 @@ export function BlogSection({ limit = 3 }: BlogSectionProps) {
                 <p className="border-b py-2.5">{m}</p>
                 <p className="pt-2.5">{y}</p>
               </div>
-              <div className="flex w-full lg:flex-col">
-                <Link href={`/blog/${post.slug}`} className="block w-full">
+              <div className="w-full">
+                <Link href={`/blog/${post.slug}`} className="flex w-full lg:flex-col">
                   <Image
                     alt={`${post.title} cover image`}
                     src={coverSrc}

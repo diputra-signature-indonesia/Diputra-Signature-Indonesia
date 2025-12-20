@@ -1,3 +1,9 @@
+import { AdminNav } from '@/components/layout/admin-navigation';
+
 export default function AdminDashboardPage() {
-  return <div>Admin Dashboard (TODO)</div>;
+  return (
+    <div>
+      <AdminNav />
+    </div>
+  );
 }

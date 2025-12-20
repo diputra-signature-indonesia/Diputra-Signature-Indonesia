@@ -30,8 +30,8 @@ export function ServicesSection({ excludeSlug }: category) {
           communication at every stage.
         </p>
       </div>
-      <div className="border-brand-black/10 flex flex-col gap-7 border-b-2 pb-14">
-        <h3 className="brand-h2 text-brand-burgundy text-center font-medium">Main Services</h3>
+      <div className="border-brand-black/10 flex flex-col gap-2.5 border-b-2 pb-14">
+        <h3 className="brand-h3 text-brand-burgundy text-center font-semibold lg:text-left">Main Services</h3>
         <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
           {SERVICES_LIST.filter((item) => item.slug !== excludeSlug && item.type === 'primary').map((item, idx) => {
             const Icon = ICONS[item.iconKey];
@@ -71,8 +71,8 @@ export function ServicesSection({ excludeSlug }: category) {
           })}
         </div>
       </div>
-      <div className="border-brand-black/10 flex flex-col gap-7 border-b-2 pb-14">
-        <h3 className="brand-h2 text-brand-burgundy text-center font-medium">Additional Services</h3>
+      <div className="border-brand-black/10 flex flex-col gap-2.5 border-b-2 pb-14">
+        <h3 className="brand-h3 text-brand-burgundy text-center font-semibold lg:text-left">Additional Services</h3>
         <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
           {SERVICES_LIST.filter((item) => item.slug !== excludeSlug && item.type === 'secondary').map((item, idx) => {
             const Icon = ICONS[item.iconKey];
