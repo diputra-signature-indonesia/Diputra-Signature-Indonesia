@@ -1,5 +1,3 @@
-export type ServiceIconKey = 'law' | 'visa' | 'realestate';
-
 export const SERVICES_LIST = [
   {
     id: 0,

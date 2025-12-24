@@ -1,7 +1,7 @@
-import type { ServiceItem } from '@/types/dsi-services';
+import type { ServiceItem } from '@/lib/supabase/queries';
 import { BrandButton } from '../ui/button';
 import IconArrow from '@/icons/BrandIconArrow';
-import { ServicesIcon } from '@/icons/service-icons';
+import { ServicesIcon } from '@/icons/service-items-icons';
 import Link from 'next/link';
 
 interface CategoryServicesSectionProps {
@@ -28,7 +28,7 @@ export function CategoryServicesSection({ categorySlug, title, short_description
       </div>
       <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-2 md:gap-y-2.5 lg:grid-cols-3 lg:gap-x-2.5 xl:grid-cols-3">
         {services.map((item, idx) => {
-          const href = item.services_detail.length > 0 ? `/services/${categorySlug}/${item.slug}` : item.cta;
+          const href = item.cta_type === 'detail' ? `/services/${categorySlug}/${item.slug}` : '/contact';
           return (
             <article
               key={idx}
@@ -36,14 +36,14 @@ export function CategoryServicesSection({ categorySlug, title, short_description
             >
               <div className="bg-brand-yellow absolute -left-2 size-12 -translate-x-[110%] rotate-45 transition-all duration-500 group-hover:-translate-x-1/2" />
               <div className="*:text-brand-burgundy flex flex-col gap-4">
-                <ServicesIcon name={item.icon} className="group-hover:text-brand-yellow size-12 transition-colors duration-200" />
+                <ServicesIcon name={item.icon_key ?? ''} className="group-hover:text-brand-yellow size-12 transition-colors duration-200" />
                 <h3 className="brand-h3 group-hover:text-brand-white font-semibold transition-colors duration-200">{item.title}</h3>
               </div>
               <p className="brand-p group-hover:text-brand-white font-normal transition-colors duration-200">{item.description}</p>
               <div className="mt-auto flex justify-end">
                 <BrandButton asChild variant="ghost" className="brand-p group-hover:text-brand-white mt-auto w-fit bg-transparent px-5 transition-colors duration-200">
                   <Link href={href}>
-                    {item.cta_description}
+                    {item.cta_label}
                     <span>
                       <IconArrow className="text-brand-black group-hover:text-brand-white size-5 transition-colors duration-200" />
                     </span>

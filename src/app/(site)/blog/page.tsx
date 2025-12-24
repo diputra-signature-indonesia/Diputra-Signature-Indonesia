@@ -1,5 +1,6 @@
-import { BlogSection } from '@/components/layout/section-blog';
 import type { Metadata } from 'next';
+import { getPublishedBlogPosts } from '@/lib/supabase/queries';
+import { BlogSection } from '@/components/layout/section-blog';
 
 export const metadata: Metadata = {
   title: 'Blog & Insights',
@@ -14,11 +15,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogListPage() {
+export default async function BlogListPage() {
+  const blogPosts = await getPublishedBlogPosts(12);
   return (
     <div className="pt-5">
       <h1 className="sr-only">Blog & Insights</h1>
-      <BlogSection />
+      <BlogSection blogPosts={blogPosts} />
     </div>
   );
 }

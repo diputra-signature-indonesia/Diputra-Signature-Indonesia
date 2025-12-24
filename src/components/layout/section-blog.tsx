@@ -1,10 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { BrandButton } from '../ui/button';
-import { DSI_BLOG_POSTS } from '@/data/dsi-blog';
+import type { BlogPost } from '@/lib/supabase/queries';
 
 type BlogSectionProps = {
-  limit?: number; // berapa item yang tampil
+  blogPosts: BlogPost[]; // berapa item yang tampil
 };
 
 function formatDateParts(iso: string) {
@@ -13,8 +13,8 @@ function formatDateParts(iso: string) {
   return { d, m, y };
 }
 
-export function BlogSection({ limit = 3 }: BlogSectionProps) {
-  const posts = [...DSI_BLOG_POSTS].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
+export function BlogSection({ blogPosts }: BlogSectionProps) {
+  // const posts = [...DSI_BLOG_POSTS].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
 
   return (
     <section className="brand-section-px brand-stretch font-raleway mx-auto flex flex-col justify-center gap-7 bg-white xl:h-[700px] xl:max-w-[1440px]">
@@ -34,9 +34,9 @@ export function BlogSection({ limit = 3 }: BlogSectionProps) {
         </div>
       </div>
       <div className="mx-auto grid w-full gap-x-10 lg:grid-cols-2 xl:max-w-7xl xl:grid-cols-3 xl:gap-y-10">
-        {posts.map((post) => {
-          const { d, m, y } = formatDateParts(post.date);
-          const coverSrc = post.cover?.src ?? '/image/news_image.png';
+        {blogPosts.map((post) => {
+          const { d, m, y } = formatDateParts(post.published_at ?? '');
+          const coverSrc = post.featured_image ?? '/image/news_image.png';
           return (
             <article key={post.slug} className="mb-3 flex h-fit w-full gap-2.5 sm:mb-5 lg:mb-10">
               <div className="flex w-fit flex-col text-[14px] max-lg:hidden">
@@ -61,7 +61,7 @@ export function BlogSection({ limit = 3 }: BlogSectionProps) {
                       <h3 className="brand-h3 text-brand-burgundy line-clamp-2 font-semibold sm:text-balance lg:min-h-13">{post.title}</h3>
                     </div>
                     <p className="line-clamp-3 font-light max-sm:hidden sm:text-sm lg:line-clamp-4 lg:min-h-20">{post.excerpt}</p>
-                    <p className="text-[9px] sm:text-[12px] lg:hidden">{post.date}</p>
+                    <p className="text-[9px] sm:text-[12px] lg:hidden">{post.published_at}</p>
                   </div>
                 </Link>
               </div>

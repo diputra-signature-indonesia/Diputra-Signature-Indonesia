@@ -1,6 +1,5 @@
 // src/lib/meta-helpers.ts
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-config';
 
 type BlogMetaInput = {
   slug: string;
@@ -12,12 +11,12 @@ type BlogMetaInput = {
 };
 
 const SITE_NAME = 'Diputra Signature Indonesia';
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og/og-default.jpg`;
+const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_SITE_URL}/og/og-default.jpg`;
 
 export function buildBlogPostMetadata({ slug, title, description, image, date, updatedAt }: BlogMetaInput): Metadata {
   const fullTitle = `${title} | ${SITE_NAME}`;
-  const ogImage = image ? (image.startsWith('http') ? image : `${SITE_URL}${image}`) : DEFAULT_OG_IMAGE;
-  const canonicalUrl = `${SITE_URL}/blog/${slug}`;
+  const ogImage = image ? (image.startsWith('http') ? image : `${process.env.NEXT_PUBLIC_SITE_URL}${image}`) : DEFAULT_OG_IMAGE;
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/blog/${slug}`;
 
   return {
     title: fullTitle,

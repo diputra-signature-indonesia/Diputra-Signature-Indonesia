@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { getPublishedBlogPosts, getServiceCategories, getVisibleStories } from '@/lib/supabase/queries';
+
 import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
 import { ServicesSection } from '@/components/layout/section-services';
@@ -22,14 +24,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [categoryService, blogPosts, review] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories()]);
   return (
     <>
       <div className="relative mx-auto max-w-[1440px]">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-5" />
         <div className="relative z-10">
           <HeroSection />
-          <ServicesSection />
+          <ServicesSection services={categoryService} />
           <div className="relative">
             <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-white/0" />
             <AboutSection />
@@ -40,14 +43,14 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/writing_with_red_pen.webp')] bg-cover bg-position-[50%_70%] bg-no-repeat opacity-10" />
         <div className="relative z-10">
           <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-white/0" />
-          <ReviewSection />
+          <ReviewSection testimonials={review} />
         </div>
         <div className="mt-30">
           <ContactSection />
         </div>
       </div>
       <div className="w-full bg-white pt-13 drop-shadow-lg">
-        <BlogSection />
+        <BlogSection blogPosts={blogPosts} />
       </div>
     </>
   );

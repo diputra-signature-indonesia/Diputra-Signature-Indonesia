@@ -2,7 +2,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Raleway } from 'next/font/google';
 import './globals.css';
-import { SITE_URL } from '@/lib/site-config';
 
 export const raleway = Raleway({
   subsets: ['latin'],
@@ -18,7 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL), // Ini Disesuaikan
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!), // Ini Disesuaikan
   title: {
     default: 'Diputra Signature Indonesia',
     template: '%s | Diputra Signature Indonesia',

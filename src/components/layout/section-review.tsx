@@ -5,30 +5,34 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 import { useState } from 'react';
 import IconQuote from '@/icons/BrandIconQuote';
+import type { StoryExperience } from '@/lib/supabase/queries';
+interface ReviewProps {
+  testimonials: StoryExperience[];
+}
 
-export function ReviewSection() {
+export function ReviewSection({ testimonials }: ReviewProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const testimonials = [
-    {
-      id: 1,
-      name: 'Laksmi Lestari',
-      date: '27-11-2025',
-      message:
-        'DSI guided me through my work permit and KITAS application in Bali. Every step was clearly explained, and I always knew what was happening. I felt safe and well taken care of throughout the process.',
-    },
-    {
-      id: 2,
-      name: 'Michael Anderson',
-      date: '03-02-2026',
-      message: 'Professional, responsive, and very familiar with Bali’s regulations. They handled my company’s legal documents efficiently and kept communication clear from start to finish.',
-    },
-    {
-      id: 3,
-      name: 'Ayumi Tanaka',
-      date: '15-04-2026',
-      message: 'As a foreigner investing in Bali, I needed someone I could trust. DSI helped with both my visa and property due diligence. Their team made a complex process feel straightforward.',
-    },
-  ];
+  // const testimonials = [
+  //   {
+  //     id: 1,
+  //     name: 'Laksmi Lestari',
+  //     date: '27-11-2025',
+  //     message:
+  //       'DSI guided me through my work permit and KITAS application in Bali. Every step was clearly explained, and I always knew what was happening. I felt safe and well taken care of throughout the process.',
+  //   },
+  //   {
+  //     id: 2,
+  //     name: 'Michael Anderson',
+  //     date: '03-02-2026',
+  //     message: 'Professional, responsive, and very familiar with Bali’s regulations. They handled my company’s legal documents efficiently and kept communication clear from start to finish.',
+  //   },
+  //   {
+  //     id: 3,
+  //     name: 'Ayumi Tanaka',
+  //     date: '15-04-2026',
+  //     message: 'As a foreigner investing in Bali, I needed someone I could trust. DSI helped with both my visa and property due diligence. Their team made a complex process feel straightforward.',
+  //   },
+  // ];
 
   return (
     <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
@@ -60,8 +64,8 @@ export function ReviewSection() {
                 <blockquote className="brand-p">“{item.message}”</blockquote>
                 <figcaption className="flex flex-col py-5">
                   <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
-                  <time dateTime={item.date} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
-                    {item.date}
+                  <time dateTime={item.experience_date ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
+                    {item.experience_date}
                   </time>
                 </figcaption>
               </figure>

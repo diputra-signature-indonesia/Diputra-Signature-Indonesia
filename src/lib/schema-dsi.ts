@@ -1,7 +1,5 @@
-import { SITE_URL } from './site-config';
-
 // src/lib/schema-dsi.ts
-const baseUrl = SITE_URL; // ganti ke domain final
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL; // ganti ke domain final
 const ORG_NAME = 'Diputra Signature Indonesia';
 type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
@@ -136,7 +134,7 @@ export interface DsiBlogPostSchemaInput {
   title: string;
   excerpt?: string | null;
   description?: string | null;
-  date: string; // ISO string
+  date?: string | null; // ISO string
   updatedAt?: string | null;
   coverImageUrl?: string | null;
   authorName?: string | null;
