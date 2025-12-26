@@ -1,10 +1,18 @@
 'use client';
 import type { AdminNavLink } from '@/data/admin-navigation';
 import { useAdminLayout } from './admin-layout-provider';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export function AdminNav({ AdminNavItem }: { AdminNavItem: AdminNavLink[] }) {
   const { isNavOpen } = useAdminLayout();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch('/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh(); // optional tapi bagus untuk reset state
+  };
   return (
     <nav className={`font-raleway bg-brand-white flex ${isNavOpen ? 'w-64' : 'w-0'} flex-col overflow-hidden border-r-2 border-gray-200 pt-5 transition-[width]`}>
       {AdminNavItem.map((item) => (
@@ -23,9 +31,9 @@ export function AdminNav({ AdminNavItem }: { AdminNavItem: AdminNavLink[] }) {
           ))}
         </div>
       ))}
-      <Link href={'/logout'} className={`brand-p hover:bg-brand-burgundy mt-auto w-full px-7 py-4 transition-colors hover:text-white`}>
+      <button onClick={handleLogout} className={`brand-p hover:bg-brand-burgundy mt-auto w-full px-7 py-4 transition-colors hover:text-white`}>
         Logout
-      </Link>
+      </button>
     </nav>
   );
 }

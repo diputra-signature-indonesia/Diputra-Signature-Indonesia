@@ -23,9 +23,12 @@ export function AboutSection() {
           Diputra <br className="sm:hidden" />
           <span className="brand-h1-semi text-brand-black"> Signature Indonesia</span>
         </h3>
-        <p className="brand-p-desc text-black max-sm:text-pretty">
+        <p className="brand-p-desc text-black max-sm:hidden max-sm:text-pretty">
           We are a team of legal, business, and immigration professionals committed to providing accurate, reliable, and efficient solutions for clients in Indonesia. With years of experience, we help
           individuals and companies navigate various regulations and administrative processes safely, clearly, and without hassle.
+        </p>
+        <p className="brand-p-desc text-black max-sm:text-pretty sm:hidden">
+          We are a team of legal, business, and immigration professionals providing accurate, reliable, and efficient solutions for clients in Indonesia.
         </p>
         <div className="flex w-full max-md:justify-end">
           <BrandButton asChild variant="red" className="mt-auto w-fit">

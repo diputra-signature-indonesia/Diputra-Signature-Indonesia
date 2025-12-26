@@ -13,9 +13,12 @@ export function QnaSection() {
             Frequently <span className="brand-h1-semi text-black">Ask</span>
           </h2>
         </div>
-        <p className="brand-p text-center">
+        <p className="brand-p text-center max-sm:hidden">
           We are committed to delivering trustworthy legal, visa, and real estate services through experienced professionals, transparent processes, and solutions tailored to each client in Bali,
           Indonesia.
+        </p>
+        <p className="brand-p text-center sm:hidden">
+          We deliver trustworthy legal, visa, and real estate services in Bali through experienced professionals and transparent, client-focused solutions.
         </p>
       </div>
       <div className="h-[450px] w-full overflow-y-scroll">

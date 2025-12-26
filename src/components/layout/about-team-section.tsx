@@ -1,7 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { TeamButton } from '../ui/team-button';
-export function TeamSection() {
+import type { TeamMember } from '@/lib/supabase/queries';
+
+interface Team {
+  team: TeamMember[];
+}
+
+export function TeamSection({ team }: Team) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const teamList = [
@@ -28,16 +34,16 @@ export function TeamSection() {
 
       <div className="flex flex-row gap-5 lg:gap-10 xl:gap-25">
         <div className="w-full">
-          {teamList.map((member, i) => (
+          {team.map((member, i) => (
             <TeamButton
               key={i}
-              position={member.position}
-              photoSrc={member.img}
-              photoAlt={member.name}
+              position={member.job_title ?? ''}
+              photoSrc={member.avatar_url ?? ''}
+              photoAlt={member.full_name ?? ''}
               isOpen={openIndex === i}
               onToggle={() => setOpenIndex(openIndex === i ? null : i)} // ⬅ only 1 open
             >
-              {member.name}
+              {member.full_name}
             </TeamButton>
           ))}
         </div>

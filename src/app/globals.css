@@ -59,7 +59,7 @@
 
   /* Every paragraf or text in this project */
   .brand-p-desc {
-    @apply mb-10 font-medium max-sm:text-xs sm:mb-12 sm:text-sm lg:mb-14 lg:text-base;
+    @apply mb-10 max-sm:text-xs sm:mb-12 sm:text-sm lg:mb-14 lg:text-base;
   }
 
   .brand-p {

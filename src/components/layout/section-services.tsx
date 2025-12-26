@@ -17,9 +17,12 @@ export function ServicesSection({ services, excludeSlug }: category) {
         <h2 className="brand-h1 text-brand-maroon border-brand-yellow brand-h1-mb border-l-4 pl-7">
           DIPUTRA <span className="brand-h1-semi text-black">Services</span>
         </h2>
-        <p className="brand-p text-left text-balance lg:text-wrap">
+        <p className="brand-p text-left text-balance max-md:hidden lg:text-wrap">
           We provide legal, visa, and real estate services for individuals and businesses in Bali, Indonesia. Our services are delivered professionally with transparent procedures and clear
           communication at every stage.
+        </p>
+        <p className="brand-p text-left text-balance md:hidden lg:text-wrap">
+          We provide legal, visa, and real estate services in Bali, Indonesia, delivered with professionalism, transparency, and clear communication.
         </p>
       </div>
       <div className="border-brand-black/10 flex flex-col gap-2.5 border-b-2 pb-14">

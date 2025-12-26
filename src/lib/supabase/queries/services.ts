@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+
 import { ServiceIconKey } from '@/types/dsi-services';
 
 export type ServiceCategory = {
@@ -47,6 +48,7 @@ export type ServiceItemDetail = {
 
 /** LIST categories (untuk section Services / services page) */
 export async function getServiceCategories(): Promise<ServiceCategory[]> {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from('services_categories').select('*').eq('is_published', true).order('sort_order', { ascending: true });
 
   if (error) throw error;
@@ -55,6 +57,7 @@ export async function getServiceCategories(): Promise<ServiceCategory[]> {
 
 /** SINGLE category by slug */
 export async function getServiceCategoryBySlug(slug: string): Promise<ServiceCategory> {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from('services_categories').select('*').eq('slug', slug).eq('is_published', true).single();
 
   if (error) throw error;
@@ -63,6 +66,7 @@ export async function getServiceCategoryBySlug(slug: string): Promise<ServiceCat
 
 /** LIST items by category slug (join) */
 export async function getServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
+  const supabase = await createSupabaseServerClient();
   // 2-step: ambil category id dulu, lalu items
   const category = await getServiceCategoryBySlug(categorySlug);
 
@@ -74,6 +78,7 @@ export async function getServiceItemsByCategorySlug(categorySlug: string): Promi
 
 /** SINGLE item by (category slug + item slug) */
 export async function getServiceItemByCategoryAndSlug(categorySlug: string, itemSlug: string): Promise<ServiceItem> {
+  const supabase = await createSupabaseServerClient();
   // join supaya validasi item benar-benar milik category itu
   const { data, error } = await supabase
     .from('services_items')
@@ -94,6 +99,7 @@ export async function getServiceItemByCategoryAndSlug(categorySlug: string, item
 
 /** LIST details by item id */
 export async function getServiceItemDetailsByItemId(itemId: string): Promise<ServiceItemDetail[]> {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from('services_item_details').select('*').eq('service_item_id', itemId).eq('is_published', true).order('sort_order', { ascending: true });
 
   if (error) throw error;

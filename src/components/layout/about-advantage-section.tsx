@@ -53,9 +53,12 @@ export function AdvantageSection() {
           </h2>
           <p className="brand-p text-brand-black mb-5">Why Choose Us?</p>
         </div>
-        <p className="brand-p text-center">
+        <p className="brand-p text-center max-sm:hidden">
           We are committed to delivering trustworthy legal, visa, and real estate services through experienced professionals, transparent processes, and solutions tailored to each client in Bali,
           Indonesia.
+        </p>
+        <p className="brand-p text-center sm:hidden">
+          We deliver trustworthy legal, visa, and real estate services in Bali through experienced professionals and transparent, client-focused solutions.
         </p>
       </div>
       <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-3 md:gap-y-2.5 lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">

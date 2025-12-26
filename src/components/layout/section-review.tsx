@@ -12,27 +12,6 @@ interface ReviewProps {
 
 export function ReviewSection({ testimonials }: ReviewProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  // const testimonials = [
-  //   {
-  //     id: 1,
-  //     name: 'Laksmi Lestari',
-  //     date: '27-11-2025',
-  //     message:
-  //       'DSI guided me through my work permit and KITAS application in Bali. Every step was clearly explained, and I always knew what was happening. I felt safe and well taken care of throughout the process.',
-  //   },
-  //   {
-  //     id: 2,
-  //     name: 'Michael Anderson',
-  //     date: '03-02-2026',
-  //     message: 'Professional, responsive, and very familiar with Bali’s regulations. They handled my company’s legal documents efficiently and kept communication clear from start to finish.',
-  //   },
-  //   {
-  //     id: 3,
-  //     name: 'Ayumi Tanaka',
-  //     date: '15-04-2026',
-  //     message: 'As a foreigner investing in Bali, I needed someone I could trust. DSI helped with both my visa and property due diligence. Their team made a complex process feel straightforward.',
-  //   },
-  // ];
 
   return (
     <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
@@ -40,9 +19,10 @@ export function ReviewSection({ testimonials }: ReviewProps) {
         <h2 id="reviews-heading" className="brand-h1 brand-h1-mb text-brand-maroon text-center">
           Client <span className="brand-h1-semi text-black">Stories & Experience</span>
         </h2>
-        <p className="brand-p-desc text-center text-balance">
+        <p className="brand-p-desc text-center text-balance max-sm:hidden">
           We are committed to delivering trusted legal, business, and immigration services through experienced professionals, transparent processes, and solutions tailored to each client’s needs.
         </p>
+        <p className="brand-p-desc text-center text-balance sm:hidden">We provide trusted legal, business, and immigration services with transparent processes and tailored solutions.</p>
       </div>
 
       <Swiper

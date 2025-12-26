@@ -1,0 +1,23 @@
+/public/og
+├─ og-default.jpg
+├─ og-legal.jpg
+├─ og-visa.jpg
+├─ og-real-estate.jpg
+├─ og-blog.jpg
+└─ og-blog-template.jpg (opsional)
+
+Ukuran WAJIB:
+
+1200 × 630 px
+JPG (lebih aman) atau PNG
+File size ideal < 300 KB
+
+Isi visual:
+-Paling aman & profesional
+Background:
+- Maroon / burgundy gradient (brand color)
+Elemen:
+- Logo Diputra Signature Indonesia
+- Garis tipis emas / aksen kuning
+Text (opsional, jangan kepenuhan):
+"Legal • Visa • Real Estate Consulting"

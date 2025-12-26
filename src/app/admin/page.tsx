@@ -27,7 +27,7 @@ const columns = [
   { header: 'Published At', width: '140px', align: 'center', cell: (row) => formatDate(row.publishedAt) },
 ] satisfies Column<ContentItem>[];
 
-export default function Page() {
+export default async function Page() {
   return (
     <div className="h-full px-4 py-6">
       <div className="brand-h1-mb flex items-center justify-between">

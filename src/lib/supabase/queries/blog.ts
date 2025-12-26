@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export type BlogPost = {
   id?: string; // kalau tabelmu pakai uuid id
@@ -18,6 +18,7 @@ export type BlogPost = {
 
 /** BLOG list (untuk /blog) */
 export async function getPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
     .select('slug,title,excerpt,author_name,reading_time_min,featured_image,cover_alt,published_at,is_published')
@@ -31,6 +32,7 @@ export async function getPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
 
 /** BLOG detail (untuk /blog/[slug]) */
 export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('is_published', true).single();
 
   if (error) throw error;
