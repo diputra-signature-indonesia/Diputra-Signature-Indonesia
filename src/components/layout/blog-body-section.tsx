@@ -2,6 +2,8 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface BlogBodySectionProps {
   content_md: string;
@@ -14,6 +16,7 @@ export function BlogBodySection({ content_md }: BlogBodySectionProps) {
         <div className="font-raleway">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, rehypeSanitize]}
             components={{
               h1: ({ children }) => <h2 className="brand-h1-semi mb-5 font-semibold">{children}</h2>,
               h2: ({ children }) => <h3 className="brand-h2 mt-10 mb-4 font-semibold">{children}</h3>,

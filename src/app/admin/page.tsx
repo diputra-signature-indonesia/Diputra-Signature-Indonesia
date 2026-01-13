@@ -1,44 +1,37 @@
-import { DataTable, type Column } from '@/components/ui/admin-table';
-import type { ContentItem } from '@/types/dummy-table-type';
-import { CONTENT_ITEMS } from '@/data/dummy-table-data';
-import { BrandButton } from '@/components/ui/button';
 import Link from 'next/link';
-
-export function formatDate(date: string | null) {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-const columns = [
-  { header: 'ID', width: '100px', cell: (row) => row.id },
-  { header: 'Title', width: 'auto', cell: (row) => row.title },
-  { header: 'Category', width: '140px', align: 'center', cell: (row) => row.category },
-  {
-    header: 'Status',
-    width: '120px',
-    align: 'center',
-    cell: (row) => <span className="rounded-full bg-gray-200 px-3 py-1 text-xs">{row.status}</span>,
-  },
-  { header: 'Created At', width: '140px', align: 'center', cell: (row) => formatDate(row.createdAt) },
-  { header: 'Published At', width: '140px', align: 'center', cell: (row) => formatDate(row.publishedAt) },
-] satisfies Column<ContentItem>[];
+import { BrandButton } from '@/components/ui/button';
+import { getAdminBlogPosts } from '@/lib/supabase/queries';
+import { AdminBlogTableClient } from '@/components/ui/AdminBlogTableClient';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function Page() {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/admin/login'); // atau '/login'
+  }
+
+  const { data: profile, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+
+  const role = (profile?.role as 'super_admin' | 'admin' | 'editor' | 'contributor') ?? null;
+
+  const blogPostsData = await getAdminBlogPosts();
+
   return (
     <div className="h-full px-4 py-6">
       <div className="brand-h1-mb flex items-center justify-between">
-        <h1 className="brand-h1 font-bold">Blog List</h1>
-        <div>
-          <BrandButton asChild variant="red" className="w-full justify-center max-sm:px-0 sm:w-fit">
-            <Link href="/blog/create">New Post</Link>
-          </BrandButton>
-        </div>
+        <h1 className="brand-h2 font-bold">Blog List</h1>
+
+        <BrandButton asChild variant="red" className="w-full justify-center max-sm:px-0 sm:w-fit">
+          <Link href="/admin/blog/create">New Post</Link>
+        </BrandButton>
       </div>
-      <DataTable data={CONTENT_ITEMS} columns={columns} getRowKey={(row) => row.id} />
+
+      <AdminBlogTableClient data={blogPostsData} role={role} />
     </div>
   );
 }

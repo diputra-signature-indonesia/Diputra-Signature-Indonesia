@@ -1,17 +1,17 @@
 'use client';
-import 'swiper/css';
-import 'swiper/css/pagination';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination } from 'swiper/modules';
-import { useState } from 'react';
 import IconQuote from '@/icons/BrandIconQuote';
 import type { StoryExperience } from '@/lib/supabase/queries';
+import { useState } from 'react';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import { Mousewheel } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
 interface ReviewProps {
   testimonials: StoryExperience[];
 }
 
 export function ReviewSection({ testimonials }: ReviewProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(1);
 
   return (
     <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
@@ -26,12 +26,15 @@ export function ReviewSection({ testimonials }: ReviewProps) {
       </div>
 
       <Swiper
-        modules={[Pagination]}
-        pagination={{ clickable: true }}
+        modules={[Mousewheel]}
         centeredSlides
+        initialSlide={1}
+        grabCursor
+        touchStartPreventDefault={false}
+        mousewheel={{ forceToAxis: true, releaseOnEdges: true }}
         slidesPerView={'auto'}
         onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
-        className="flex! h-64! w-full! flex-row! pb-7! sm:h-72! lg:h-80!"
+        className="h-64! w-full! pb-7! sm:h-72! lg:h-80!"
       >
         {testimonials.map((item, index) => {
           const isActive = index === activeIndex;
@@ -40,7 +43,7 @@ export function ReviewSection({ testimonials }: ReviewProps) {
           return (
             <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto p-5`}>
               <IconQuote className="text-brand-yellow size-6" />
-              <figure className="hide-scrollbar h-full overflow-y-scroll">
+              <figure className="h-full overflow-hidden">
                 <blockquote className="brand-p">“{item.message}”</blockquote>
                 <figcaption className="flex flex-col py-5">
                   <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
