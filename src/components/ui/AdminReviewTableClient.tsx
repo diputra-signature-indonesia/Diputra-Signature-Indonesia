@@ -14,15 +14,13 @@ function formatDate(date: string | null | undefined) {
 }
 
 const statusClassMap: Record<string, string> = {
-  published: 'bg-green-100 text-green-700',
-  draft: 'bg-gray-200 text-gray-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  reject: 'bg-red-100 text-red-700',
+  Shown: 'bg-green-100 text-green-700',
+  Hidden: 'bg-red-100 text-red-700',
 };
 
 const columns = [
-  { header: 'Title', width: '400px', align: 'center', cell: (row) => row.title },
-  { header: 'Excerpt / Short Description', width: 'auto', align: 'left', cell: (row) => row.excerpt },
+  { header: 'Name', width: '400px', align: 'center', cell: (row) => row.title },
+  { header: 'Message', width: 'auto', align: 'left', cell: (row) => row.excerpt },
   {
     header: 'Status',
     width: '140px',
@@ -30,7 +28,6 @@ const columns = [
     cell: (row) => <span className={`rounded-full px-3 py-1 text-xs ${statusClassMap[row.status || ''] ?? 'bg-gray-100 text-gray-600'}`}>{row.status}</span>,
   },
   { header: 'Created', width: '140px', align: 'center', cell: (row) => formatDate(row.created_at) },
-  { header: 'Updated', width: '140px', align: 'center', cell: (row) => formatDate(row.updated_at) },
 ] satisfies Column<BlogPost>[];
 
 export function AdminBlogTableClient({ data, role }: { data: BlogPost[]; role: UserRole | null }) {
