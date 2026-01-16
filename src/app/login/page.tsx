@@ -9,8 +9,9 @@ const ERROR_TEXT: Record<string, string> = {
   oauth_callback_failed: 'Login gagal. Silakan coba lagi.',
 };
 
-export default function LoginPage({ searchParams }: { searchParams?: { error?: string } }) {
-  const errorKey = searchParams?.error ?? '';
+export default async function LoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> | { error?: string } }) {
+  const sp = searchParams ? await searchParams : undefined;
+  const errorKey = sp?.error ?? '';
   const errorMsg = ERROR_TEXT[errorKey];
   return (
     <main className="flex min-h-dvh items-center justify-center px-6">

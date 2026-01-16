@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react';
 
-type FeaturedImage = { publicUrl: string; path: string } | null;
+// path === null → initial cover from DB (delete on Update only)
+// path !== null → draft uploaded image (can be deleted immediately)
+type FeaturedImage = { publicUrl: string; path: string | null } | null;
 
 export type BlogDraft = {
   title: string;
@@ -30,11 +32,20 @@ export function loadBlogDraft(storageKey: string): BlogDraft {
     if (!raw) return DEFAULT_DRAFT;
 
     const parsed = JSON.parse(raw) as Partial<BlogDraft>;
+
+    const featured =
+      parsed.featuredImage && typeof parsed.featuredImage === 'object'
+        ? {
+            publicUrl: typeof parsed.featuredImage.publicUrl === 'string' ? parsed.featuredImage.publicUrl : '',
+            path: typeof parsed.featuredImage.path === 'string' ? parsed.featuredImage.path : null,
+          }
+        : null;
+
     return {
       ...DEFAULT_DRAFT,
       ...parsed,
       uploadedPaths: Array.isArray(parsed.uploadedPaths) ? parsed.uploadedPaths : [],
-      featuredImage: parsed.featuredImage ?? null,
+      featuredImage: featured?.publicUrl ? featured : null,
     };
   } catch {
     return DEFAULT_DRAFT;

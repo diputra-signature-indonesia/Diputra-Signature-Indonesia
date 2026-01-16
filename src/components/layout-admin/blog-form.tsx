@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { saveDraftBlogAction, updateBlogPostAction } from '@/app/admin/blog/actions';
 import ImageInputWithPreview from '@/components/layout-admin/image-input';
 import TiptapEditor from '@/components/layout-admin/tiptap-editor';
-import { cleanupUnusedImages, deleteImage, publicUrlToPath } from '@/lib/uploadImage';
 import { slugify } from '@/lib/slugify';
-import { clearBlogDraft, loadBlogDraft, useAutosaveBlogDraft } from '@/lib/useBlogDraft';
-import { saveDraftBlogAction, updateBlogPostAction } from '@/app/admin/blog/actions';
-import { useRouter } from 'next/navigation';
 import { EditableBlogPost } from '@/lib/supabase/queries';
+import { cleanupUnusedImages, deleteImage, extractImageSrcs, publicUrlToPath } from '@/lib/uploadImage';
+import { clearBlogDraft, loadBlogDraft, useAutosaveBlogDraft } from '@/lib/useBlogDraft';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 type CreateBlogFormProps = { mode: 'create'; authorName: string } | { mode: 'edit'; initialValues: EditableBlogPost };
+type Uploaded = { publicUrl: string; path: string | null };
 
 function estimateReadingTimeFromHtml(html: string) {
   const text = html
@@ -28,9 +29,10 @@ const DRAFT_KEY = 'blog-create-draft';
 export default function CreateBlogForm(props: CreateBlogFormProps) {
   const [contentHtml, setContentHtml] = useState('');
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
-  const [featuredImage, setFeaturedImage] = useState<{ publicUrl: string; path: string } | null>(null);
-  const [coverUploadedPath, setCoverUploadedPath] = useState<string | null>(null);
-  const [initialCoverPath, setInitialCoverPath] = useState<string | null>(null);
+  const [featuredImage, setFeaturedImage] = useState<Uploaded | null>(null);
+  const [initialCoverPath, setInitialCoverPath] = useState<Uploaded | null>(null);
+
+  const isUsingInitial = !!featuredImage?.publicUrl && !!initialCoverPath?.publicUrl && featuredImage.publicUrl === initialCoverPath.publicUrl;
 
   const [authorName, setAuthorName] = useState('');
   const [title, setTitle] = useState('');
@@ -42,36 +44,37 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
   const STORAGE_KEY = isEdit ? `blog-edit-draft:${props.initialValues.id}` : DRAFT_KEY;
 
   useEffect(() => {
+    setFeaturedImage(null);
+    setUploadedPaths([]);
     // 1) load draft dulu
     const draft = loadBlogDraft(STORAGE_KEY);
 
     if (isEdit) {
       const blog = props.initialValues;
-      const imageData = blog.featured_image ? publicUrlToPath(blog.featured_image, 'images') : null;
+      const imageData = blog.featured_image ? { publicUrl: blog.featured_image, path: publicUrlToPath(blog.featured_image, 'images') ?? null } : null;
       const draftHasData = !!draft.title || !!draft.excerpt || !!draft.contentHtml || !!draft.featuredImage?.publicUrl || (draft.uploadedPaths?.length ?? 0) > 0;
+      const htmlToUse = draftHasData ? draft.contentHtml || blog.content_md : blog.content_md;
 
-      // 2) prefer draft kalau ada (FIX refresh/close tab)
-      if (draftHasData) {
-        setAuthorName(blog.author_name); // tetap dari DB
-        setTitle(draft.title || blog.title);
-        setExcerpt(draft.excerpt || blog.excerpt);
-        setSlug(blog.slug); // slug tetap dari DB (atau draft.slug kalau kamu mau)
-        setContentHtml(draft.contentHtml || blog.content_md);
-        setUploadedPaths(draft.uploadedPaths || []);
-        setFeaturedImage(draft.featuredImage ?? (blog.featured_image ? { publicUrl: blog.featured_image, path: imageData ?? '' } : null));
-      } else {
-        // 3) kalau tidak ada draft, pakai initial DB
-        setAuthorName(blog.author_name);
-        setTitle(blog.title);
-        setExcerpt(blog.excerpt);
-        setSlug(blog.slug);
-        setContentHtml(blog.content_md);
-        setUploadedPaths([]);
-        setFeaturedImage(blog.featured_image ? { publicUrl: blog.featured_image, path: imageData ?? '' } : null);
-      }
+      setAuthorName(blog.author_name);
+      setTitle(draftHasData ? draft.title || blog.title : blog.title);
+      setExcerpt(draftHasData ? draft.excerpt || blog.excerpt : blog.excerpt);
+      setSlug(blog.slug);
+      setContentHtml(htmlToUse);
+      setUploadedPaths(draftHasData ? draft.uploadedPaths || [] : []);
 
+      const initialPathsFromHtml = extractImageSrcs(htmlToUse)
+        .map((src) => publicUrlToPath(src, 'images'))
+        .filter(Boolean) as string[];
+      const merged = new Set([...(draftHasData ? draft.uploadedPaths || [] : []), ...initialPathsFromHtml]);
+
+      setUploadedPaths(Array.from(merged));
+
+      // INI KUNCINYA:
+      // featuredImage hanya draft cover (cover baru) dari localStorage
+      setFeaturedImage(draftHasData ? (draft.featuredImage ?? null) : imageData);
       // initialCoverPath selalu dari DB
       setInitialCoverPath(imageData);
+
       return;
     }
 
@@ -83,7 +86,7 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
     setContentHtml(draft.contentHtml);
     setUploadedPaths(draft.uploadedPaths);
     setFeaturedImage(draft.featuredImage);
-  }, [STORAGE_KEY]);
+  }, [STORAGE_KEY, isEdit, props.mode]);
 
   useAutosaveBlogDraft(STORAGE_KEY, { title, excerpt, slug: isEdit ? props.initialValues.slug : slug, contentHtml, uploadedPaths, featuredImage });
 
@@ -112,7 +115,7 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
 
     if (!title.trim()) return alert('Title is required');
     if (!excerpt.trim()) return alert('Excerpt is required');
-    if (!slug.trim()) return alert('Slug is required');
+    if (!isEdit && !slug.trim()) return alert('Slug is required');
     if (!contentHtml.trim()) return alert('Content is required');
 
     const reading_time_min = estimateReadingTimeFromHtml(contentHtml);
@@ -139,15 +142,23 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
 
     if (props.mode === 'edit') {
       try {
+        const nextFeaturedUrl = featuredImage?.publicUrl ?? null;
+
         res = await updateBlogPostAction(props.initialValues.id, {
           title,
           excerpt,
           content_md: contentHtml,
           reading_time_min,
-          featured_image: featuredImage?.publicUrl ?? null,
+          featured_image: nextFeaturedUrl,
         });
-        if (coverUploadedPath && initialCoverPath && coverUploadedPath !== initialCoverPath) {
-          await deleteImage(initialCoverPath);
+
+        if (initialCoverPath?.path) {
+          const userRemovedInitial = nextFeaturedUrl === null;
+          const userReplaced = !!featuredImage?.publicUrl && !!initialCoverPath?.publicUrl && featuredImage.publicUrl !== initialCoverPath.publicUrl;
+
+          if (userRemovedInitial || userReplaced) {
+            await deleteImage(initialCoverPath.path);
+          }
         }
       } catch (err) {
         console.error('saveUpdateBlogAction: ERROR', err);
@@ -188,8 +199,9 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
                   console.error('Draft cleanup failed', e);
                 }
               } else {
-                if (coverUploadedPath && coverUploadedPath !== initialCoverPath) {
-                  await deleteImage(coverUploadedPath);
+                const userUploadedNew = featuredImage?.path && initialCoverPath?.path && featuredImage.path !== initialCoverPath.path;
+                if (userUploadedNew && featuredImage?.path) {
+                  await deleteImage(featuredImage.path);
                 }
 
                 if (uploadedPaths.length) {
@@ -219,13 +231,11 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
         </div>
         <div className="flex flex-col rounded-sm border border-gray-300">
           <ImageInputWithPreview
-            deferDelet={isEdit}
-            onUploadedChange={(img) => {
-              setFeaturedImage(img);
-              if (isEdit) setCoverUploadedPath(img?.path ?? null);
-            }}
-            defaultPath={featuredImage?.path ?? null}
-            defaultUrl={featuredImage?.publicUrl ?? null}
+            initialUploaded={initialCoverPath}
+            onUploadedChange={(img) => setFeaturedImage(img ?? initialCoverPath)}
+            defaultPath={!isUsingInitial ? (featuredImage?.path ?? null) : null}
+            defaultUrl={!isUsingInitial ? (featuredImage?.publicUrl ?? null) : null}
+            onRemoveInitial={() => setFeaturedImage(null)}
           />
         </div>
         <div className="flex flex-col rounded-sm border border-gray-300">

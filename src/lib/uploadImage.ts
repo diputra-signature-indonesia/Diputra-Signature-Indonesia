@@ -52,6 +52,8 @@ export async function cleanupUnusedImages(contentHtml: string, uploadedPaths: st
   const usedPaths = new Set(usedPathsArr);
 
   const unused = uploadedPaths.filter((p) => !usedPaths.has(p));
+  console.warn(uploadedPaths);
+  console.warn(unused);
   if (unused.length === 0) return;
 
   const { error } = await supabase.storage.from('images').remove(unused);
