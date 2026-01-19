@@ -47,8 +47,8 @@ export function ReviewSection({ testimonials }: ReviewProps) {
                 <blockquote className="brand-p">“{item.message}”</blockquote>
                 <figcaption className="flex flex-col py-5">
                   <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
-                  <time dateTime={item.experience_date ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
-                    {item.experience_date}
+                  <time dateTime={item.created_at ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
+                    {item.created_at}
                   </time>
                 </figcaption>
               </figure>

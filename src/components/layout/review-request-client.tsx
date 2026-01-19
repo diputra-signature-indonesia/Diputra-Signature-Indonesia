@@ -1,5 +1,6 @@
 'use client';
 
+import { submitReviewAction } from '@/app/review-request/[token]/actions';
 import { useState } from 'react';
 import { BrandButton } from '../ui/button';
 
@@ -55,11 +56,12 @@ export default function ReviewRequestClient({ token, status }: Props) {
 
     setIsSubmitting(true);
     try {
-      // TODO: panggil server action / API route submit review
-      // await submitReviewAction({ token, rating, name, message });
-
-      // simulasi sukses
-      await new Promise((r) => setTimeout(r, 600));
+      await submitReviewAction({
+        token,
+        name,
+        email,
+        message,
+      });
       setDone(true);
     } catch (err: any) {
       alert(err?.message ?? 'Failed to submit review');
@@ -122,9 +124,6 @@ export default function ReviewRequestClient({ token, status }: Props) {
       <BrandButton type="submit" disabled={isSubmitting} variant="white" className="w-full justify-center transition-all">
         {isSubmitting ? 'Submitting...' : 'Submit Review'}
       </BrandButton>
-
-      {/* debug token */}
-      <p className="text-xs break-all text-white/40">token: {token}</p>
     </form>
   );
 }

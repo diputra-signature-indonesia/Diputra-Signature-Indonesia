@@ -1,12 +1,10 @@
 'use client';
-import { deleteBlogAction, setBlogStatusAction } from '@/app/admin/action';
 import IconAction from '@/icons/BrandIconAction';
 import { UserRole } from '@/types/auth-role';
-import { Action } from '@/types/blog-action';
-import { Status } from '@/types/blog-status';
+import { UrlActionTable } from '@/types/review-action';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { BlogAction } from './admin-blog-action';
+import { ReviewUrlAction } from './admin-review-url-action';
 
 export type Column<T> = {
   header: string;
@@ -21,67 +19,31 @@ export type DataTableProps<T> = {
   columns: Column<T>[];
   getRowKey?: (row: T, index: number) => string;
   getId: (row: T) => string;
-  getSlug: (row: T) => string;
-  getStatus?: (row: T) => Status;
 };
 
-export function DataTable<T>({ role, data, columns, getStatus, getRowKey, getId, getSlug }: DataTableProps<T>) {
+export function ReviewUrlDataTable<T>({ role, data, columns, getRowKey, getId }: DataTableProps<T>) {
   const [activeRow, setActiveRow] = React.useState<number | null>(null);
-  const [loadingAction, setLoadingAction] = React.useState<Action | null>(null);
+  const [loadingReviewAction, setLoadingReviewAction] = React.useState<UrlActionTable | null>(null);
   const router = useRouter();
 
-  const handleAction = async (action: Action, row: T) => {
+  const handleAction = async (action: UrlActionTable, row: T) => {
     const id = getId(row);
 
     try {
-      setLoadingAction(action);
+      setLoadingReviewAction(action);
 
-      if (action === 'approve') {
-        await setBlogStatusAction(id, 'published');
-      }
-
-      if (action === 'reject') {
-        const ok = confirm('Reject this post?');
-        if (!ok) return;
-        await setBlogStatusAction(id, 'reject');
-      }
-
-      if (action === 'toPending') {
-        await setBlogStatusAction(id, 'pending');
-      }
-
-      if (action === 'toDraft') {
-        await setBlogStatusAction(id, 'draft');
-      }
-
-      if (action === 'preview') {
-        setActiveRow(null);
-        router.push(`/admin/blog/preview/${getSlug(row)}`);
-        return;
-      }
-
-      if (action === 'edit') {
-        setActiveRow(null);
-        router.push(`/admin/blog/${getSlug(row)}/edit`);
-        return;
+      if (action === 'revoke') {
       }
 
       if (action === 'delete') {
         const ok = confirm('Delete this post permanently?');
         if (!ok) return;
-        await deleteBlogAction(id);
-      }
-
-      if (action === 'unpublish') {
-        const ok = confirm('Unpublish this post? It will be hidden from the public site.');
-        if (!ok) return;
-        await setBlogStatusAction(id, 'draft');
       }
 
       setActiveRow(null);
       router.refresh();
     } finally {
-      setLoadingAction(null);
+      setLoadingReviewAction(null);
     }
   };
 
@@ -120,7 +82,7 @@ export function DataTable<T>({ role, data, columns, getStatus, getRowKey, getId,
                 <IconAction className="size-5" />
               </button>
 
-              {activeRow === i && <BlogAction role={role} status={getStatus?.(row) ?? 'draft'} loadingAction={loadingAction} onAction={(action) => handleAction(action, row)} />}
+              {activeRow === i && <ReviewUrlAction role={role} loadingAction={loadingReviewAction} onAction={(action) => handleAction(action, row)} />}
             </td>
           </tr>
         ))}

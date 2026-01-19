@@ -2,6 +2,7 @@
 import ReviewRequestClient from '@/components/layout/review-request-client';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { getReviewRequestStatusAction } from './actions';
 
 export const metadata: Metadata = {
   title: 'Leave a Review | Diputra Signature Indonesia',
@@ -11,9 +12,7 @@ export const metadata: Metadata = {
 export default async function ReviewRequestPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  // TODO: ganti ini dengan validasi token beneran (Supabase)
-  const isValid = Boolean(token) && token.length > 10;
-  const status: 'valid' | 'expired' | 'used' | 'invalid' = isValid ? 'valid' : 'invalid';
+  const status = await getReviewRequestStatusAction(token);
 
   return (
     <main className="bg-brand-white flex min-h-dvh flex-col items-center justify-center px-4 py-5">
