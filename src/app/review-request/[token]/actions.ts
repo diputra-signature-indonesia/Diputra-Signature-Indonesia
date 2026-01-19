@@ -11,16 +11,18 @@ function hashToken(token: string) {
 
 export async function getReviewRequestStatusAction(token: string): Promise<TokenStatus> {
   const supabase = await createSupabaseServerClient();
-  const tokenHash = hashToken(token);
-
-  const { data, error } = await supabase.from('review_requests').select('used_at, revoked_at, expires_at').eq('token_hash', tokenHash).maybeSingle();
+  const { data, error } = await supabase.rpc('check_review_request_status', {
+    p_token: token,
+  });
 
   if (error) throw error;
-  if (!data) return 'invalid';
-  if (data.revoked_at) return 'invalid';
-  if (data.used_at) return 'used';
-  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) return 'expired';
-  return 'valid';
+
+  const status = String(data ?? 'invalid') as TokenStatus;
+
+  // guard agar hanya menerima value yang kita kenal
+  if (!['valid', 'expired', 'used', 'invalid'].includes(status)) return 'invalid';
+
+  return status;
 }
 
 export async function submitReviewAction(input: { token: string; name: string; email: string; message: string }) {

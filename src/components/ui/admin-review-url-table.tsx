@@ -1,4 +1,5 @@
 'use client';
+import { deleteReviewRequestAction, revokeReviewRequestAction } from '@/app/admin/reviews/action';
 import IconAction from '@/icons/BrandIconAction';
 import { UserRole } from '@/types/auth-role';
 import { UrlActionTable } from '@/types/review-action';
@@ -19,9 +20,12 @@ export type DataTableProps<T> = {
   columns: Column<T>[];
   getRowKey?: (row: T, index: number) => string;
   getId: (row: T) => string;
+  getIsUsed?: (row: T) => boolean;
+  getIsRevoked?: (row: T) => boolean;
+  getIsExpired?: (row: T) => boolean;
 };
 
-export function ReviewUrlDataTable<T>({ role, data, columns, getRowKey, getId }: DataTableProps<T>) {
+export function ReviewUrlDataTable<T>({ role, data, columns, getRowKey, getId, getIsUsed, getIsRevoked, getIsExpired }: DataTableProps<T>) {
   const [activeRow, setActiveRow] = React.useState<number | null>(null);
   const [loadingReviewAction, setLoadingReviewAction] = React.useState<UrlActionTable | null>(null);
   const router = useRouter();
@@ -33,11 +37,15 @@ export function ReviewUrlDataTable<T>({ role, data, columns, getRowKey, getId }:
       setLoadingReviewAction(action);
 
       if (action === 'revoke') {
+        const ok = confirm('Revoke this link? It will no longer be usable.');
+        if (!ok) return;
+        await revokeReviewRequestAction(id);
       }
 
       if (action === 'delete') {
-        const ok = confirm('Delete this post permanently?');
+        const ok = confirm('Delete this generated link permanently?');
         if (!ok) return;
+        await deleteReviewRequestAction(id);
       }
 
       setActiveRow(null);
@@ -82,7 +90,16 @@ export function ReviewUrlDataTable<T>({ role, data, columns, getRowKey, getId }:
                 <IconAction className="size-5" />
               </button>
 
-              {activeRow === i && <ReviewUrlAction role={role} loadingAction={loadingReviewAction} onAction={(action) => handleAction(action, row)} />}
+              {activeRow === i && (
+                <ReviewUrlAction
+                  role={role}
+                  loadingAction={loadingReviewAction}
+                  isUsed={getIsUsed?.(row) ?? false}
+                  isRevoked={getIsRevoked?.(row) ?? false}
+                  isExpired={getIsExpired?.(row) ?? false}
+                  onAction={(action) => handleAction(action, row)}
+                />
+              )}
             </td>
           </tr>
         ))}

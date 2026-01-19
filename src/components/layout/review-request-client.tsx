@@ -22,8 +22,10 @@ export default function ReviewRequestClient({ token, status }: Props) {
   if (done) {
     return (
       <div className="space-y-3">
-        <h1 className="text-xl font-semibold">Thank you! 🙏</h1>
-        <p className="text-sm text-white/80">Review kamu sudah tersimpan. Kalau berkenan, kamu juga bisa tinggalkan review di Google.</p>
+        <h1 className="text-xl font-semibold">Thank you!</h1>
+        <p className="text-sm text-black/80">
+          <ReviewResult review={message} />
+        </p>
 
         <a href={googleReviewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-medium text-black">
           Leave a Google Review
@@ -84,10 +86,7 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          //   defaultValue={''}
           placeholder="e.g. John"
-          //   aria-invalid={''}
-          //   aria-describedby={''}
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
         />
       </div>
@@ -98,10 +97,7 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          // defaultValue={state.values?.email ?? ''}
           placeholder="your-email@example.com"
-          // aria-invalid={hasError}
-          // aria-describedby={hasError ? 'contact-form-error' : undefined}
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
         />
       </div>
@@ -112,10 +108,7 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          // defaultValue={state.values?.message ?? ''}
           placeholder="Write your experience..."
-          // aria-invalid={hasError}
-          // aria-describedby={hasError ? 'contact-form-error' : undefined}
           rows={5}
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
         />
@@ -125,5 +118,31 @@ export default function ReviewRequestClient({ token, status }: Props) {
         {isSubmitting ? 'Submitting...' : 'Submit Review'}
       </BrandButton>
     </form>
+  );
+}
+
+function ReviewResult({ review }: { review: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(review);
+    setCopied(true);
+
+    // reset icon setelah beberapa detik (opsional)
+    setTimeout(() => setCopied(false), 3000);
+  }
+
+  return (
+    <div className="rounded-md border border-green-300 bg-green-50 p-4 text-sm">
+      <p className="mb-2 font-semibold text-green-800">Copy Review</p>
+
+      <div className="flex items-start gap-3">
+        <p className="font-mono break-all text-green-900">{review}</p>
+
+        <button type="button" onClick={handleCopy} className="shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition hover:bg-green-100 disabled:opacity-60" disabled={copied}>
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+    </div>
   );
 }

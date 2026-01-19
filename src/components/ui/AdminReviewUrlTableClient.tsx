@@ -42,7 +42,16 @@ const columns = [
 export function AdminReviewUrlTableClient({ data, role }: { data: DefaultGeneratedUrl[]; role: UserRole | null }) {
   return (
     <div className="w-full overflow-x-scroll">
-      <ReviewUrlDataTable role={role} data={data} columns={columns} getRowKey={(row) => row.id} getId={(row) => row.id} />
+      <ReviewUrlDataTable
+        role={role}
+        data={data}
+        columns={columns}
+        getRowKey={(row) => row.id}
+        getId={(row) => row.id}
+        getIsUsed={(row) => Boolean(row.used_at)}
+        getIsRevoked={(row) => Boolean(row.revoked_at)}
+        getIsExpired={(row) => (row.expires_at ? new Date(row.expires_at).getTime() <= Date.now() : false)}
+      />
     </div>
   );
 }
