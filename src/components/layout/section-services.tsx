@@ -1,9 +1,9 @@
-import Image from 'next/image';
-import { BrandButton } from '../ui/button';
+import IconArrow from '@/icons/BrandIconArrow';
 import { getServiceIcon } from '@/icons/services-icons';
 import type { ServiceCategory } from '@/lib/supabase/queries';
-import IconArrow from '@/icons/BrandIconArrow';
+import Image from 'next/image';
 import Link from 'next/link';
+import { BrandButton } from '../ui/button';
 
 interface category {
   services: ServiceCategory[];
@@ -33,23 +33,27 @@ export function ServicesSection({ services, excludeSlug }: category) {
             .map((item, idx) => {
               const Icon = getServiceIcon(item.card_icon_key);
               return (
-                <article key={item.id} className="relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-sm p-5 transition-all duration-500 hover:scale-100 xl:gap-7">
+                <article
+                  key={item.id}
+                  className="inner-shadow group relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-xl p-5 pt-40 transition-all duration-500 hover:scale-100 hover:shadow-xs xl:gap-5"
+                >
+                  {/* item.card_image ?? '/legal.webp' */}
                   <Image
-                    src={item.card_image ?? '/legal.webp'}
+                    src={'/image/unnamed.png'}
                     alt={`${item.title} – Diputra Signature Indonesia`}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
                     quality={75}
-                    className="-z-20 object-cover brightness-75"
+                    className="-z-20 scale-110 object-cover brightness-90 transition-transform delay-0 duration-500 group-hover:scale-100"
                   />
-                  <div className="absolute inset-0 -z-10 bg-black/20" />
-                  <div className="flex flex-col gap-7">
+                  <div className="absolute inset-0 -z-20 bg-linear-to-t from-black/90 via-black/60 to-transparent"></div>
+                  <div className="flex flex-col gap-5">
                     <div className="border-brand-yellow border-l-4 pt-5 pl-5">
                       <Icon className="size-10" />
                     </div>
                     <h4 className="brand-h3 w-full">{item.title}</h4>
                   </div>
-                  <div className="mt-auto flex h-full flex-col items-end gap-7">
+                  <div className="mt-auto flex h-full flex-col items-end gap-5">
                     <p className="brand-p md:text-balance xl:text-pretty">{item.short_description}</p>
                     <BrandButton asChild variant="ghost" className="group mt-auto w-fit justify-end overflow-hidden px-0 pl-7 text-white">
                       <Link href={`/services/${item.slug.toLowerCase()}`} className="relative">
@@ -76,7 +80,7 @@ export function ServicesSection({ services, excludeSlug }: category) {
             .map((item, idx) => {
               const Icon = getServiceIcon(item.card_icon_key);
               return (
-                <article key={item.id} className="relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-sm p-5 transition-all duration-500 hover:scale-100 xl:gap-7">
+                <article key={item.id} className="inner-shadow relative z-10 flex w-full scale-95 flex-col gap-5 overflow-hidden rounded-sm p-5 transition-all duration-500 hover:scale-100 xl:gap-7">
                   <Image
                     src={item.card_image ?? '/legal.webp'}
                     alt={`${item.title} – Diputra Signature Indonesia `}

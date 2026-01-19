@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
 import { getPublishedBlogPosts, getServiceCategories, getVisibleStories } from '@/lib/supabase/queries';
+import type { Metadata } from 'next';
 
+import { AboutSection } from '@/components/layout/home-about-section';
+import { HeroSection } from '@/components/layout/home-hero-section';
 import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
-import { ServicesSection } from '@/components/layout/section-services';
 import { ReviewSection } from '@/components/layout/section-review';
-import { HeroSection } from '@/components/layout/home-hero-section';
-import { AboutSection } from '@/components/layout/home-about-section';
+import { ServicesSection } from '@/components/layout/section-services';
 
 export const metadata: Metadata = {
   title: 'Legal, Visa, and Business Consulting in Bali',

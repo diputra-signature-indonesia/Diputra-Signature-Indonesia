@@ -190,3 +190,18 @@ html {
   margin-inline: auto;
   background: #f3f4f6;
 }
+
+@layer utilities {
+  .inner-shadow {
+    position: relative;
+  }
+
+  .inner-shadow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+    border-radius: inherit;
+  }
+}
