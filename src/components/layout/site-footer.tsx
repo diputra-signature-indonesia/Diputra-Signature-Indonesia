@@ -1,20 +1,20 @@
 'use client';
 
-import IconMap from '@/icons/BrandIconMap';
+import { isDropdown, NavDropdownItem, NavItem, NavLinkItem } from '@/data/navigation';
 import IconEmail from '@/icons/BrandIconEmail';
+import IconMap from '@/icons/BrandIconMap';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { isDropdown, NavDropdownItem, NavItem, NavLinkItem } from '@/data/navigation';
 
 export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
   const pathname = usePathname();
 
   return (
-    <footer className="brand-section-px **:font-raleway **:brand-stretch text-brand-black flex w-full flex-col gap-5 bg-white py-20 drop-shadow-lg">
-      <p className="text-brand-burgundy border-brand-yellow border-l-4 pl-7 text-2xl font-semibold sm:text-3xl">
+    <footer className="brand-section-px **:font-raleway **:brand-stretch text-brand-white bg-brand-burgundy flex w-full flex-col gap-5 py-20 drop-shadow-lg">
+      <p className="text-brand-white border-brand-yellow border-l-4 pl-7 text-2xl font-semibold sm:text-3xl">
         Diputra
-        <span className="brand-h3 text-brand-black font-light"> Signature Indonesia</span>
+        <span className="brand-h3 text-brand-white font-light"> Signature Indonesia</span>
       </p>
       <div className="flex flex-col gap-20 lg:flex-row xl:gap-30">
         <div className="flex w-full flex-col gap-5">
@@ -50,7 +50,7 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
         </div>
         <div className="flex w-full flex-row max-md:justify-between md:gap-20">
           <div className="flex flex-col gap-5 max-md:w-full">
-            <p className="brand-h3 text-brand-burgundy">Our Services</p>
+            <p className="brand-h3 text-brand-white">Our Services</p>
             <div className="flex w-full flex-col gap-2.5">
               {navItems
                 .filter((item): item is NavDropdownItem => item.slug === 'services' && isDropdown(item))
@@ -58,7 +58,7 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
                 .map((child) => {
                   const isActive = pathname === child.href || pathname.startsWith(child.href + '/');
                   return (
-                    <Link key={child.slug} href={child.href} className={`brand-p hover:text-brand-burgundy ${isActive ? 'font-semibold' : 'font-normal'}`}>
+                    <Link key={child.slug} href={child.href} className={`brand-p hover:text-brand-white ${isActive ? 'font-semibold' : 'font-normal'}`}>
                       {child.label}
                     </Link>
                   );
@@ -66,16 +66,16 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
             </div>
           </div>
           <div className="flex flex-col gap-5 max-md:w-full">
-            <p className="brand-h3 text-brand-burgundy">Navigation</p>
+            <p className="brand-h3 text-brand-white">Navigation</p>
             <div className="flex w-full flex-col gap-2.5">
               {navItems
                 .filter((item): item is NavLinkItem => item.slug !== 'services')
                 .map((item) => (
-                  <Link key={item.slug} href={item.href} className={`brand-p hover:text-brand-burgundy ${pathname === item.href ? 'text-brand-burgundy font-semibold' : 'font-normal'}`}>
+                  <Link key={item.slug} href={item.href} className={`brand-p hover:text-brand-white ${pathname === item.href ? 'text-brand-white font-semibold' : 'font-normal'}`}>
                     {item.label}
                   </Link>
                 ))}
-              <Link href={contactLink.href} className={`brand-p hover:text-brand-burgundy ${pathname === contactLink.href && 'font-semibold'}`}>
+              <Link href={contactLink.href} className={`brand-p hover:text-brand-white ${pathname === contactLink.href && 'font-semibold'}`}>
                 Contact Us
               </Link>
             </div>

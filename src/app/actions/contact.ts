@@ -1,75 +1,52 @@
 'use server';
 
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+
 export type ContactState = {
   ok: boolean;
   error?: string;
-  // NANTI (optional):
-  // fieldErrors?: {
-  //   name?: string;
-  //   email?: string;
-  //   message?: string;
-  // };
   values?: {
     name?: string | null;
+    phone?: string | null;
     email?: string | null;
     message?: string | null;
   };
 };
 
 export async function submitContact(prevState: ContactState, formData: FormData): Promise<ContactState> {
-  const typeEntry = formData.get('type');
   const nameEntry = formData.get('name');
+  const phoneEntry = formData.get('phone');
   const emailEntry = formData.get('email');
   const messageEntry = formData.get('message');
 
-  const type = typeof typeEntry === 'string' ? typeEntry : null;
-  const name = typeof nameEntry === 'string' ? nameEntry : null;
-  const email = typeof emailEntry === 'string' ? emailEntry : null;
-  const message = typeof messageEntry === 'string' ? messageEntry : null;
+  const name = typeof nameEntry === 'string' ? nameEntry.trim() : null;
+  const phone = typeof phoneEntry === 'string' ? phoneEntry.trim() : null;
+  const email = typeof emailEntry === 'string' ? emailEntry.trim() : null;
+  const message = typeof messageEntry === 'string' ? messageEntry.trim() : null;
 
-  console.log('Received Contact:', { type, name, email, message });
-
-  // -----------------------------------------------------
-  // BASIC VALIDATION
-  // -----------------------------------------------------
-  if (!name || !email || !message) {
-    return {
-      ok: false,
-      error: 'All fields are required.',
-      values: {
-        name,
-        email,
-        message,
-      },
-    };
+  if (!name || !phone || !email || !message) {
+    return { ok: false, error: 'All fields are required.', values: { name, phone, email, message } };
   }
 
-  // -----------------------------------------------------
-  // NANTI: contoh validasi lanjutan (opsional)
-  // -----------------------------------------------------
-  // if (name.length < 2) {
-  //   return {
-  //     ok: false,
-  //     fieldErrors: { name: "Name must be at least 2 characters." },
-  //     values: { name, email, message },
-  //   };
-  // }
-  //
-  // if (!email.includes("@")) {
-  //   return {
-  //     ok: false,
-  //     fieldErrors: { email: "Invalid email format." },
-  //     values: { name, email, message },
-  //   };
-  // }
+  // SIMPAN KE DB (tidak butuh email tujuan)
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  // -----------------------------------------------------
-  // PLACEHOLDER: email/send-to-database logic
-  // -----------------------------------------------------
-  // TODO: send email or save the message to database
-  // await sendEmailToAdmin({ type, name, email, message });
-  // await saveContactToDb(...);
+    const { error } = await supabase.from('contact_messages').insert([
+      {
+        name,
+        phone,
+        email,
+        message,
+        status: 'new',
+      },
+    ]);
 
-  // TODO: kirim email/simpan data
-  return { ok: true };
+    if (error) throw error;
+
+    return { ok: true };
+  } catch (e) {
+    console.error('submitContact error:', e);
+    return { ok: false, error: 'Failed to send message. Please try again later.', values: { name, phone, email, message } };
+  }
 }

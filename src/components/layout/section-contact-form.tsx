@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useActionState } from 'react';
-import { BrandButton } from '../ui/button';
-import IconArrow from '@/icons/BrandIconArrow';
 import { submitContact, type ContactState } from '@/app/actions/contact';
+import IconArrow from '@/icons/BrandIconArrow';
+import { useActionState, useState } from 'react';
+import { BrandButton } from '../ui/button';
 
 const initialState: ContactState = { ok: false };
 
@@ -17,13 +17,8 @@ export function ContactForm() {
     <>
       <div className="flex w-full flex-col gap-7 px-5 sm:px-10 md:px-0">
         <div className="flex flex-col gap-5">
-          <div className="border-brand-burgundy flex overflow-hidden rounded-lg border *:rounded-none sm:rounded-xl sm:*:rounded-none">
-            <BrandButton onClick={() => setContact('message')} variant={contact === 'message' ? `red` : `white`} className="w-1/2 justify-center border-0">
-              Send Message
-            </BrandButton>
-            <BrandButton onClick={() => setContact('review')} variant={contact === 'review' ? `red` : `white`} className="w-1/2 justify-center border-0">
-              Send Review
-            </BrandButton>
+          <div className="border-brand-burgundy bg-brand-burgundy flex overflow-hidden rounded-lg border *:rounded-none sm:rounded-xl sm:*:rounded-none">
+            <p className="w-full justify-center border-0 px-3 py-3 text-center text-white">Send Message</p>
           </div>
         </div>
         <form action={formAction} className="flex flex-col gap-3 sm:gap-4">
@@ -60,6 +55,25 @@ export function ContactForm() {
             // {state.fieldErrors?.email && (
             //   <p id="contact-email-error" className="brand-p mt-1 text-red-600">
             //     {state.fieldErrors.email}
+            //   </p>
+            // )}
+          */}
+
+          <input
+            type="tel"
+            name="phone"
+            defaultValue={state.values?.phone ?? ''}
+            placeholder="Phone number"
+            aria-invalid={hasError}
+            aria-describedby={hasError ? 'contact-form-error' : undefined}
+            className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
+          />
+
+          {/* 
+            // NANTI: error khusus untuk email (jika ada)
+            // {state.fieldErrors?.phone && (
+            //   <p id="contact-phone-error" className="brand-p mt-1 text-red-600">
+            //     {state.fieldErrors.phone}
             //   </p>
             // )}
           */}

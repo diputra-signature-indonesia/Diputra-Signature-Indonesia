@@ -38,15 +38,17 @@ export function ReviewSection({ testimonials }: ReviewProps) {
       >
         {testimonials.map((item, index) => {
           const isActive = index === activeIndex;
-          const cardBase = 'flex! size-64! h-full! flex-col! overflow-hidden!  sm:w-xs! lg:w-sm! transition-all! duration-300!';
-          const cardState = isActive ? 'border-t-4 border-brand-yellow scale-100! text-brand-black! shadow-xl!' : 'border-t-4 border-brand-burgundy bg-gray-100! scale-75! text-brand-black!';
+          const cardBase = 'flex! size-64! h-full! flex-col! overflow-hidden! border! !border-black/10  w-xs! md:w-md! lg:w-xl! transition-all! duration-300!';
+          const cardState = isActive ? 'scale-100! text-brand-black! shadow-md!' : 'scale-75! text-brand-black!';
           return (
-            <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto p-5`}>
-              <IconQuote className="text-brand-yellow size-6" />
-              <figure className="h-full overflow-hidden">
-                <blockquote className="brand-p">“{item.message}”</blockquote>
-                <figcaption className="flex flex-col py-5">
-                  <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
+            <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto rounded-xl p-5`}>
+              <IconQuote className="text-brand-yellow mb-5 size-6" />
+              <figure className="flex h-full flex-col overflow-hidden">
+                <blockquote className="brand-p scrollbar-thin scrollbar-track-transparent scrollbar-thumb-brand-burgundy/20 hover:scrollbar-thumb-brand-burgundy/40 flex-1 overflow-y-auto pr-1">
+                  “{item.message}”
+                </blockquote>
+                <figcaption className="flex shrink-0 flex-col pt-5 pr-10">
+                  <h3 className="brand-p text-brand-burgundy truncate font-semibold">{item.name}</h3>
                   <time dateTime={item.created_at ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
                     {item.created_at}
                   </time>

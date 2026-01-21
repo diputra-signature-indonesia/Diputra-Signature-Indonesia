@@ -3,6 +3,7 @@ import { getServiceIcon } from '@/icons/services-icons';
 import type { ServiceCategory } from '@/lib/supabase/queries';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
 
 interface category {
@@ -13,15 +14,13 @@ interface category {
 export function ServicesSection({ services, excludeSlug }: category) {
   return (
     <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:gap-7">
-      <div className="flex flex-col gap-5 sm:w-xl lg:w-2xl xl:w-3xl">
+      <Motion as="div" delay={0.2} duration={0.6} y={0} x={-100} once={true} className="flex flex-col gap-5 sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 text-brand-maroon border-brand-yellow border-l-4 pl-7">
           Diputra <span className="brand-h1-semi text-black">Services</span>
         </h2>
-        <p className="brand-p text-left text-balance max-md:hidden lg:text-wrap">Trusted legal, visa, and real estate services in Bali for individuals and businesses.</p>
-        <p className="brand-p text-left text-balance md:hidden lg:text-wrap">
-          We provide legal, visa, and real estate services in Bali, Indonesia, delivered with professionalism, transparency, and clear communication.
-        </p>
-      </div>
+        <p className="brand-p text-left lg:text-wrap">Trusted legal, visa, and real estate services in Bali for individuals and businesses.</p>
+      </Motion>
+
       <div className="border-brand-black/10 flex flex-col gap-2.5 pb-14">
         <div className={`grid w-full grid-cols-1 gap-3 text-white md:grid-cols-2 xl:gap-12 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
           {services
@@ -29,9 +28,18 @@ export function ServicesSection({ services, excludeSlug }: category) {
             .map((item, idx) => {
               const Icon = getServiceIcon(item.card_icon_key);
               return (
-                <article key={item.id} className="inner-shadow group relative z-10 flex w-full flex-col overflow-hidden rounded-xl p-7 pt-36 transition-all duration-500 hover:shadow-xs">
+                <Motion
+                  key={item.id}
+                  as="article"
+                  delay={0.2 + idx * 0.1}
+                  duration={0.6}
+                  y={0}
+                  x={-20}
+                  once={true}
+                  className="inner-shadow group shadow-brand-burgundy/20 relative z-10 flex w-full flex-col overflow-hidden rounded-xl p-7 pt-36 shadow-md transition-shadow duration-500 hover:shadow-xl"
+                >
                   {/* item.card_image ?? '/legal.webp' */}
-                  <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-5 overflow-hidden">
                     <Image
                       src={item.card_image ?? '/legal.webp'}
                       alt={`${item.title} – Diputra Signature Indonesia`}
@@ -60,19 +68,21 @@ export function ServicesSection({ services, excludeSlug }: category) {
                           </div>
                         </Link>
                       </BrandButton>
+                      <div className="bg-brand-yellow absolute bottom-0 left-0 h-1 w-full" />
                     </div>
                   </div>
-                  <div className="bg-brand-yellow absolute bottom-0 left-0 h-1 w-full" />
-                </article>
+                </Motion>
               );
             })}
         </div>
       </div>
       <div className="border-brand-black/10 flex flex-col gap-5 pb-14">
-        <h2 className="brand-h1 text-brand-maroon border-brand-yellow border-l-4 pl-7">
-          Additional <span className="brand-h1-semi text-black">Services</span>
-        </h2>
-        <p className="brand-p text-left text-balance max-md:hidden lg:text-wrap">Additional professional services provided to complement our core legal and consulting offerings.</p>
+        <Motion as="div" delay={0.2} duration={0.6} y={0} x={-100} once={true} className="flex flex-col gap-5 sm:w-xl lg:w-2xl xl:w-3xl">
+          <h2 className="brand-h1 text-brand-maroon border-brand-yellow border-l-4 pl-7">
+            Additional <span className="brand-h1-semi text-black">Services</span>
+          </h2>
+        </Motion>
+        <p className="brand-p text-left lg:text-wrap">Additional professional services provided to complement our core legal and consulting offerings.</p>
         <div className={`grid w-full grid-cols-1 gap-3 text-white sm:gap-5 md:grid-cols-2 xl:gap-12 ${excludeSlug ? 'lg:grid-cols-2' : 'lg:grid-cols-2'}`}>
           {services
             .filter((item) => item.slug !== excludeSlug && item.type === 'secondary')
@@ -80,9 +90,15 @@ export function ServicesSection({ services, excludeSlug }: category) {
               const Icon = getServiceIcon(item.card_icon_key);
               const servicesLength = services.filter((item) => item.type === 'secondary').length;
               return (
-                <article
+                <Motion
+                  as="article"
+                  delay={0.2 + idx * 0.1}
+                  duration={0.6}
+                  y={0}
+                  x={-20}
+                  once={true}
                   key={item.id}
-                  className={`inner-shadow group relative z-10 flex w-full flex-col overflow-hidden rounded-xl p-5 pt-36 ${servicesLength === 2 ? 'pt-8' : 'pt-36'} transition-all duration-500 hover:shadow-xs`}
+                  className={`inner-shadow group relative z-10 flex w-full flex-col overflow-hidden rounded-xl p-5 pt-36 ${servicesLength === 2 ? 'pt-8' : 'pt-36'} shadow-brand-burgundy/20 shadow-md transition-shadow duration-500 hover:shadow-xl`}
                 >
                   <div className="flex flex-col gap-5">
                     <Image
@@ -116,7 +132,7 @@ export function ServicesSection({ services, excludeSlug }: category) {
                     </div>
                   </div>
                   <div className="bg-brand-yellow absolute bottom-0 left-0 h-1 w-full" />
-                </article>
+                </Motion>
               );
             })}
         </div>
