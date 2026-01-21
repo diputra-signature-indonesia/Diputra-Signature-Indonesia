@@ -8,13 +8,13 @@ export function HeroSection() {
     <section
       aria-label="Hero"
       id="hero-section"
-      className="brand-stretch font-raleway brand-section-px mx-auto flex h-[85svh] max-w-[1440px] max-md:flex-col sm:h-svh sm:max-h-[650px] sm:gap-10 lg:gap-14"
+      className="brand-stretch font-raleway brand-section-px relative mx-auto flex h-[85svh] max-w-[1440px] max-md:flex-col sm:h-svh sm:max-h-[650px] sm:gap-10 lg:gap-14"
     >
-      <div className="mx-auto my-auto flex w-full min-w-[280px] flex-col max-md:order-2 sm:min-w-[380px] lg:min-w-[450px]">
+      <div className="bg-brand-burgundy/10 absolute top-[-70%] left-[-20%] h-[300px] w-[300px] rounded-full mix-blend-multiply blur-3xl md:h-[600px] md:w-[600px]"></div>
+      <div className="relative mx-auto my-auto flex w-full min-w-[280px] flex-col max-md:order-2 sm:min-w-[380px] lg:min-w-[450px]">
+        <div className="bg-brand-yellow absolute top-0 -left-5 -z-10 size-10"></div>
         <div className="brand-h1-mb flex w-full flex-col gap-2.5">
-          <h1 className="text-brand-black w-full text-6xl leading-[125%] font-bold text-balance max-md:text-center">
-            {' '}
-            {/*brand-h1 */}
+          <h1 className="text-brand-black w-full text-4xl leading-[125%] font-bold text-balance max-md:text-center sm:text-5xl lg:text-6xl">
             Comprehensive Legal Solutions, <span className="text-brand-burgundy">Simplified.</span>
           </h1>
           <div className="bg-brand-yellow h-1 w-25 max-md:mx-auto" />
@@ -38,7 +38,7 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-      <div className="min-h-0 w-full flex-1 py-10 pl-20 max-md:mb-7 md:h-full md:basis-10/12">
+      <div className="relative min-h-0 w-full flex-1 py-5 md:h-full md:basis-10/12 md:py-10 xl:pl-20">
         <Image
           src={'/image/brown-wooden-frame-glass-window.webp'}
           alt="team from Diputra Signature Indonesia"
@@ -49,6 +49,7 @@ export function HeroSection() {
           fetchPriority="high"
           className="h-full rounded-2xl object-cover max-lg:w-full"
         />
+        <div className="to-slate-10 from-brand-burgundy/50 to-brand-burgundy/5 absolute top-1/2 left-4/7 -z-10 h-[70%] w-full -translate-x-1/2 -translate-y-1/2 rotate-3 rounded-2xl bg-linear-to-br opacity-20 max-md:hidden"></div>
       </div>
     </section>
   );

@@ -1,15 +1,12 @@
 export default function IconTwoBuilding({ className }: { className?: string }) {
   return (
-    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M34.1963 48.9126H33.1963V30.896H34.1963V48.9126Z" fill="currentColor" />
-      <path d="M39.3495 48.9126H38.3494V28.9307H39.3495V48.9126Z" fill="currentColor" />
-      <path d="M44.5026 48.9126H43.5026V25H44.5026V48.9126Z" fill="currentColor" />
+    <svg width="42" height="40" viewBox="0 0 42 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M21.7405 15.2173V49H28.2595V29.8906L50 11.9561V49.9995L0 50V0L21.7405 15.2173ZM1.00006 49H4.93779V10H5.93785V49H10.4381V16.4111H11.4382V49H15.9384V19.6162H16.9385V49H20.7405V15.7378L1.00006 1.92041V49ZM29.2595 30.3618V48.9995H48.9999V14.0771L29.2595 30.3618Z"
-        fill="currentColor"
+        d="M23.5 38.5H38.5C39.6046 38.5 40.5 37.6046 40.5 36.5V13.238C40.5 11.5477 38.5333 10.6196 37.2286 11.6941L24.2286 22.4C23.7673 22.7799 23.5 23.3462 23.5 23.9438V38.5ZM23.5 38.5H17.5M17.5 38.5V12.5439C17.5 11.8898 17.1802 11.2771 16.6436 10.9031L4.14359 2.19098C2.81767 1.26686 1 2.21559 1 3.83178V36.5C1 37.6046 1.89543 38.5 3 38.5H13.5H17.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
       />
+      <path d="M35.5 38.5V19.5M31.5 38.5V23M27.5 38.5V27M13.5 38.5V15.5M9 38.5V12M4.5 38.5V7" stroke="currentColor" />
     </svg>
   );
 }
