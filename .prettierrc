@@ -3,6 +3,7 @@
   "semi": true,
   "tabWidth": 2,
   "trailingComma": "es5",
-  "printWidth": 100,
-  "arrowParens": "always"
+  "printWidth": 200,
+  "arrowParens": "always",
+  "plugins": ["prettier-plugin-tailwindcss"]
 }

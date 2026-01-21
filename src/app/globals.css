@@ -1,8 +1,12 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.font-raleway {
+  font-family: var(--font-raleway), sans-serif;
 }
 
 @theme inline {
@@ -10,17 +14,194 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-raleway: var(--font-raleway);
+
+  --color-brand-yellow: #ffc30b;
+  --color-brand-yellow-semi: #f7ba00;
+  --color-brand-burgundy: #800020;
+  --color-brand-maroon: #9c0000;
+  --color-brand-white: #fafafa;
+  --color-brand-white-semi: #eeeeee;
+  --color-brand-black: #0d0d0d;
+  --color-brand-black-semi: #3b3b3b;
+  --color-brand-gray: #bfbfbf;
+
+  --spacing-13: 60px;
+  --spacing-25: 100px;
+  --spacing-30: 120px;
+  --spacing-40: 160px;
+  --spacing-40: 160px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  /* Only one in every page #IMPORTANT */
+  .brand-h1 {
+    @apply text-3xl font-bold sm:text-4xl lg:text-5xl;
+  }
+
+  .brand-h1-mb {
+    @apply mb-5 sm:mb-6 lg:mb-7;
+  }
+
+  .brand-h1-semi {
+    @apply text-2xl font-normal sm:text-3xl lg:text-[40px];
+  }
+
+  /* Every Section Title */
+  .brand-h2 {
+    @apply text-2xl;
+  }
+
+  /* Every Card Title or Component*/
+  .brand-h3 {
+    @apply text-base font-medium lg:text-[20px];
+  }
+
+  /* Every paragraf or text in this project */
+  .brand-p-desc {
+    @apply mb-10 max-sm:text-xs sm:mb-12 sm:text-sm lg:mb-14 lg:text-base;
+  }
+
+  .brand-p {
+    @apply max-sm:text-xs sm:text-sm lg:text-base;
+  }
+
+  .brand-section-px {
+    @apply px-5 sm:px-10 lg:px-13;
+  }
+
+  .brand-section-mpx {
+    @apply sm:px-10 lg:px-25;
+  }
+
+  .brand-section-my {
+    @apply pt-30 pb-20 sm:pt-20 lg:pt-30 lg:pb-20;
+  }
+
+  .brand-stretch {
+    @apply leading-[125%] tracking-wider max-sm:leading-[100%];
   }
 }
 
 body {
-  background: var(--background);
+  background: #fafafa;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+/* leading-[125%] tracking-wider */
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: 0px;
+}
+
+.blog-content img {
+  width: 100%;
+  max-width: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+  aspect-ratio: 16/8;
+  margin: 18px auto; /* center */
+}
+
+/* ======================================================
+   TIPTAP EDITOR BASE
+   ====================================================== */
+
+.tiptap {
+  font-family: var(--font-raleway), sans-serif;
+  cursor: text;
+}
+
+/* ProseMirror root */
+.tiptap .ProseMirror {
+  min-height: 420px; /* editor height */
+  outline: none;
+}
+
+/* Force Raleway on ALL pasted content (override inline styles) */
+.tiptap .ProseMirror,
+.tiptap .ProseMirror * {
+  font-family: var(--font-raleway), sans-serif !important;
+}
+
+/* ======================================================
+   TYPOGRAPHY
+   ====================================================== */
+
+.tiptap .ProseMirror p {
+  margin: 0.6em 0;
+}
+
+/* Headings */
+.tiptap .ProseMirror h1 {
+  font-size: 40px;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.tiptap .ProseMirror h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.tiptap .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+}
+
+.tiptap .ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #4b5563;
+  margin: 1em 0;
+}
+
+.tiptap .ProseMirror ul,
+.tiptap .ProseMirror ol {
+  padding-left: 1.5rem;
+  margin: 0.6em 0;
+}
+
+.tiptap .ProseMirror li {
+  margin: 0.3em 0;
+}
+
+/* Preview style untuk gambar di editor */
+.tiptap .ProseMirror img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16/9;
+  height: 300px; /* default preview height */
+  object-fit: cover; /* biar nggak gepeng */
+  border-radius: 8px;
+  margin: 1rem 0;
+  margin-inline: auto;
+  background: #f3f4f6;
+}
+
+@layer utilities {
+  .inner-shadow {
+    position: relative;
+  }
+
+  .inner-shadow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+    border-radius: inherit;
+  }
 }
