@@ -1,7 +1,7 @@
 'use client';
-import { useState, type ButtonHTMLAttributes, type MouseEventHandler, type ReactNode } from 'react';
-import Image from 'next/image';
 import IconPlus from '@/icons/BrandIconPlus';
+import Image from 'next/image';
+import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 interface TeamButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   position: string;
@@ -17,9 +17,9 @@ export function TeamButton({ position, children, type = 'button', isOpen, onTogg
     <button type={type} onClick={onToggle} className={`flex w-full flex-col max-lg:border-b max-lg:border-neutral-300 lg:flex-row lg:items-center ${className ?? ''} `} {...props}>
       {photoSrc && (
         <div
-          className={`ml-8 flex shrink-0 overflow-hidden transition-all duration-500 max-lg:order-2 sm:ml-13 lg:ml-0 ${isOpen ? 'mb-5 h-[180px] w-[150px] opacity-100 lg:mt-5 lg:mr-16 lg:h-[216px] lg:w-[180px] xl:mr-20 xl:h-[300px] xl:w-[250px]' : 'h-0 w-0 opacity-0'}`}
+          className={`ml-8 flex shrink-0 overflow-hidden rounded-xl transition-all duration-500 max-lg:order-2 sm:ml-13 lg:ml-0 ${isOpen ? 'mb-5 h-[180px] w-[150px] opacity-100 lg:mt-5 lg:mr-16 lg:h-[216px] lg:w-[180px] xl:mr-20 xl:h-[300px] xl:w-[250px]' : 'h-0 w-0 opacity-0'}`}
         >
-          <Image src={photoSrc} alt={photoAlt} width={250} height={300} className="aspect-5/6 object-cover" />
+          <Image src={photoSrc} alt={photoAlt} width={250} height={300} className="aspect-5/6 scale-125 rounded-xl object-cover brightness-110" />
         </div>
       )}
 

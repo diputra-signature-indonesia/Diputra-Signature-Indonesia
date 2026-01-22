@@ -1,6 +1,6 @@
+import { getPublishedBlogPosts, getServiceCategories, getServiceCategoryBySlug, getServiceItemsByCategorySlug } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getServiceItemsByCategorySlug, getServiceCategories, getServiceCategoryBySlug, getPublishedBlogPosts } from '@/lib/supabase/queries';
 
 import { CategoryHeroSection } from '@/components/layout/category-hero-section';
 import { CategoryServicesSection } from '@/components/layout/category-services-section';

@@ -1,6 +1,7 @@
 import IconEmail from '@/icons/BrandIconEmail';
 import IconInstagram from '@/icons/BrandIconInstagram';
 import IconMap from '@/icons/BrandIconMap';
+import IconPhone from '@/icons/BrandIconPhone';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import { Motion } from '../motion';
 import { ContactForm } from './section-contact-form';
@@ -23,17 +24,23 @@ export function ContactSection() {
           </div>
           <div className="flex h-full flex-col gap-3 sm:gap-2.5">
             <address className="flex flex-row items-center gap-2.5 not-italic">
-              <IconMap className="size-5 text-black" />
+              <IconMap className="size-5 shrink-0 text-black" />
               {/* samakan nanti dengan di schema-dsi.ts */}
-              <span className="brand-p">Jalan Gunung Bahlil, Denpasar, Bali, Indonesia</span>
+              <a href="https://maps.app.goo.gl/tZ2SZFShu5k1Kae28" target="_blank" rel="noopener noreferrer" className="brand-p">
+                Banjar Latusari, Desa Abiansemal, Kecamatan Abiansemal, Kabupaten Badung, Bali, Indonesia
+              </a>
             </address>
-            <a href="mailto:DSIInfo@diputraSignature.com" aria-label="Email Diputra Signature Indonesia" className="flex flex-row items-center gap-2.5">
+            <a href="mailto:info@diputrasignature.com" aria-label="Email Diputra Signature Indonesia" className="flex flex-row items-center gap-2.5">
               <IconEmail className="size-5 text-black" />
-              <span className="brand-p">DSIInfo@diputraSignature.com</span>
+              <span className="brand-p">info@diputrasignature.com</span>
             </a>
-            <a href="https://wa.me/" aria-label="Chat with Diputra Signature Indonesia on WhatsApp" className="flex flex-row items-center gap-2.5">
+            <a href="https://wa.me/+6287851021080" aria-label="Chat with Diputra Signature Indonesia on WhatsApp" className="flex flex-row items-center gap-2.5">
               <IconWhatsapp className="size-5 text-black" />
-              <p className="brand-p">+62811234567890</p>
+              <p className="brand-p">+62 878-5102-1080</p>
+            </a>
+            <a href="tel:+6287851021080" aria-label="Call Diputra Signature Indonesia" className="flex flex-row items-center gap-2.5">
+              <IconPhone className="size-5 text-black" />
+              <p className="brand-p">+62 878-5102-1080</p>
             </a>
           </div>
           <div className="py-2.5 max-md:flex max-md:items-center max-md:gap-2.5 max-md:border-y md:border-t md:pt-2.5 md:pb-0">

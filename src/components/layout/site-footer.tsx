@@ -3,6 +3,7 @@
 import { isDropdown, NavDropdownItem, NavItem, NavLinkItem } from '@/data/navigation';
 import IconEmail from '@/icons/BrandIconEmail';
 import IconMap from '@/icons/BrandIconMap';
+import IconPhone from '@/icons/BrandIconPhone';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -22,28 +23,28 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
           <div className="flex w-full flex-col gap-2.5">
             <div className="flex h-fit flex-col">
               <address className="not-italic">
-                <div className="flex flex-row items-center gap-2.5">
+                <a href="https://maps.app.goo.gl/tZ2SZFShu5k1Kae28" target="_blank" rel="noopener noreferrer" className="flex flex-row items-center gap-2.5">
                   <IconMap className="size-5" />
-                  <span className="brand-p">Jalan Gunung Bahlil</span>
-                </div>
+                  <span className="brand-p">Banjar Latusari, Desa Abiansemal, Kecamatan Abiansemal, Kabupaten Badung, Bali, Indonesia</span>
+                </a>
               </address>
             </div>
             <div className="flex h-fit flex-col">
-              <a href="mailto:DSIInfo@diputraSignature.com" aria-label="Send email to DSIInfo@diputraSignature.com" className="flex flex-row items-center gap-2.5">
+              <a href="mailto:info@diputrasignature.com" aria-label="Send email to info@diputrasignature.com" className="flex flex-row items-center gap-2.5">
                 <IconEmail className="size-5" />
-                <span className="brand-p">DSIInfo@diputraSignature.com</span>
+                <span className="brand-p">info@diputrasignature.com</span>
               </a>
             </div>
             <div className="flex h-fit flex-col">
-              <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="Chat via WhatsApp" className="flex flex-row items-center gap-2.5">
+              <a href="https://wa.me/+6287851021080" target="_blank" rel="noopener noreferrer" aria-label="Chat via WhatsApp" className="flex flex-row items-center gap-2.5">
                 <IconWhatsapp className="size-5" />
-                <span className="brand-p">+62811234567890</span>
+                <span className="brand-p">+62 878-5102-1080</span>
               </a>
             </div>
             <div className="flex h-fit flex-col">
-              <a href="tel:+62811234567890" className="flex flex-row items-center gap-2.5">
-                <IconWhatsapp className="size-5" />
-                <span className="brand-p">+62811234567890</span>
+              <a href="tel:+6287851021080" className="flex flex-row items-center gap-2.5">
+                <IconPhone className="size-5" />
+                <span className="brand-p">+62 878-5102-1080</span>
               </a>
             </div>
           </div>
