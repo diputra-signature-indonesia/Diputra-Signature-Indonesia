@@ -1,3 +1,7 @@
+/*
+This is Unused Action Component for Blog Action 
+*/
+
 'use client';
 import IconApprove from '@/icons/BrandIconApprove';
 import IconDelete from '@/icons/BrandIconDelete';

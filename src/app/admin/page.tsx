@@ -1,25 +1,32 @@
-import Link from 'next/link';
+import { AdminBlogTableClient } from '@/components/ui/AdminBlogTableClient';
 import { BrandButton } from '@/components/ui/button';
 import { getAdminBlogPosts } from '@/lib/supabase/queries';
-import { AdminBlogTableClient } from '@/components/ui/AdminBlogTableClient';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-export default async function Page() {
+type SearchParams = { page?: string; pageSize?: string };
+
+export default async function Page({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+
   const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) {
-    redirect('/admin/login'); // atau '/login'
+    redirect('/admin/login');
   }
 
-  const { data: profile, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   const role = (profile?.role as 'super_admin' | 'admin' | 'editor' | 'contributor') ?? null;
 
-  const blogPostsData = await getAdminBlogPosts();
+  const page = Math.max(0, Number(sp.page ?? '0') || 0);
+  const pageSize = [5, 10, 25, 50].includes(Number(sp.pageSize)) ? Number(sp.pageSize) : 10;
+
+  const { data: blogPostsData, count } = await getAdminBlogPosts({ page, pageSize });
 
   return (
     <div className="h-full px-4 py-6">
@@ -31,7 +38,7 @@ export default async function Page() {
         </BrandButton>
       </div>
 
-      <AdminBlogTableClient data={blogPostsData} role={role} />
+      <AdminBlogTableClient data={blogPostsData} role={role} page={page} pageSize={pageSize} totalCount={count} />
     </div>
   );
 }

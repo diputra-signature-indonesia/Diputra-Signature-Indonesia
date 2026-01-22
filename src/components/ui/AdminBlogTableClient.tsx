@@ -22,7 +22,7 @@ const statusClassMap: Record<string, string> = {
 
 const columns = [
   { header: 'Title', width: '400px', align: 'center', cell: (row) => row.title },
-  { header: 'Excerpt / Short Description', width: 'auto', align: 'left', cell: (row) => row.excerpt },
+  { header: 'Excerpt / Short Description', align: 'left', cell: (row) => row.excerpt },
   {
     header: 'Status',
     width: '140px',
@@ -33,6 +33,23 @@ const columns = [
   { header: 'Updated', width: '140px', align: 'center', cell: (row) => formatDate(row.updated_at) },
 ] satisfies Column<BlogPost>[];
 
-export function AdminBlogTableClient({ data, role }: { data: BlogPost[]; role: UserRole | null }) {
-  return <DataTable role={role} data={data} columns={columns} getStatus={(row) => row.status ?? 'draft'} getRowKey={(row) => row.id ?? row.slug} getId={(row) => row.id} getSlug={(row) => row.slug} />;
+export function AdminBlogTableClient({ data, role, page, pageSize, totalCount }: { data: BlogPost[]; role: UserRole | null; page: number; pageSize: number; totalCount: number }) {
+  return (
+    <DataTable
+      role={role}
+      data={data}
+      columns={columns}
+      getStatus={(row) => row.status ?? 'draft'}
+      getRowKey={(row) => row.id ?? row.slug}
+      getId={(row) => row.id}
+      getSlug={(row) => row.slug}
+      pagination={{
+        page,
+        pageSize,
+        totalCount,
+        pageSizeOptions: [5, 10, 25, 50],
+        basePath: '/admin/blog',
+      }}
+    />
+  );
 }
