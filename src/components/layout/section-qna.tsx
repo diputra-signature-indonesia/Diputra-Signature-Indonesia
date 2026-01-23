@@ -1,13 +1,14 @@
 'use client';
-import { useState } from 'react';
-import IconAnswer from '@/icons/BrandIconAnswer';
 import { DSI_QNA } from '@/data/dsi-qna';
+import IconAnswer from '@/icons/BrandIconAnswer';
+import { useState } from 'react';
+import { Motion } from '../motion';
 
 export function QnaSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   return (
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-14">
-      <div className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
+      <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true} className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
         <div className="flex flex-col items-center gap-5">
           <h2 className="brand-h1 brand-h1-mb text-brand-maroon">
             Frequently <span className="brand-h1-semi text-black">Ask</span>
@@ -20,8 +21,8 @@ export function QnaSection() {
         <p className="brand-p text-center sm:hidden">
           We deliver trustworthy legal, visa, and real estate services in Bali through experienced professionals and transparent, client-focused solutions.
         </p>
-      </div>
-      <div className="h-[450px] w-full overflow-y-scroll">
+      </Motion>
+      <Motion as="div" delay={0.2} duration={0.6} y={-24} x={0} once={true} className="h-[450px] w-full overflow-y-scroll">
         {DSI_QNA.map((item, idx) => {
           const isOpen = openIndex === idx;
 
@@ -41,7 +42,7 @@ export function QnaSection() {
             </article>
           );
         })}
-      </div>
+      </Motion>
     </section>
   );
 }

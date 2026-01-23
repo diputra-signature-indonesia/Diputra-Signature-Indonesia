@@ -27,12 +27,12 @@ export function BlogSection({ blogPosts }: BlogSectionProps) {
           <p className="brand-p text-right"> Stay updated with the latest legal, government regulation, immigration, and business insights relevant to Bali and Indonesia.</p>
         </Motion>
 
-        <div className="flex w-full justify-end gap-2.5">
+        <Motion as="div" delay={0.2} duration={0.6} y={0} x={100} once={true} className="flex w-full justify-end gap-2.5">
           <input type="text" placeholder="Coming soon!" disabled className="w-full rounded-xl border px-5 py-2 text-xs font-light max-sm:max-w-3xs sm:max-w-80 sm:text-sm lg:max-w-96 lg:text-base" />
           <BrandButton variant="white" className="my-auto px-5 font-light sm:px-7 lg:px-10">
             Find
           </BrandButton>
-        </div>
+        </Motion>
       </div>
       <div className="mx-auto grid w-full gap-x-10 lg:grid-cols-2 xl:max-w-7xl xl:grid-cols-3 xl:gap-y-10">
         {blogPosts.map((post, idx) => {

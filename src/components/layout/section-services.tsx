@@ -13,7 +13,7 @@ interface category {
 
 export function ServicesSection({ services, excludeSlug }: category) {
   return (
-    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 xl:gap-7">
+    <section id="services-section" className="brand-section-px brand-stretch font-raleway relative mx-auto mt-30 flex max-w-[1440px] flex-col justify-center gap-7 overflow-x-hidden xl:gap-7">
       <Motion as="div" delay={0.2} duration={0.6} y={0} x={-100} once={true} className="flex flex-col gap-5 sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 className="brand-h1 text-brand-maroon border-brand-yellow border-l-4 pl-7">
           Diputra <span className="brand-h1-semi text-black">Services</span>

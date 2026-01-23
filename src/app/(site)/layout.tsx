@@ -1,13 +1,12 @@
-import { NAV_ITEMS, CONTACT_LINK } from '@/data/navigation';
-import { SiteNavbar } from '@/components/layout/site-navbar';
 import { SiteFooter } from '@/components/layout/site-footer';
+import { SiteNavbar } from '@/components/layout/site-navbar';
 import RootClient from '@/components/root-client';
+import { CONTACT_LINK, NAV_ITEMS } from '@/data/navigation';
 import { dsiLocalBusinessJsonLd } from '@/lib/schema-dsi';
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RootClient>
-      {/* JSON-LD for LocalBusiness / DSI */}
+    <>
       <script
         id="dsi-localbusiness-schema"
         type="application/ld+json"
@@ -15,9 +14,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           __html: JSON.stringify(dsiLocalBusinessJsonLd),
         }}
       />
-      <SiteNavbar navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
-      <main>{children}</main>
-      <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
-    </RootClient>
+      <RootClient>
+        <SiteNavbar navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
+        <main className="overflow-x-hidden">{children}</main>
+        <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
+      </RootClient>
+    </>
   );
 }

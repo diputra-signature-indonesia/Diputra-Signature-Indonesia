@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import IconBurger from '@/icons/BrandIconBurger';
-import { usePathname } from 'next/navigation';
-import IconArrow from '@/icons/BrandIconArrow';
 import type { NavItem, NavLinkItem } from '@/data/navigation';
 import { isDropdown } from '@/data/navigation';
+import IconArrow from '@/icons/BrandIconArrow';
+import IconBurger from '@/icons/BrandIconBurger';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
   const [open, setOpen] = useState(false);
@@ -37,14 +37,8 @@ export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; con
     <header className="bg-brand-white text-brand-black sticky top-0 z-50 w-full px-5 shadow-md transition-colors duration-500 max-lg:**:text-sm sm:px-10 lg:px-13">
       <div className="relative flex w-full flex-row items-center justify-between">
         <Link href="/" className={`flex items-center gap-4 pt-6 pb-5 sm:pt-7 lg:pt-8`}>
-          <span className="aspect-square size-[1em]">
-            <Image alt="diputra-signature-indonesia" src="/vercel.svg" width={20} height={20} className="size-full" />
-          </span>
-          <span className="font-raleway text-brand-burgundy hidden text-xs font-medium tracking-wider sm:block">
-            Diputra <br />
-            <span className="text-brand-black text-[10px] font-normal">Signature Indonesia</span>
-          </span>
-          <span className="font-raleway text-base tracking-wider sm:hidden">DSI</span>
+          <Image alt="diputra-signature-indonesia" src="/icon/dsi-logo.png" width={100} height={50} className="h-8 w-auto object-contain" />
+          {/* <span className="font-raleway text-base tracking-wider sm:hidden">DSI</span> */}
         </Link>
 
         {/* DESKTOP NAV */}

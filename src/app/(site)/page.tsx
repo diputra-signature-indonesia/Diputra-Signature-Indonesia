@@ -28,7 +28,7 @@ export default async function HomePage() {
   const [categoryService, blogPosts, review] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories()]);
   return (
     <>
-      <div className="relative mx-auto max-w-[1440px]">
+      <div className="relative mx-auto max-w-[1440px] overflow-x-hidden">
         {/* <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-5" /> */}
         <div className="relative z-10">
           <HeroSection />
