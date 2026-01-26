@@ -25,9 +25,6 @@ export const metadata: Metadata = {
     template: '%s | Diputra Signature Indonesia',
   },
   description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.', //1–2 kalimat “about” resmi yang mereka setuju (tone legal/corporate)
-  alternates: {
-    canonical: '/',
-  },
   icons: {
     icon: [
       { url: '/favicon.ico' },

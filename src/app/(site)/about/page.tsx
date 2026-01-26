@@ -2,12 +2,28 @@ import { AdvantageSection } from '@/components/layout/about-advantage-section';
 import { HeroSection } from '@/components/layout/about-hero-section';
 import { TeamSection } from '@/components/layout/about-team-section';
 import { getVisibleTeamMembers } from '@/lib/supabase/queries';
+import { Metadata } from 'next';
 import Image from 'next/image';
 
-export const metadata = {
-  title: 'About Us | Diputra Signature Indonesia',
+export const metadata: Metadata = {
+  title: 'About Us',
   description:
     'Learn about Diputra Signature Indonesia, a Bali-based consulting firm specializing in legal, visa, and business advisory services with a commitment to transparency and professionalism.',
+  alternates: { canonical: '/about' },
+  openGraph: {
+    title: 'About Us | Diputra Signature Indonesia',
+    description:
+      'Learn about Diputra Signature Indonesia, a Bali-based consulting firm specializing in legal, visa, and business advisory services with a commitment to transparency and professionalism.',
+    url: '/about',
+    images: [
+      {
+        url: '/og/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'About Us | Diputra Signature Indonesia',
+      },
+    ],
+  },
 };
 
 export default async function AboutPage() {
