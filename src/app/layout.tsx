@@ -16,8 +16,10 @@ export const viewport: Viewport = {
   themeColor: '#800020', // brand burgundy
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!), // Ini Disesuaikan
+  metadataBase: new URL(siteUrl), // Ini Disesuaikan
   title: {
     default: 'Diputra Signature Indonesia',
     template: '%s | Diputra Signature Indonesia',
@@ -25,6 +27,15 @@ export const metadata: Metadata = {
   description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.', //1–2 kalimat “about” resmi yang mereka setuju (tone legal/corporate)
   alternates: {
     canonical: '/',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon/icon-16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: [{ url: '/icon/apple-touch-icon.png', sizes: '180x180' }],
   },
   openGraph: {
     type: 'website',
@@ -34,37 +45,17 @@ export const metadata: Metadata = {
     description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.',
     images: [
       {
-        url: '/og/og-default.jpg', // siapkan file ini di. /public/og/ logo versi terang/gelap + preferensi foto/visual (legal/visa/real estate vibe). ukuran HARUS 1200×630, aman text tidak kepotong, kontras bagus
+        url: '/og/og-default.png', // siapkan file ini di. /public/og/ logo versi terang/gelap + preferensi foto/visual (legal/visa/real estate vibe). ukuran HARUS 1200×630, aman text tidak kepotong, kontras bagus
         width: 1200,
         height: 630,
         alt: 'Diputra Signature Indonesia',
-        // Contoh pilihan preferensi (biar kebayang)
-        // Opsi A — Corporate & Clean (paling aman)
-        // Background polos / gradient maroon
-        // Logo DSI
-        // Tagline singkat
-        // Tanpa foto orang
       },
     ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Diputra Signature Indonesia',
-    description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.',
-    images: ['/og/og-default.jpg'],
   },
   robots: {
     index: true,
     follow: true,
   },
-  // icons: {
-  //   icon: [
-  //     { url: '/favicon.ico' }, //minimal ada: favicon.ico, apple-touch-icon.png (180×180), icon-32.png, icon-16.png
-  //     { url: '/icons/icon-32.png', sizes: '32x32', type: 'image/png' },
-  //     { url: '/icons/icon-16.png', sizes: '16x16', type: 'image/png' },
-  //   ],
-  //   apple: [{ url: '/icons/apple-touch-icon.png' }],
-  // },
 };
 
 export default function RootLayout({

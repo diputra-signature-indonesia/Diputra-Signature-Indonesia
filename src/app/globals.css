@@ -102,6 +102,41 @@ html {
   scrollbar-width: 0px;
 }
 
+/* Custom Scrollbar for Reviews */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-track-transparent {
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-thumb-brand-burgundy\/20 {
+  scrollbar-color: rgba(128, 0, 32, 0.2) transparent;
+}
+
+.hover\:scrollbar-thumb-brand-burgundy\/40:hover {
+  scrollbar-color: rgba(128, 0, 32, 0.4) transparent;
+}
+
+/* Webkit Scrollbar Styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thumb-brand-burgundy\/20::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 0, 32, 0.2);
+  border-radius: 3px;
+}
+
+.hover\:scrollbar-thumb-brand-burgundy\/40:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 0, 32, 0.4);
+}
+
 .blog-content img {
   width: 100%;
   max-width: 100%;

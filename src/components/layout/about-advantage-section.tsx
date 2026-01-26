@@ -1,3 +1,5 @@
+import { Motion } from '../motion';
+
 export function AdvantageSection() {
   const advantageContent = [
     {
@@ -46,7 +48,7 @@ export function AdvantageSection() {
 
   return (
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-7 xl:max-h-[700px]">
-      <div className="mx-auto flex flex-col items-center lg:w-4xl">
+      <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true} className="mx-auto flex flex-col items-center lg:w-4xl">
         <div className="flex flex-col items-center gap-5">
           <h2 className="brand-h1 text-brand-maroon">
             Diputra <span className="brand-h1-semi text-black">Advantage</span>
@@ -60,11 +62,11 @@ export function AdvantageSection() {
         <p className="brand-p text-center sm:hidden">
           We deliver trustworthy legal, visa, and real estate services in Bali through experienced professionals and transparent, client-focused solutions.
         </p>
-      </div>
+      </Motion>
       <div className="*:text-brand-white grid w-full grid-cols-1 gap-x-5 overflow-hidden max-lg:rounded-2xl max-lg:*:text-black sm:grid-cols-2 md:grid-cols-3 md:gap-y-2.5 lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">
         {advantageContent.map((item, idx) => {
           return (
-            <div key={idx} className={`flex w-full flex-col gap-2.5 border-b border-gray-300 py-5 text-left lg:flex-col lg:gap-4`}>
+            <Motion as="div" key={idx} delay={0.3} duration={0.6} y={24} x={0} once={true} className={`flex w-full flex-col gap-2.5 border-b border-gray-300 py-5 text-left lg:flex-col lg:gap-4`}>
               <div className="border-brand-yellow border-l-2 px-5">
                 <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.title}</h3>
                 <h3 className="brand-h3 text-brand-black font-normal">{item.subTitle}</h3>
@@ -73,7 +75,7 @@ export function AdvantageSection() {
                 <span className="hidden md:inline">{item.description}</span>
                 <span className="md:hidden">{item.shortDescription}</span>
               </p>
-            </div>
+            </Motion>
           );
         })}
       </div>

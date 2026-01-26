@@ -53,8 +53,9 @@ export default function CreateUrlForm() {
 function GeneratedUrlResult({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
 
+  const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   async function handleCopy() {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(BASE_URL + url);
     setCopied(true);
 
     // reset icon setelah beberapa detik (opsional)
@@ -66,7 +67,10 @@ function GeneratedUrlResult({ url }: { url: string }) {
       <p className="mb-2 font-semibold text-green-800">Review URL generated (copy now — shown once)</p>
 
       <div className="flex items-start gap-3">
-        <p className="font-mono break-all text-green-900">{url}</p>
+        <p className="font-mono break-all text-green-900">
+          {BASE_URL}
+          {url}
+        </p>
 
         <button type="button" onClick={handleCopy} className="shrink-0 rounded-md border px-3 py-1 text-xs font-medium transition hover:bg-green-100 disabled:opacity-60" disabled={copied}>
           {copied ? '✓ Copied' : 'Copy'}

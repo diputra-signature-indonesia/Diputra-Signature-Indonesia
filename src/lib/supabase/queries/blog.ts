@@ -17,6 +17,11 @@ export type BlogPost = {
   updated_at?: string | null;
 };
 
+type GetAdminBlogPostsParams = {
+  page: number; // 0-based
+  pageSize: number;
+};
+
 export type CreateDraftBlogPostInput = {
   slug: string;
   title: string;
@@ -65,10 +70,13 @@ export type BlogPostRow = {
 };
 
 // admin read all
-export async function getAdminBlogPosts(): Promise<BlogPost[]> {
+export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsParams): Promise<{ data: BlogPost[]; count: number }> {
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await supabase
     .from('blog_posts')
     .select(
       `
@@ -79,12 +87,18 @@ export async function getAdminBlogPosts(): Promise<BlogPost[]> {
       status,
       created_at,
       updated_at
-      `
+      `,
+      { count: 'exact' }
     )
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) throw error;
-  return (data ?? []) as BlogPost[];
+
+  return {
+    data: (data ?? []) as BlogPost[],
+    count: count ?? 0,
+  };
 }
 
 /** BLOG list (untuk /blog) */

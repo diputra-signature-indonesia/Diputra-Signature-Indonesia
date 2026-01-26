@@ -6,6 +6,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { Mousewheel } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import { Motion } from '../motion';
 interface ReviewProps {
   testimonials: StoryExperience[];
 }
@@ -15,7 +16,7 @@ export function ReviewSection({ testimonials }: ReviewProps) {
 
   return (
     <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
-      <div className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
+      <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true} className="mx-auto flex flex-col items-center sm:w-xl lg:w-2xl xl:w-3xl">
         <h2 id="reviews-heading" className="brand-h1 brand-h1-mb text-brand-maroon text-center">
           Client <span className="brand-h1-semi text-black">Stories & Experience</span>
         </h2>
@@ -23,7 +24,7 @@ export function ReviewSection({ testimonials }: ReviewProps) {
           We are committed to delivering trusted legal, business, and immigration services through experienced professionals, transparent processes, and solutions tailored to each client’s needs.
         </p>
         <p className="brand-p-desc text-center text-balance sm:hidden">We provide trusted legal, business, and immigration services with transparent processes and tailored solutions.</p>
-      </div>
+      </Motion>
 
       <Swiper
         modules={[Mousewheel]}
@@ -38,15 +39,17 @@ export function ReviewSection({ testimonials }: ReviewProps) {
       >
         {testimonials.map((item, index) => {
           const isActive = index === activeIndex;
-          const cardBase = 'flex! size-64! h-full! flex-col! overflow-hidden!  sm:w-xs! lg:w-sm! transition-all! duration-300!';
-          const cardState = isActive ? 'border-t-4 border-brand-yellow scale-100! text-brand-black! shadow-xl!' : 'border-t-4 border-brand-burgundy bg-gray-100! scale-75! text-brand-black!';
+          const cardBase = 'flex! size-64! h-full! flex-col! overflow-hidden! border! !border-black/10  w-xs! md:w-md! lg:w-xl! transition-all! duration-300!';
+          const cardState = isActive ? 'scale-100! text-brand-black! shadow-md!' : 'scale-75! text-brand-black!';
           return (
-            <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto p-5`}>
-              <IconQuote className="text-brand-yellow size-6" />
-              <figure className="h-full overflow-hidden">
-                <blockquote className="brand-p">“{item.message}”</blockquote>
-                <figcaption className="flex flex-col py-5">
-                  <h3 className="brand-h3 text-brand-burgundy font-semibold">{item.name}</h3>
+            <SwiperSlide key={item.id} className={`${cardBase} ${cardState} mx-auto rounded-xl p-5`}>
+              <IconQuote className="text-brand-yellow mb-5 size-6" />
+              <figure className="flex h-full flex-col overflow-hidden">
+                <blockquote className="brand-p scrollbar-thin scrollbar-track-transparent scrollbar-thumb-brand-burgundy/20 hover:scrollbar-thumb-brand-burgundy/40 flex-1 overflow-y-auto pr-1">
+                  “{item.message}”
+                </blockquote>
+                <figcaption className="flex shrink-0 flex-col pt-5 pr-10">
+                  <h3 className="brand-p text-brand-burgundy truncate font-semibold">{item.name}</h3>
                   <time dateTime={item.created_at ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
                     {item.created_at}
                   </time>

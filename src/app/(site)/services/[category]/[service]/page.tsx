@@ -1,12 +1,12 @@
+import { getPublishedBlogPosts, getServiceCategories, getServiceDetailPageData } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getPublishedBlogPosts, getServiceCategories, getServiceDetailPageData } from '@/lib/supabase/queries';
 
 import { DetailServiceSection } from '@/components/layout/detail-service-section';
+import { BlogSection } from '@/components/layout/section-blog';
 import { CtaSection } from '@/components/layout/section-cta';
 import { QnaSection } from '@/components/layout/section-qna';
 import { ServicesSection } from '@/components/layout/section-services';
-import { BlogSection } from '@/components/layout/section-blog';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; service: string }> }): Promise<Metadata> {
   const { category, service } = await params;
@@ -22,6 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
         description: selectedService.item.description ?? '',
         type: 'article',
         url: `/services/${category}/${service}`,
+        images: ['/og/og-default.png'],
       },
     };
   } catch {
@@ -56,7 +57,7 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
       <div className="pb-13">
         <ServicesSection services={ServicesCategory} excludeSlug={category} />
       </div>
-      <div className="w-full bg-white pt-13 drop-shadow-lg">
+      <div className="w-full bg-white pt-13 drop-shadow-lg max-md:pb-28">
         <BlogSection blogPosts={blogPosts} />
       </div>
     </>

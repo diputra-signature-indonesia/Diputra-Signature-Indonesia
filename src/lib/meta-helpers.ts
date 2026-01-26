@@ -11,7 +11,7 @@ type BlogMetaInput = {
 };
 
 const SITE_NAME = 'Diputra Signature Indonesia';
-const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_SITE_URL}/og/og-default.jpg`;
+const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_SITE_URL}/og/og-default.png`;
 
 export function buildBlogPostMetadata({ slug, title, description, image, date, updatedAt }: BlogMetaInput): Metadata {
   const fullTitle = `${title} | ${SITE_NAME}`;

@@ -40,26 +40,24 @@ logo final path publik
 */
 export const dsiLocalBusinessJsonLd = cleanJsonLd({
   '@context': 'https://schema.org',
-  '@type': 'ProfessionalService', // TODO: bisa diganti ke LegalService, ImmigrationConsultant, dll nanti
-  '@id': `${baseUrl}/#organization`, // ID unik untuk entity (bagus untuk konsistensi)
+  '@type': 'ProfessionalService',
+  '@id': `${baseUrl}/#organization`,
   name: ORG_NAME,
-  url: baseUrl, // TODO: ganti ke domain resmi DSI
+  url: baseUrl,
   description: 'Legal, immigration, and real estate consulting services in Bali with a professional, transparent, and integrity-based approach.',
-  logo: `${baseUrl}/images/logo-dsi.png`, // TODO: pastikan file bener & publik
-  image: [`${baseUrl}/og/og-default.jpg`], // saran: pakai OG default yang sama
-  // Kontak (isi yang resmi)
-  telephone: '+62811234567890', // TODO
-  email: 'DSIInfo@diputraSignature.com', // TODO
+  logo: `${baseUrl}/og/logo-dsi.svg`,
+  image: [`${baseUrl}/og/og-default.png`],
+  telephone: '+6287851021080',
+  email: 'info@diputrasignature.com',
   contactPoint: [
     {
       '@type': 'ContactPoint',
-      telephone: '+62...', // TODO
+      telephone: '+6287851021080',
       contactType: 'customer service',
       areaServed: ['ID'],
       availableLanguage: ['English', 'Indonesian'],
     },
   ],
-  //  Area layanan
   areaServed: [
     { '@type': 'AdministrativeArea', name: 'Bali' },
     { '@type': 'Country', name: 'Indonesia' },
@@ -102,26 +100,27 @@ export const dsiLocalBusinessJsonLd = cleanJsonLd({
     {
       '@type': 'OpeningHoursSpecification',
       dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as DayOfWeek[],
-      opens: '09:00',
+      opens: '10:00',
       closes: '17:00',
     },
   ],
   address: {
     // TODO: Harus ASLI (prinsip: lebih baik kurang daripada salah)
     '@type': 'PostalAddress',
-    streetAddress: '', // TODO
-    addressLocality: 'Denpasar', // contoh, TODO
+    streetAddress: 'Banjar Latusari, Desa Abiansemal, Kecamatan Abiansemal',
+    addressLocality: 'Badung',
     addressRegion: 'Bali',
-    postalCode: '80xxx',
+    postalCode: '80352',
     addressCountry: 'ID',
   },
   geo: {
     '@type': 'GeoCoordinates',
-    latitude: -8.65, // TODO
-    longitude: 115.21, // TODO
+    latitude: -8.541167054038437,
+    longitude: 115.21423090707123,
   },
-  // Social proof / entity linking
   sameAs: [
+    'https://maps.app.goo.gl/fYVeaHKnzToJLyGK7',
+    'https://share.google/DDQ6eXU2eNJDQTBBd',
     // TODO: isi kalau ada
     // 'https://www.instagram.com/...',
     // 'https://www.linkedin.com/company/...',
