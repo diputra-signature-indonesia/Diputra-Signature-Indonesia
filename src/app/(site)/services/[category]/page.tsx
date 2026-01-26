@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
         description: cat.short_description ?? '',
         type: 'website',
         url: `${baseUrl}/services/${category}`,
+        images: ['/og/og-default.png'],
       },
     };
   } catch {
@@ -63,7 +64,7 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
       <div className="pb-13">
         <ServicesSection services={ServicesCategory} excludeSlug={category} />
       </div>
-      <div className="w-full bg-white pt-13 drop-shadow-lg">
+      <div className="w-full bg-white pt-13 pb-28 drop-shadow-lg">
         <BlogSection blogPosts={blogPosts} />
       </div>
     </>

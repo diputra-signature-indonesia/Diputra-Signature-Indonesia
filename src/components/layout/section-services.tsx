@@ -58,7 +58,12 @@ export function ServicesSection({ services, excludeSlug }: category) {
                     <div className="mt-auto flex h-full flex-col items-end gap-5">
                       <p className="brand-p md:text-balance xl:text-pretty">{item.short_description}</p>
                       <BrandButton asChild variant="ghost" className="group mt-auto w-fit justify-end overflow-hidden px-0 pl-7 text-white">
-                        <Link href={`/services/${item.slug.toLowerCase()}`} className="relative">
+                        <Link
+                          href={`/services/${item.slug.toLowerCase()}`}
+                          aria-label={`Learn more about ${item.title} Services in Bali`}
+                          title={`${item.title} Services in Bali`}
+                          className="relative"
+                        >
                           Learn More{' '}
                           <span>
                             <IconArrow className="text-white" />

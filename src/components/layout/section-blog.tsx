@@ -58,7 +58,6 @@ export function BlogSection({ blogPosts }: BlogSectionProps) {
                   />
                   <div className="flex w-full flex-col gap-1 p-2 sm:gap-2.5 lg:p-5">
                     <div className="relative w-full">
-                      <div className="border-brand-yellow absolute -z-10 aspect-square h-[50px] -translate-x-1/2 border max-lg:-top-4 max-sm:-top-2 md:border-2 lg:h-full" />
                       <h3 className="brand-h3 text-brand-burgundy line-clamp-2 font-semibold sm:text-balance lg:min-h-13">{post.title}</h3>
                     </div>
                     <p className="line-clamp-3 font-light max-sm:hidden sm:text-sm lg:line-clamp-4 lg:min-h-20">{post.excerpt}</p>

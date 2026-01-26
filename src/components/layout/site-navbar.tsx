@@ -90,6 +90,8 @@ export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; con
                             <Link
                               key={child.href}
                               href={child.href}
+                              aria-label={`Learn more about ${child.label} Services in Bali`}
+                              title={`${child.label} Services in Bali`}
                               className={`font-raleway brand-p hover:text-brand-burgundy block px-4 py-3 text-left text-sm transition-colors hover:bg-gray-100 ${isChildActive ? 'text-brand-burgundy font-semibold' : 'font-normal'}`}
                             >
                               {child.label}

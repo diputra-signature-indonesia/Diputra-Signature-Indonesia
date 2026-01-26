@@ -16,11 +16,7 @@ export const metadata: Metadata = {
     title: 'Diputra Signature Indonesia – Legal, Visa, and Business Consulting in Bali',
     description: 'Professional legal, visa, and business consulting services based in Bali. Trusted by individuals and companies for transparent, reliable, and efficient solutions.',
     url: '/',
-    images: ['/og/og-default.jpg'],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    images: ['/og/og-default.jpg'],
+    images: ['/og/og-default.png'],
   },
 };
 
@@ -45,7 +41,7 @@ export default async function HomePage() {
           <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-white/0" />
           <ReviewSection testimonials={review} />
         </div>
-        <div className="mt-30">
+        <div className="mt-30 max-md:mb-10">
           <BlogSection blogPosts={blogPosts} />
         </div>
       </div>

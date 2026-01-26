@@ -12,36 +12,45 @@ type Payload = {
 export async function sendContactEmail(payload: Payload) {
   const to = process.env.CONTACT_TO_EMAIL;
   const from = process.env.CONTACT_FROM_EMAIL;
-  // contoh: "Diputra Signature Indonesia <info@diputrasignature.com>"
 
   if (!to) return { skipped: true as const, reason: 'CONTACT_TO_EMAIL not set' };
   if (!from) return { skipped: true as const, reason: 'CONTACT_FROM_EMAIL not set' };
 
-  const subject = `New Contact Message — ${payload.name}`;
+  const safeName = payload.name.replace(/[\r\n]+/g, ' ').trim();
+  const safeEmail = payload.email.replace(/[\r\n]+/g, '').trim();
+  const safePhone = payload.phone.replace(/[\r\n]+/g, ' ').trim();
 
-  const text = [`New Contact Message`, ``, `Name: ${payload.name}`, `Email: ${payload.email}`, `Phone: ${payload.phone}`, ``, `Message:`, payload.message].join('\n');
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail);
+  if (!isEmail) return { skipped: true as const, reason: 'Invalid email' };
+
+  const subject = `New Contact Message — ${safeName}`;
+
+  const text = [`New Contact Message`, ``, `Name: ${safeName}`, `Email: ${safeEmail}`, `Phone: ${safePhone}`, ``, `Message:`, payload.message].join('\n');
 
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h2>New Contact Message</h2>
-      <p><b>Name:</b> ${escapeHtml(payload.name)}</p>
-      <p><b>Email:</b> ${escapeHtml(payload.email)}</p>
-      <p><b>Phone:</b> ${escapeHtml(payload.phone)}</p>
+      <p><b>Name:</b> ${escapeHtml(safeName)}</p>
+      <p><b>Email:</b> ${escapeHtml(safeEmail)}</p>
+      <p><b>Phone:</b> ${escapeHtml(safePhone)}</p>
       <p><b>Message:</b><br/>${escapeHtml(payload.message).replace(/\n/g, '<br/>')}</p>
     </div>
   `;
 
-  const res = await resend.emails.send({
-    from,
-    to,
-    subject,
-    // Ini yang paling kompatibel di Resend:
-    replyTo: payload.email,
-    text,
-    html,
-  });
+  try {
+    const res = await resend.emails.send({
+      from,
+      to: [to],
+      subject,
+      replyTo: `${safeName} <${safeEmail}>`,
+      text,
+      html,
+    });
 
-  return { skipped: false as const, res };
+    return { skipped: false as const, res };
+  } catch (err: any) {
+    return { skipped: false as const, error: true as const, message: err?.message ?? 'Resend send failed', err };
+  }
 }
 
 function escapeHtml(s: string) {

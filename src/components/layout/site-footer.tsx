@@ -72,7 +72,13 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
               {navItems
                 .filter((item): item is NavLinkItem => item.slug !== 'services')
                 .map((item) => (
-                  <Link key={item.slug} href={item.href} className={`brand-p hover:text-brand-white ${pathname === item.href ? 'text-brand-white font-semibold' : 'font-normal'}`}>
+                  <Link
+                    key={item.slug}
+                    href={item.href}
+                    aria-label={`Learn more about ${item.label} Services in Bali`}
+                    title={`${item.label} Services in Bali`}
+                    className={`brand-p hover:text-brand-white ${pathname === item.href ? 'text-brand-white font-semibold' : 'font-normal'}`}
+                  >
                     {item.label}
                   </Link>
                 ))}
