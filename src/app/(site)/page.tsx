@@ -16,7 +16,14 @@ export const metadata: Metadata = {
     title: 'Diputra Signature Indonesia – Legal, Visa, and Business Consulting in Bali',
     description: 'Professional legal, visa, and business consulting services based in Bali. Trusted by individuals and companies for transparent, reliable, and efficient solutions.',
     url: '/',
-    images: ['/og/og-default.png'],
+    images: [
+      {
+        url: '/og/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'Diputra Signature Indonesia',
+      },
+    ],
   },
 };
 

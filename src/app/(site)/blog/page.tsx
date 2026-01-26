@@ -5,14 +5,19 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Blog & Insights',
   description: 'Read the latest articles and insights on legal updates, visa regulations, business compliance, and professional guidance for individuals and companies in Bali.',
-  alternates: {
-    canonical: '/blog',
-  },
+  alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'Blog & Insights',
+    title: 'Blog & Insights | Diputra Signature Indonesia',
     description: 'Read the latest articles and insights on legal updates, visa regulations, business compliance, and professional guidance for individuals and companies in Bali.',
     url: '/blog',
-    images: ['/og/og-default.png'],
+    images: [
+      {
+        url: '/og/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'Blog & Insights | Diputra Signature Indonesia',
+      },
+    ],
   },
 };
 
