@@ -69,6 +69,33 @@ export type BlogPostRow = {
   updated_at: string | null;
 };
 
+export async function getAdminBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select(
+      `
+      id,
+      title,
+      slug,
+      excerpt,
+      content_md,
+      featured_image,
+      status,
+      published_at,
+      created_at,
+      updated_at,
+      author_name
+      `
+    )
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as BlogPost | null;
+}
+
 // admin read all
 export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsParams): Promise<{ data: BlogPost[]; count: number }> {
   const supabase = await createSupabaseServerClient();
