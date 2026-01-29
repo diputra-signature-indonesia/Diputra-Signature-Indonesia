@@ -24,13 +24,13 @@ export default async function AdminReviewPage() {
   const reviewUrlData = await getAdminGeneratedReview();
   return (
     <div className="h-full px-4 py-6">
-      <div className="brand-h1-mb flex items-center justify-between">
+      <div className="brand-h1-mb flex items-center justify-between rounded-2xl border border-gray-200 px-5 py-4 shadow-sm">
         <h1 className="brand-h2 font-bold">Review List</h1>
         <BrandButton asChild variant="red" className="w-full justify-center max-sm:px-0 sm:w-fit">
           <Link href="/admin/reviews/create">Generate URL</Link>
         </BrandButton>
       </div>
-      <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-7 pb-28">
         <AdminReviewUrlTableClient role={role} data={reviewUrlData} />
         <AdminReviewTableClient role={role} data={reviewData} />
       </div>

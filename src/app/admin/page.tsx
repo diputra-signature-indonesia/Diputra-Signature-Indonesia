@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
 
   return (
     <div className="h-full px-4 py-6">
-      <div className="brand-h1-mb flex items-center justify-between">
+      <div className="brand-h1-mb flex items-center justify-between rounded-2xl border border-gray-200 px-5 py-4 shadow-sm">
         <h1 className="brand-h2 font-bold">Blog List</h1>
 
         <BrandButton asChild variant="red" className="w-full justify-center max-sm:px-0 sm:w-fit">

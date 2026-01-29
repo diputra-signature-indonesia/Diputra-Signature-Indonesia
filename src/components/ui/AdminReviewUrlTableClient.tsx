@@ -15,33 +15,33 @@ function formatDate(date: string | null | undefined) {
 }
 
 const columns = [
-  { header: 'Client Name', width: '200px', align: 'center', cell: (row) => row.client_name },
-  { header: 'Client Email', width: '200px', align: 'center', cell: (row) => row.client_email },
+  { header: 'Client Name', width: '200px', align: 'left', cell: (row) => row.client_name },
+  { header: 'Client Email', width: '200px', align: 'left', cell: (row) => row.client_email },
   {
     header: 'Expires At',
     width: '140px',
-    align: 'center',
+    align: 'left',
     cell: (row) => formatDate(row.expires_at),
   },
   {
     header: 'Used At',
     width: '140px',
-    align: 'center',
+    align: 'left',
     cell: (row) => formatDate(row.used_at),
   },
   {
     header: 'Revoked At',
     width: '140px',
-    align: 'center',
+    align: 'left',
     cell: (row) => formatDate(row.revoked_at),
   },
 
-  { header: 'Created', width: '140px', align: 'center', cell: (row) => formatDate(row.created_at) },
+  { header: 'Created', width: '140px', align: 'left', cell: (row) => formatDate(row.created_at) },
 ] satisfies Column<DefaultGeneratedUrl>[];
 
 export function AdminReviewUrlTableClient({ data, role }: { data: DefaultGeneratedUrl[]; role: UserRole | null }) {
   return (
-    <div className="w-full overflow-x-scroll">
+    <div className="w-full">
       <ReviewUrlDataTable
         role={role}
         data={data}
