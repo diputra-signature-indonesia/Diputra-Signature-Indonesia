@@ -171,7 +171,11 @@ export function DataTable<T>({ role, data, columns, getStatus, getRowKey, getId,
   };
 
   return (
-    <TableContainer component={Paper} className="w-full">
+    <TableContainer component={Paper} sx={{ borderRadius: '12px', backgroundColor: 'white' }} className="mb-3 w-full rounded-2xl border border-gray-200">
+      <Box className="px-5 py-4">
+        <h2 className="text-lg font-bold">Created Blog/Article</h2>
+        <p className="text-base text-gray-500">List of Blogs/Articles Ever Created</p>
+      </Box>
       <Table
         stickyHeader
         sx={{

@@ -1,9 +1,9 @@
 'use client';
-import { createContext, useContext, useState } from 'react';
-import type { ReactNode } from 'react';
-import { AdminNav } from './admin-navigation';
-import { AdminHeader } from './admin-header';
 import { ADMIN_NAV_ITEM } from '@/data/admin-navigation';
+import type { ReactNode } from 'react';
+import { createContext, useContext, useState } from 'react';
+import { AdminHeader } from './admin-header';
+import { AdminNav } from './admin-navigation';
 
 type AdminLayoutContextValue = {
   isNavOpen: boolean;
@@ -20,12 +20,17 @@ export function useAdminLayout() {
   return ctx;
 }
 
-export function AdminLayoutProvider({ children }: { children: ReactNode }) {
+interface AdminLayoutProviderProps {
+  username: string;
+  children: ReactNode;
+}
+
+export function AdminLayoutProvider({ username, children }: AdminLayoutProviderProps) {
   const [isNavOpen, setIsNavOpen] = useState(true);
 
   return (
     <AdminLayoutContext.Provider value={{ isNavOpen, setIsNavOpen }}>
-      <AdminHeader />
+      <AdminHeader username={username} />
       <div className="flex min-h-0 w-full flex-1">
         <AdminNav AdminNavItem={ADMIN_NAV_ITEM} />
         <div className="flex-1 overflow-y-scroll">{children}</div>

@@ -24,13 +24,13 @@ const featureClassMap: Record<string, string> = {
 };
 
 const columns = [
-  { header: 'Reviewer Name', width: '200px', align: 'center', cell: (row) => row.name },
-  { header: 'Email', width: '200px', align: 'center', cell: (row) => row.email },
+  { header: 'Reviewer Name', width: '200px', align: 'left', cell: (row) => row.name },
+  { header: 'Email', width: '200px', align: 'left', cell: (row) => row.email },
   { header: 'Message', width: 'auto', align: 'left', cell: (row) => row.message },
   {
     header: 'Status',
-    width: '140px',
-    align: 'center',
+    width: '128px',
+    align: 'left',
     cell: (row) => (
       <span className={`rounded-full px-3 py-1 text-xs ${statusClassMap[row.is_published ? 'Published' : 'Unpublished'] ?? 'bg-gray-100 text-gray-600'}`}>
         {row.is_published ? 'Published' : 'Unpublished'}
@@ -39,17 +39,19 @@ const columns = [
   },
   {
     header: 'Feature',
-    width: '140px',
-    align: 'center',
+    width: '128px',
+    align: 'left',
     cell: (row) => (
       <span className={`rounded-full px-3 py-1 text-xs ${featureClassMap[row.is_featured ? 'Featured' : 'Unfeatured'] ?? 'bg-gray-100 text-gray-600'}`}>
         {row.is_featured ? 'Featured' : 'Unfeatured'}
       </span>
     ),
   },
-  { header: 'Created', width: '140px', align: 'center', cell: (row) => formatDate(row.created_at) },
+  { header: 'Created', width: '128px', align: 'left', cell: (row) => formatDate(row.created_at) },
 ] satisfies Column<DefaultReview>[];
 
 export function AdminReviewTableClient({ data, role }: { data: DefaultReview[]; role: UserRole | null }) {
-  return <ReviewDataTable role={role} data={data} columns={columns} getStatus={(row) => row.is_published} getFeatured={(row) => row.is_featured} getRowKey={(row) => row.id} getId={(row) => row.id} />;
+  return (
+    <ReviewDataTable role={role} data={data} columns={columns} getPublished={(row) => row.is_published} getFeatured={(row) => row.is_featured} getRowKey={(row) => row.id} getId={(row) => row.id} />
+  );
 }
