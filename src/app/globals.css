@@ -89,9 +89,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-html {
-  scroll-behavior: smooth;
-}
 /* leading-[125%] tracking-wider */
 
 .hide-scrollbar::-webkit-scrollbar {

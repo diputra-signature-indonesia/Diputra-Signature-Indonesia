@@ -4,7 +4,6 @@ import type { StoryExperience } from '@/lib/supabase/queries';
 import { useState } from 'react';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import { Mousewheel } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Motion } from '../motion';
 interface ReviewProps {
@@ -27,12 +26,10 @@ export function ReviewSection({ testimonials }: ReviewProps) {
       </Motion>
 
       <Swiper
-        modules={[Mousewheel]}
         centeredSlides
         initialSlide={1}
         grabCursor
         touchStartPreventDefault={false}
-        mousewheel={{ forceToAxis: true, releaseOnEdges: true }}
         slidesPerView={'auto'}
         onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
         className="h-64! w-full! pb-7! sm:h-72! lg:h-80!"

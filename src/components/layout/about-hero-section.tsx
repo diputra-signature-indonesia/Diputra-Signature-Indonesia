@@ -1,4 +1,5 @@
 import IconArrow from '@/icons/BrandIconArrow';
+import Link from 'next/link';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
 
@@ -32,12 +33,12 @@ export function HeroSection() {
           </Motion>
           <Motion as="div" delay={0.3} duration={0.6} y={24} x={0} once={true} className="w-fit">
             <BrandButton asChild variant="yellow" className="w-fit bg-transparent">
-              <a href="/contact" className="text-brand-white">
+              <Link href="/contact" className="text-brand-white">
                 Contact Us
                 <span>
                   <IconArrow className="text-brand-white size-5" />
                 </span>
-              </a>
+              </Link>
             </BrandButton>
           </Motion>
         </div>
