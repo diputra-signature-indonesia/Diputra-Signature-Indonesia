@@ -1,0 +1,280 @@
+Project diputra_signature_indonesia {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Application schema for Diputra Signature Indonesia.
+    Source: supabase/migrations/20260814124226_remote_schema.sql
+    Generated: 2026-08-16
+
+    Scope:
+    - Includes all application-owned tables in the public schema.
+    - Includes auth.users as a minimal external Supabase Auth reference.
+    - Supabase-managed auth and storage internal columns are intentionally omitted.
+    - The application expects a public Storage bucket named images.
+    - RLS policies, database functions, and triggers are summarized in table/column notes because DBML does not model their full behavior.
+  '''
+}
+
+Enum public.blog_status {
+  draft
+  pending
+  published
+  rejected
+}
+
+Enum public.categories_type {
+  primary
+  secondary
+}
+
+Enum public.contact_status {
+  new
+  in_progress
+  replied
+  closed
+  spam
+}
+
+Enum public.cta_type {
+  contact
+  detail
+}
+
+Enum public.role {
+  super_admin
+  admin
+  editor
+  contributor
+}
+
+Table auth.users {
+  id uuid [pk, not null]
+
+  Note: 'External Supabase Auth table. Only the referenced id is shown.'
+}
+
+Table public.profiles {
+  id uuid [pk, not null]
+  email text [not null, unique]
+  role public.role [not null, default: 'contributor']
+  is_active boolean [not null, default: true]
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+    Whitelist and authorization profile for Supabase Auth users.
+    RLS currently allows authenticated users to select and update their own row.
+    The FK to auth.users uses ON UPDATE CASCADE and ON DELETE CASCADE.
+  '''
+}
+
+Table public.team_members {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  profile_id uuid
+  full_name text [not null]
+  job_title text [not null]
+  short_bio text
+  avatar_url text
+  is_visible boolean [not null, default: true]
+  display_order bigint
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+  nickname text
+
+  Note: '''
+    Team members displayed on the About page.
+    profile_id optionally connects a member to an admin account.
+    Public users may read rows where is_visible is true.
+  '''
+}
+
+Table public.services_categories {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  slug text [not null, unique]
+  seo_title text
+  seo_description text
+  og_image text
+  title text
+  type public.categories_type [not null, default: 'primary']
+  short_description text
+  description text
+  hero_heading text
+  hero_image text
+  card_image text
+  card_icon_key text
+  sort_order bigint [default: 0]
+  is_published boolean
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+
+  Note: '''
+    Top-level service categories.
+    Public users may read rows where is_published is true.
+    updated_at is maintained by services_categories_update_at.
+  '''
+}
+
+Table public.services_items {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  category_id uuid [not null]
+  slug text [not null]
+  seo_title text
+  seo_description text
+  og_image text
+  title text
+  description text
+  icon_key text
+  cta_label text [default: 'contact']
+  sort_order bigint [default: 0]
+  is_published boolean
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+  cta_type public.cta_type [not null, default: 'contact']
+
+  indexes {
+    (category_id, slug) [unique, name: 'services_items_category_slug_unique']
+  }
+
+  Note: '''
+    Individual services belonging to a category.
+    Public users may read rows where is_published is true.
+    updated_at is maintained by services_items_update_at.
+  '''
+}
+
+Table public.services_item_details {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  service_item_id uuid [not null]
+  title text
+  description text
+  cta_description text
+  sort_order bigint [default: 0]
+  is_published boolean
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+
+  indexes {
+    (service_item_id, sort_order) [unique, name: 'services_item_details_unique_order']
+  }
+
+  Note: '''
+    Ordered detail sections for a service item.
+    Public users may read rows where is_published is true.
+    updated_at is maintained by services_detail_update_at.
+  '''
+}
+
+Table public.question_answer {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  services_categories_id uuid
+  question text [not null]
+  anwer text [not null, note: 'Column name is intentionally preserved from the current schema; anwer is a typo of answer.']
+  is_visible boolean [not null, default: true]
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+
+  Note: '''
+    FAQ entries optionally assigned to a service category.
+    Public users may read rows where is_visible is true.
+    The current frontend still reads FAQ content from a static source instead of this table.
+  '''
+}
+
+Table public.blog_posts {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  slug text [not null, unique]
+  title text
+  excerpt text
+  content_md text [note: 'Despite its name, the application currently stores Tiptap HTML in this column.']
+  author_name text
+  reading_time_min bigint
+  featured_image text
+  cover_alt text
+  seo_title text
+  seo_description text
+  og_image text
+  published_at date
+  updated_at timestamptz [default: `now()`]
+  created_at timestamptz [default: `now()`]
+  status public.blog_status [default: 'draft']
+
+  Note: '''
+    Blog drafts and published articles.
+    Anonymous users may only read rows with status published.
+    Authenticated users currently have a separate read-all policy.
+    trg_set_published_at sets published_at when status changes to published.
+  '''
+}
+
+Table public.contact_messages {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  name text [not null]
+  email text
+  phone text
+  message text [not null]
+  status public.contact_status [not null, default: 'new']
+  created_at timestamptz [default: `now()`]
+
+  Note: '''
+    Contact form inbox and backup.
+    Anonymous and authenticated users may insert rows.
+    Staff may read/update; admins may delete.
+  '''
+}
+
+Table public.review_requests {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  token_hash text [not null, unique, note: 'SHA-256 hex hash; the raw token is not stored.']
+  client_name text
+  client_email text
+  expires_at timestamptz
+  used_at timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+    One-time review invitations.
+    The application creates links with a seven-day expiry.
+    Staff may create/read/update requests; super_admin and admin may delete them.
+  '''
+}
+
+Table public.reviews {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  review_request_id uuid
+  name text [not null]
+  email text
+  message text [not null]
+  is_published boolean [default: false]
+  is_featured boolean [default: false]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+    Reviews submitted through one-time review requests.
+    Public users may read rows where is_published is true.
+    Staff may read, update, and delete reviews.
+  '''
+}
+
+Ref auth_user_profile {
+  public.profiles.id > auth.users.id [update: cascade, delete: cascade]
+}
+
+Ref team_members_profile {
+  public.team_members.profile_id > public.profiles.id [update: cascade, delete: cascade]
+}
+
+Ref service_category_items {
+  public.services_items.category_id > public.services_categories.id [update: cascade, delete: cascade]
+}
+
+Ref service_item_details {
+  public.services_item_details.service_item_id > public.services_items.id [update: cascade, delete: cascade]
+}
+
+Ref category_question_answers {
+  public.question_answer.services_categories_id > public.services_categories.id [update: cascade, delete: cascade]
+}
+
+Ref review_request_reviews {
+  public.reviews.review_request_id > public.review_requests.id
+}
