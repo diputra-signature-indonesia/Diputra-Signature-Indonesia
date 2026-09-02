@@ -7,6 +7,7 @@ import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
 import { ReviewSection } from '@/components/layout/section-review';
 import { ServicesSection } from '@/components/layout/section-services';
+import { MotionProvider } from '@/components/motion';
 
 export const metadata: Metadata = {
   title: 'Legal, Visa, and Business Consulting in Bali',
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const [categoryService, blogPosts, review] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories()]);
   return (
-    <>
+    <MotionProvider>
       <div className="relative mx-auto max-w-[1440px] overflow-x-hidden">
         {/* <div className="pointer-events-none absolute inset-0 -z-10 bg-[url('/image/landing_page_building_paralax.webp')] bg-cover bg-top bg-no-repeat opacity-5" /> */}
         <div className="relative z-10">
@@ -55,6 +56,6 @@ export default async function HomePage() {
       <div className="w-full pt-13 pb-30 drop-shadow-lg">
         <ContactSection />
       </div>
-    </>
+    </MotionProvider>
   );
 }

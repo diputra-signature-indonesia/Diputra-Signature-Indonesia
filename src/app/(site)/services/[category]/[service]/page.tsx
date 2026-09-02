@@ -7,6 +7,7 @@ import { BlogSection } from '@/components/layout/section-blog';
 import { CtaSection } from '@/components/layout/section-cta';
 import { QnaSection } from '@/components/layout/section-qna';
 import { ServicesSection } from '@/components/layout/section-services';
+import { MotionProvider } from '@/components/motion';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; service: string }> }): Promise<Metadata> {
   const { category, service } = await params;
@@ -45,7 +46,7 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
 
   const [blogPosts, ServicesCategory] = await Promise.all([getPublishedBlogPosts(3), getServiceCategories()]);
   return (
-    <>
+    <MotionProvider>
       <DetailServiceSection
         categoryTitle={servicesDetail.category.title ?? ''}
         serviceTitle={servicesDetail.item.title ?? ''}
@@ -60,6 +61,6 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
       <div className="w-full bg-white pt-13 drop-shadow-lg max-md:pb-28">
         <BlogSection blogPosts={blogPosts} />
       </div>
-    </>
+    </MotionProvider>
   );
 }

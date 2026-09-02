@@ -1,4 +1,5 @@
 import { ServicesSection } from '@/components/layout/section-services';
+import { MotionProvider } from '@/components/motion';
 import { getServiceCategories } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 
@@ -24,11 +25,13 @@ export const metadata: Metadata = {
 export default async function ServicesPage() {
   const categoryService = await getServiceCategories();
   return (
-    <div className="my-10">
-      <h1 id="services-heading" className="sr-only">
-        Diputra Services
-      </h1>
-      <ServicesSection services={categoryService} />
-    </div>
+    <MotionProvider>
+      <div className="my-10">
+        <h1 id="services-heading" className="sr-only">
+          Diputra Services
+        </h1>
+        <ServicesSection services={categoryService} />
+      </div>
+    </MotionProvider>
   );
 }
