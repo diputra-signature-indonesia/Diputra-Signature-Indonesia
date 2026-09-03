@@ -1,5 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
 import { Status } from '@/types/blog-status';
+import { unstable_cache } from 'next/cache';
 
 export type BlogPost = {
   id: string; // kalau tabelmu pakai uuid id
@@ -129,8 +132,8 @@ export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsPar
 }
 
 /** BLOG list (untuk /blog) */
-export async function getPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
-  const supabase = await createSupabaseServerClient();
+async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
     .select(
@@ -153,6 +156,11 @@ export async function getPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
   if (error) throw error;
   return (data ?? []) as BlogPost[];
 }
+
+export const getPublishedBlogPosts = unstable_cache(fetchPublishedBlogPosts, getPublicCacheKeyParts('published-blog-posts'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.blog],
+});
 
 export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost> {
   const supabase = await createSupabaseServerClient();
@@ -181,13 +189,18 @@ export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost
 }
 
 /** BLOG detail (untuk /blog/[slug]) */
-export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
-  const supabase = await createSupabaseServerClient();
+async function fetchPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').single();
 
   if (error) throw error;
   return data as BlogPost;
 }
+
+export const getPublishedBlogPostBySlug = unstable_cache(fetchPublishedBlogPostBySlug, getPublicCacheKeyParts('published-blog-post-by-slug'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.blog],
+});
 
 async function ensureUniqueSlug(baseSlug: string) {
   const supabase = await createSupabaseServerClient();

@@ -1,4 +1,6 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
+import { unstable_cache } from 'next/cache';
 
 import { ServiceIconKey } from '@/types/dsi-services';
 
@@ -47,26 +49,36 @@ export type ServiceItemDetail = {
 };
 
 /** LIST categories (untuk section Services / services page) */
-export async function getServiceCategories(): Promise<ServiceCategory[]> {
-  const supabase = await createSupabaseServerClient();
+async function fetchServiceCategories(): Promise<ServiceCategory[]> {
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase.from('services_categories').select('*').eq('is_published', true).order('sort_order', { ascending: true });
 
   if (error) throw error;
   return (data ?? []) as ServiceCategory[];
 }
 
+export const getServiceCategories = unstable_cache(fetchServiceCategories, getPublicCacheKeyParts('service-categories'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.services],
+});
+
 /** SINGLE category by slug */
-export async function getServiceCategoryBySlug(slug: string): Promise<ServiceCategory> {
-  const supabase = await createSupabaseServerClient();
+async function fetchServiceCategoryBySlug(slug: string): Promise<ServiceCategory> {
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase.from('services_categories').select('*').eq('slug', slug).eq('is_published', true).single();
 
   if (error) throw error;
   return data as ServiceCategory;
 }
 
+export const getServiceCategoryBySlug = unstable_cache(fetchServiceCategoryBySlug, getPublicCacheKeyParts('service-category-by-slug'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.services],
+});
+
 /** LIST items by category slug (join) */
-export async function getServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
-  const supabase = await createSupabaseServerClient();
+async function fetchServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
+  const supabase = createSupabasePublicServerClient();
   // 2-step: ambil category id dulu, lalu items
   const category = await getServiceCategoryBySlug(categorySlug);
 
@@ -76,9 +88,14 @@ export async function getServiceItemsByCategorySlug(categorySlug: string): Promi
   return (data ?? []) as ServiceItem[];
 }
 
+export const getServiceItemsByCategorySlug = unstable_cache(fetchServiceItemsByCategorySlug, getPublicCacheKeyParts('service-items-by-category-slug'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.services],
+});
+
 /** SINGLE item by (category slug + item slug) */
-export async function getServiceItemByCategoryAndSlug(categorySlug: string, itemSlug: string): Promise<ServiceItem> {
-  const supabase = await createSupabaseServerClient();
+async function fetchServiceItemByCategoryAndSlug(categorySlug: string, itemSlug: string): Promise<ServiceItem> {
+  const supabase = createSupabasePublicServerClient();
   // join supaya validasi item benar-benar milik category itu
   const { data, error } = await supabase
     .from('services_items')
@@ -97,14 +114,24 @@ export async function getServiceItemByCategoryAndSlug(categorySlug: string, item
   return data as ServiceItem;
 }
 
+export const getServiceItemByCategoryAndSlug = unstable_cache(fetchServiceItemByCategoryAndSlug, getPublicCacheKeyParts('service-item-by-category-and-slug'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.services],
+});
+
 /** LIST details by item id */
-export async function getServiceItemDetailsByItemId(itemId: string): Promise<ServiceItemDetail[]> {
-  const supabase = await createSupabaseServerClient();
+async function fetchServiceItemDetailsByItemId(itemId: string): Promise<ServiceItemDetail[]> {
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase.from('services_item_details').select('*').eq('service_item_id', itemId).eq('is_published', true).order('sort_order', { ascending: true });
 
   if (error) throw error;
   return (data ?? []) as ServiceItemDetail[];
 }
+
+export const getServiceItemDetailsByItemId = unstable_cache(fetchServiceItemDetailsByItemId, getPublicCacheKeyParts('service-item-details-by-item-id'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.services],
+});
 
 /** Convenience: detail page data */
 export async function getServiceDetailPageData(categorySlug: string, itemSlug: string) {

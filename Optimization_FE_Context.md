@@ -463,3 +463,140 @@ Verifikasi setelah deployment yang diwajibkan:
 5. Uji login/admin dan minimal satu operasi baca yang membutuhkan session tanpa melakukan perubahan data production.
 6. Setelah Preview lulus, merge/deploy ke Production dan ulangi pemeriksaan header serta TTFB.
 7. Jangan melanjutkan FE-01 sebelum baseline sesudah perubahan region dicatat agar kontribusi FE-02 dapat dibedakan dari efek caching.
+
+## Progress FE-01 — Analisis strategi caching data publik (3 September 2026)
+
+Status: **audit source selesai; implementasi belum dilakukan dan menunggu keputusan**.
+
+Batas pekerjaan:
+
+- Audit hanya membaca loader Supabase, route publik, mutation Server Action, konfigurasi Next.js, serta policy lokal yang merepresentasikan schema production.
+- Tidak ada cache, query, UI, environment variable, database, migration, maupun konfigurasi production yang diubah pada tahap analisis.
+- Admin/session, token review, contact form, login, dan data privat tidak boleh masuk shared cache.
+
+Kondisi saat ini:
+
+- `createSupabaseServerClient()` selalu memanggil `cookies()`, termasuk ketika hanya membaca konten publik anonim.
+- `next.config.ts` belum mengaktifkan `cacheComponents`, dan tidak ditemukan `unstable_cache`, `use cache`, `cacheTag`, `revalidateTag`, `updateTag`, maupun `revalidatePath` pada source.
+- Build masih mengklasifikasikan `/`, `/about`, `/blog`, `/blog/[slug]`, `/services`, dan seluruh detail layanan sebagai dynamic.
+- Homepage menjalankan tiga kelompok query publik secara paralel: services, tiga blog terbaru, dan review terbit.
+- Category dan detail service menggunakan data services dan blog yang sama pada beberapa route. Metadata dan body juga memanggil loader yang sama kembali; deduplikasi cold request tetap menjadi scope FE-03.
+- Cache response production sebelum FE-01 masih `MISS` dengan `private, no-store`, sehingga setiap request membayar Function render dan round-trip Supabase.
+
+Kandidat shared cache:
+
+| Tag yang diusulkan | Data | Konsumen utama | Jalur mutation aplikasi |
+| --- | --- | --- | --- |
+| `public-services` | category, item, dan item detail yang published | `/`, `/services`, category/detail service, metadata | Tidak ditemukan; perubahan kemungkinan langsung melalui Supabase |
+| `public-blog` | daftar dan detail blog published | `/`, `/blog`, blog detail, category/detail service, metadata | save/edit, publish/unpublish, delete melalui Server Action |
+| `public-team` | team member visible | `/about` | Tidak ditemukan; perubahan kemungkinan langsung melalui Supabase |
+| `public-reviews` | review published | `/` | publish/unpublish dan delete melalui Server Action |
+
+Temuan data-minimization:
+
+- `getVisibleStories()` menggunakan `select('*')` pada tabel `reviews`.
+- Tabel tersebut memiliki kolom `email`, sedangkan `ReviewSection` adalah Client Component dan menerima seluruh object hasil query sebagai props.
+- TypeScript assertion ke `StoryExperience[]` tidak menghapus properti tambahan pada runtime. Karena itu email dapat ikut terserialisasi ke payload client walaupun tidak dirender.
+- Sebelum caching review publik, query harus memilih hanya `id`, `name`, `message`, dan `created_at`. Ini tidak mengubah tampilan dan mencegah data yang tidak diperlukan masuk ke shared cache/payload browser.
+
+Opsi mekanisme:
+
+1. **Cache Components + `use cache`.** Ini API modern yang direkomendasikan Next.js 16, tetapi perlu mengaktifkan `cacheComponents` secara global. Perubahan tersebut juga mengubah model prerendering seluruh App Router dan berpotensi mewajibkan penyesuaian Suspense/request-time API pada route admin. Scope dan regression surface terlalu besar untuk patch caching pertama pada project production.
+2. **`unstable_cache` pada loader publik tanpa mengaktifkan Cache Components.** API ini masih didukung oleh model caching tanpa Cache Components dan memakai Next.js Data Cache lintas request/deployment. Kekurangannya adalah API tersebut telah digantikan oleh `use cache` untuk arah jangka panjang, sehingga migrasi terkontrol tetap diperlukan nanti.
+3. **Cache full route atau `force-static`.** Potensi response paling cepat, tetapi meningkatkan risiko stale page, metadata, dan slug serta memperbesar dampak invalidasi. Tidak direkomendasikan untuk implementasi awal.
+
+Rekomendasi implementasi pertama:
+
+- Gunakan opsi 2 sebagai perubahan paling sempit: `unstable_cache` hanya pada loader publik anonim.
+- Buat Supabase public server client terpisah dengan anon key, tanpa `cookies()`, session persistence, atau service-role key.
+- Pertahankan client cookie-bound saat ini untuk seluruh auth, admin, preview draft, contact, dan review-request.
+- Gunakan empat tag domain yang kasar seperti tabel di atas. Argumen `slug` dan `limit` tetap menjadi bagian cache key.
+- Gunakan TTL 15 menit sebagai safety net awal untuk perubahan yang dilakukan langsung di Supabase.
+- Setelah mutation blog/review berhasil, expire tag terkait dari Server Action agar publish, unpublish, edit, dan delete tidak menunggu TTL.
+- Jangan mengaktifkan `cacheComponents`, `force-static`, full-route caching, webhook, atau multi-layer cache pada putaran pertama.
+- Uji cache MISS pertama, HIT berikutnya, invalidasi mutation, isolation session, not-found, serta build/Preview sebelum Production.
+
+Risiko dan batas invalidasi:
+
+- Mutation blog/review dari aplikasi dapat menginvalidasi cache secara otomatis.
+- Perubahan services/team langsung dari Supabase tidak menjalankan kode Next.js. Dengan pilihan tanpa webhook, konten dapat tetap lama sampai TTL terlewati dan request berikutnya merevalidasi.
+- Webhook Supabase menuju Route Handler revalidation dapat mengurangi keterlambatan tersebut, tetapi menambah secret endpoint, autentikasi webhook, retry, dan permukaan keamanan. Ini sebaiknya menjadi tahap terpisah setelah cache dasar stabil.
+- Error query yang melempar exception tidak boleh dijadikan fallback cache. Cache hanya menyimpan hasil query yang berhasil; perilaku not-found/error yang lebih tepat tetap dibahas pada FE-15/FE-16.
+- FE-01 dapat mengurangi query pada cache hit, tetapi tidak dianggap menyelesaikan FE-03 atau FE-04 untuk cold cache.
+
+Keputusan yang masih diperlukan:
+
+1. Pilih `unstable_cache` scoped tanpa Cache Components untuk putaran pertama, atau aktifkan Cache Components + `use cache` sekarang.
+2. Setujui bahwa hanya data publik anonim yang di-cache dan seluruh data auth/admin/token/contact tetap uncached.
+3. Pilih TTL safety net: 5 menit, 15 menit (rekomendasi), atau 1 jam.
+4. Pilih invalidasi mutation blog/review yang langsung expire agar perubahan terlihat pada request publik berikutnya, atau stale-while-revalidate yang masih dapat menyajikan versi lama satu kali.
+5. Untuk services/team yang diedit langsung di Supabase, terima keterlambatan sesuai TTL untuk tahap awal atau bangun webhook revalidation sekarang.
+6. Setujui pemangkasan kolom review publik agar `email` tidak ikut ke shared cache dan payload browser.
+7. Setujui data-cache-only pada putaran pertama; full-route cache, `force-static`, dan perubahan visual tetap ditunda.
+
+Keputusan arsitektur lanjutan:
+
+- Seluruh rekomendasi FE-01 Tahap A disetujui secara prinsip.
+- `unstable_cache` dipakai sebagai bridge scoped untuk menyelesaikan optimasi FE dengan risiko perubahan minimum.
+- Setelah fondasi FE selesai, bridge wajib dimigrasikan ke Next.js 16 Cache Components + `use cache` agar tidak menjadi utang arsitektur permanen.
+- Rancangan tahap, exit criteria, rollback, dan guardrail SEO dicatat di `V2_Baseline_Architecture.md`.
+- Pembuatan rancangan ini belum mengimplementasikan cache atau mengubah source aplikasi.
+
+## Progress FE-01 — Implementasi scoped Data Cache Tahap A (3 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi; belum di-deploy ke Preview maupun Production**.
+
+Implementasi:
+
+- Menambahkan `src/lib/supabase/public-server.ts` sebagai Supabase server client khusus data publik anonim.
+- Public client memakai anon key, tidak membaca cookies, tidak menyimpan/me-refresh session, dan tidak memakai service-role key.
+- Menambahkan `src/lib/public-cache.ts` sebagai sumber tunggal TTL 15 menit, empat cache tag, dan namespace cache key.
+- Namespace key mencakup environment Vercel/Node dan URL Supabase agar entry dari sumber data local, Preview, dan Production tidak bertabrakan.
+- Public loader services, blog, team, dan reviews sekarang dibungkus `unstable_cache` dengan tag domain dan TTL 900 detik.
+- Parameter `slug` dan `limit` tetap menjadi bagian cache key melalui argumen fungsi cached.
+- Query admin, auth, preview draft, contact, review request, dan mutation tetap memakai client cookie-bound dan tidak masuk shared cache.
+- Public review query berubah dari `select('*')` menjadi hanya `id, name, message, created_at`. Kolom email tidak lagi ikut ke props `ReviewSection`.
+- Server Action blog meng-expire tag `public-blog` setelah perubahan status, edit, atau delete berhasil.
+- Server Action review meng-expire tag `public-reviews` setelah publish/unpublish atau delete berhasil.
+- Save draft, review request, submit review unpublished, revoke/delete review request, dan toggle featured yang belum dipakai UI publik tidak menginvalidasi public cache.
+
+Kendali Full Route Cache:
+
+- Build awal setelah cookie dipisahkan memperlihatkan Next.js otomatis mem-prerender `/`, `/about`, `/blog`, dan `/services` dengan revalidate 15 menit.
+- Karena keputusan Tahap A adalah data-cache-only, keempat page memanggil API stabil `connection()` agar tetap dynamic tanpa mengakses cookies atau data session.
+- Build final kembali menandai seluruh route publik berbasis Supabase sebagai dynamic (`ƒ`), sementara `/contact` dan sitemap tetap static (`○`).
+- Penanda `connection()` ini harus diaudit/dihapus saat migrasi Cache Components Tahap B agar static shell dapat dirancang secara sengaja.
+
+Verifikasi lokal:
+
+- Prettier pada seluruh file source yang diubah berhasil.
+- ESLint langsung pada seluruh file source yang diubah berhasil.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js berhasil.
+- `git diff --check` berhasil tanpa whitespace error.
+- Smoke test production server lokal menghasilkan HTTP 200 untuk `/`, `/about`, `/blog`, `/services`, `/contact`, satu category service, dan satu detail service.
+- Dengan `NEXT_PRIVATE_DEBUG_CACHE=1`, log cache menunjukkan request awal `FETCH false` dan request berikutnya `FETCH true` untuk services, blog, reviews, team, serta key detail berbasis slug.
+- Homepage lokal: TTFB sekitar 297 ms pada request pertama dan 54 ms pada request kedua.
+- Category service lokal: sekitar 179 ms lalu 45 ms; detail service sekitar 118 ms lalu 42 ms.
+- Angka lokal hanya membuktikan jalur cache dan tidak boleh dianggap sebagai prediksi production.
+- Enam review terserialisasi pada homepage; pemeriksaan window object review menemukan nol key email. Email publik pada JSON-LD LocalBusiness tetap ada dan bukan data review.
+- Warning lama `baseline-browser-mapping` dan deprecation konvensi `middleware` tetap muncul serta tidak diubah.
+
+Batas verifikasi saat ini:
+
+- Pemisahan cold/hit dan key berbasis argumen sudah terbukti melalui log runtime lokal.
+- `updateTag` berhasil melewati compile, TypeScript, dan production build, tetapi alur mutation authenticated belum dijalankan end-to-end karena tidak ada session admin dalam pengujian otomatis ini.
+- TTL 15 menit tidak ditunggu penuh dalam pengujian lokal.
+- Preview Vercel diperlukan untuk memastikan perilaku Data Cache terdistribusi, Function Region `sin1`, invalidasi admin, dan metrik production-like.
+
+Checklist Preview sebelum Production:
+
+1. Pastikan Function Region deployment adalah `sin1`.
+2. Uji dua request berulang pada route publik dan bandingkan Function duration/TTFB.
+3. Uji publish lalu unpublish satu blog test; list, detail, dan metadata harus berubah pada request berikutnya.
+4. Uji publish lalu unpublish satu review test; homepage harus berubah tanpa menunggu 15 menit.
+5. Pastikan draft, review request, dan data admin tidak muncul pada halaman publik.
+6. Periksa payload homepage dan pastikan email review tidak ada.
+7. Uji satu category/detail service valid serta slug tidak ada tanpa mengubah data Supabase.
+8. Bandingkan title, description, canonical, robots, JSON-LD, heading, internal link, dan status HTTP dengan baseline SEO.
+9. Setelah seluruh pemeriksaan lulus, deploy ke Production dan catat minimal 20 sampel TTFB cold/warm.

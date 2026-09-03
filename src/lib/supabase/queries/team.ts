@@ -1,4 +1,6 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
+import { unstable_cache } from 'next/cache';
 
 export type TeamMember = {
   id: string;
@@ -16,8 +18,8 @@ export type TeamMember = {
  * LIST team members (public website)
  * Hanya yang is_visible = true
  */
-export async function getVisibleTeamMembers(): Promise<TeamMember[]> {
-  const supabase = await createSupabaseServerClient();
+async function fetchVisibleTeamMembers(): Promise<TeamMember[]> {
+  const supabase = createSupabasePublicServerClient();
 
   const { data, error } = await supabase
     .from('team_members')
@@ -37,3 +39,8 @@ export async function getVisibleTeamMembers(): Promise<TeamMember[]> {
   if (error) throw error;
   return (data ?? []) as TeamMember[];
 }
+
+export const getVisibleTeamMembers = unstable_cache(fetchVisibleTeamMembers, getPublicCacheKeyParts('visible-team-members'), {
+  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
+  tags: [PUBLIC_CACHE_TAGS.team],
+});

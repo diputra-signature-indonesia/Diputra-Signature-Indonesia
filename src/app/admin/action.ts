@@ -1,8 +1,10 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { publicUrlToPath } from '@/lib/uploadImage';
 import { Status } from '@/types/blog-status';
+import { updateTag } from 'next/cache';
 
 export async function setBlogStatusAction(blogId: string, status: Status) {
   const supabase = await createSupabaseServerClient();
@@ -10,6 +12,7 @@ export async function setBlogStatusAction(blogId: string, status: Status) {
   const { error } = await supabase.from('blog_posts').update({ status }).eq('id', blogId);
 
   if (error) throw new Error(error.message);
+  updateTag(PUBLIC_CACHE_TAGS.blog);
 }
 
 function extractImageSrcsServer(html: string): string[] {
@@ -62,4 +65,5 @@ export async function deleteBlogAction(blogId: string) {
   const { error } = await supabase.from('blog_posts').delete().eq('id', blogId);
 
   if (error) throw new Error(error.message);
+  updateTag(PUBLIC_CACHE_TAGS.blog);
 }

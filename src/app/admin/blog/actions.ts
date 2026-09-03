@@ -1,6 +1,8 @@
 'use server';
 
 import { createDraftBlogPost, DefaultInputBlogPost, UpdateBlogInput, updateEditedBlogPost } from '@/lib/supabase/queries/blog';
+import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { updateTag } from 'next/cache';
 
 export async function saveDraftBlogAction(payload: DefaultInputBlogPost) {
   return await createDraftBlogPost({
@@ -19,7 +21,7 @@ export async function saveDraftBlogAction(payload: DefaultInputBlogPost) {
 }
 
 export async function updateBlogPostAction(id: string, payload: UpdateBlogInput) {
-  return await updateEditedBlogPost(id, {
+  await updateEditedBlogPost(id, {
     title: payload.title,
     excerpt: payload.excerpt,
     content_md: payload.content_md,
@@ -30,4 +32,6 @@ export async function updateBlogPostAction(id: string, payload: UpdateBlogInput)
     seo_description: payload.excerpt || null,
     og_image: payload.featured_image,
   });
+
+  updateTag(PUBLIC_CACHE_TAGS.blog);
 }

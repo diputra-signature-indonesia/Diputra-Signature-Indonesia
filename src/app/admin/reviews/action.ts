@@ -1,11 +1,14 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { updateTag } from 'next/cache';
 
 export async function setReviewPublishedAction(id: string, isPublished: boolean) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from('reviews').update({ is_published: isPublished }).eq('id', id);
   if (error) throw error;
+  updateTag(PUBLIC_CACHE_TAGS.reviews);
 }
 
 export async function setReviewFeaturedAction(id: string, isFeatured: boolean) {
@@ -18,6 +21,7 @@ export async function deleteReviewAction(id: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from('reviews').delete().eq('id', id);
   if (error) throw error;
+  updateTag(PUBLIC_CACHE_TAGS.reviews);
 }
 
 export async function revokeReviewRequestAction(id: string) {

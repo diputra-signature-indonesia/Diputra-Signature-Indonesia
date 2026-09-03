@@ -2,6 +2,7 @@ import { ServicesSection } from '@/components/layout/section-services';
 import { MotionProvider } from '@/components/motion';
 import { getServiceCategories } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 
 export const metadata: Metadata = {
   title: 'Our Services',
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ServicesPage() {
+  await connection();
   const categoryService = await getServiceCategories();
   return (
     <MotionProvider>
