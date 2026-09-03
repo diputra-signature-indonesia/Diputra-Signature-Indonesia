@@ -322,14 +322,14 @@ Catatan tooling:
 
 ## Progress FE-10 — Analisis paint/compositing (2 September 2026)
 
-Status: **audit source selesai, Performance trace empiris belum tersedia, tidak ada style atau source visual yang diubah**.
+Status: **audit source dan profiling trace putaran pertama selesai; bottleneck main-thread/paint terkonfirmasi tetapi efek visual penyebab tunggal belum terisolasi; tidak ada style atau source visual yang diubah**.
 
 Batas pekerjaan:
 
 - FE-08 yang belum di-commit tetap dipertahankan dan tidak ditimpa.
-- Audit ini hanya membaca source serta CSS hasil production build.
+- Audit awal hanya membaca source serta CSS hasil production build. Profiling lanjutan membaca trace yang diberikan user tanpa menjalankan perubahan source.
 - Shadow, overlay, fixed image, filter, transform, dan efek visual lain tidak dikurangi atau diubah.
-- Browser interaktif tidak tersedia pada sesi ini, sehingga belum ada bukti Paint Flashing, Layers, GPU memory, dropped frame, atau durasi raster/paint dari browser nyata.
+- Browser interaktif tetap tidak tersedia pada sesi ini. Bukti dropped frame, paint, layerization, dan raster sekarang tersedia dari trace user, tetapi Paint Flashing, inspeksi Layers/GPU memory, serta eksperimen toggle CSS satu per satu belum dilakukan.
 
 Inventaris aktif pada halaman publik:
 
@@ -370,6 +370,96 @@ Rencana trace sebelum keputusan implementasi:
 
 Keputusan FE-10 saat ini:
 
-- Belum ada dasar yang cukup untuk mengubah tampilan atau menambahkan `will-change`/layer hint.
-- Rekomendasi paling aman adalah mempertahankan seluruh UI dan melanjutkan ke pengambilan trace pada perangkat/browser yang tersedia.
-- Jika bukti menunjukkan bottleneck, urutan eksperimen adalah fixed filtered image About, full-width `drop-shadow`, lalu kombinasi filter/shadow pada service cards. Navbar, gradient, dan overlay tidak disentuh lebih dahulu tanpa bukti spesifik.
+- Sudah ada bukti bahwa `/` dan `/about` lebih berat daripada baseline `/contact`, tetapi belum ada dasar yang cukup untuk mengubah tampilan atau menambahkan `will-change`/layer hint.
+- Rekomendasi paling aman tetap mempertahankan seluruh UI dan melanjutkan pengambilan trace terkontrol dalam production build.
+- Eksperimen berikutnya dilakukan sementara di DevTools, bukan sebagai source patch: fixed/filter About, full-width `drop-shadow`, lalu kombinasi filter/shadow pada service cards, masing-masing satu variabel per rekaman.
+
+### Trace empiris putaran 1 — `Trace-20260902T200232.json.gz`
+
+Kondisi rekaman:
+
+- Trace berasal dari Chrome DevTools, berdurasi sekitar 65,93 detik, berisi 580.709 event, memakai CPU throttling 4x dan host DPR 1,25.
+- Viewport yang terekam sekitar 1227 x 922 pada display 60 Hz. Ini merupakan profil desktop, belum mewakili mobile.
+- Adanya elemen `#devtools-indicator` dan chunk development Next.js menunjukkan rekaman dibuat dari `next dev`, bukan production build. Angka absolut karena itu tidak boleh dipakai sebagai prediksi performa production.
+- Urutan route adalah `/` → `/about` → `/` → `/about` → `/contact`. Proses soft navigation dipisahkan dari interval scroll aktif.
+- Sembilan cluster wheel digabung menjadi lima interval scroll aktif. Setiap interval mencakup 100 ms sebelum wheel pertama dan tail maksimal 1 detik setelah wheel terakhir, dibatasi oleh boundary route.
+- Frame dihitung dari `frame_sequence` unik pada renderer utama. Ini menghindari menghitung dua event `PipelineReporter` milik refresh frame yang sama.
+
+Ringkasan interval scroll aktif:
+
+| Kunjungan | Durasi aktif | Frame unik | Dropped | Affects smoothness | Long task >50 ms | Paint ms/detik | Layerize ms/detik | Raster ms/detik |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/` pertama | 9,76 dtk | 586 | 89 (15,2%) | 335 (57,2%) | 47 | 77,5 | 120,1 | 6,1 |
+| `/about` pertama | 8,58 dtk | 473 | 79 (16,7%) | 208 (44,0%) | 34 | 55,1 | 35,6 | 2,8 |
+| `/` kedua | 14,38 dtk | 864 | 70 (8,1%) | 277 (32,1%) | 50 | 42,8 | 105,1 | 3,9 |
+| `/about` kedua | 10,59 dtk | 637 | 55 (8,6%) | 124 (19,5%) | 14 | 67,2 | 41,3 | 5,0 |
+| `/contact` | 2,64 dtk | 158 | 6 (3,8%) | 9 (5,7%) | 1 | 6,9 | 13,4 | 1,1 |
+
+Catatan: kategori `Dropped`, `Affects smoothness`, dan status presented pada `PipelineReporter` dapat saling overlap pada frame sequence yang sama. Durasi event juga tidak dijumlahkan lintas kategori karena beberapa event bersifat nested.
+
+Temuan trace:
+
+1. `/` dan `/about` benar-benar lebih berat daripada baseline `/contact`. Bahkan pada kunjungan kedua yang sudah lebih hangat, dropped frame `/` dan `/about` sekitar 8%, sedangkan `/contact` 3,8%; frame yang ditandai memengaruhi smoothness masing-masing 32,1%, 19,5%, dan 5,7%.
+2. Beban `/` paling menonjol pada update style/layerization. Pada kunjungan kedua, `UpdateLayoutTree` memakan 1.552,98 ms atau sekitar 108,0 ms/detik dan `Layerize` 1.511,34 ms atau 105,1 ms/detik. Paint yang sering muncul berasal dari `#document`, sticky header, service cards, dan slide carousel. Ini mendukung dugaan bahwa jumlah elemen bergerak/card/layer lebih berpengaruh daripada satu shadow tunggal.
+3. `/about` paling menonjol pada repaint area besar. Pada dua kunjungan, sekitar 93,5–93,8% total waktu Paint berada pada clip selebar lebih dari 1000 px dan lebih tinggi dari dua viewport. Paint berulang terlihat pada `#document` dengan clip sekitar 1208 x 3723–3859 serta outer `DIV.relative` sekitar 1208 x 2873.
+4. Trace belum membuktikan fixed image atau brightness About sebagai penyebab tunggal. Node fixed image tidak muncul sebagai paint hotspot terpisah; browser mengatribusikan paint mahal terutama ke document/ancestor. Karena itu menghapus `fixed`, filter, gradient, atau `shadow-2xl` sekarang masih berupa tebakan dan dilarang oleh batas UI saat ini.
+5. GPU raster bukan sinyal utama pada rekaman ini. `RasterTask` hanya sekitar 1,1–6,1 ms/detik; checkerboarding nol pada kedua About dan Contact, serta hanya 3 dan 4 frame pada dua kunjungan Home. Masalah lebih konsisten dengan main-thread animation, style, paint, dan layerization.
+6. Seluruh frame sequence pada interval aktif ditandai `has_main_animation`. Trace juga mencatat callback `raf` yang cocok dengan Lenis `autoRaf`, sementara fungsi `processBatch` berasal dari frameloop Framer Motion. Long task besar berulang berisi `PageAnimator::serviceScriptedAnimations`, `FireAnimationFrame`, `UpdateLayoutTree`, `Layerize`, dan `Paint`.
+7. Kunjungan kedua `/about` mencampur scroll dengan minimal tiga click pada Team accordion. Tiga long task click sekitar 74 ms, 85 ms, dan 160 ms berasal dari dispatch React/state update; angka tersebut tidak boleh dianggap sebagai biaya scroll pasif.
+8. Variasi cold/warm besar: dropped frame pada kunjungan pertama Home/About sekitar 15–17%, lalu turun menjadi sekitar 8% pada kunjungan kedua. Ini memperkuat kebutuhan mengulang pengukuran pada production build dengan urutan interaksi yang identik.
+9. Soft navigation start-to-commit pada dev trace berada sekitar 1,04–1,51 detik. Angka ini dipisahkan dari FE-10 karena mencampur Next.js dev server, RSC/data fetching, dan navigation work; jangan dipakai sebagai kesimpulan TTFB production.
+
+Kesimpulan putaran 1:
+
+- Status FE-10 tetap **profiling, belum implementasi**.
+- Hipotesis umum FE-10 tervalidasi: route visual kompleks mengalami dropped frame dan kerja paint/layerization yang nyata pada CPU 4x.
+- Hipotesis “fixed filtered image About adalah penyebab utama” belum tervalidasi. Pada kunjungan kedua, Home justru memiliki layerization sekitar 2,5x About, sedangkan About memiliki paint sekitar 1,6x Home.
+- Tidak ada dasar untuk mengubah shadow, overlay, fixed image, brightness, transform, gradient, atau hierarchy UI.
+- Langkah berikutnya yang direkomendasikan adalah merekam production build minimal tiga kali per route, memisahkan scroll pasif dari click/hover/carousel, lalu melakukan eksperimen sementara satu efek per trace di DevTools. Hanya perubahan yang tetap identik secara visual dan menunjukkan perbaikan berulang yang layak diajukan untuk implementasi.
+
+## Progress FE-02 — Penyelarasan region Vercel Function dan Supabase (3 September 2026)
+
+Status: **konfigurasi lokal selesai dan terverifikasi; belum di-deploy ke Preview maupun Production**.
+
+Keputusan yang disetujui:
+
+- Region Supabase production telah dikonfirmasi berada di AWS `ap-southeast-1` (Singapore).
+- Vercel Function sebelumnya berjalan di `iad1` (Washington, D.C.) berdasarkan pengaturan dashboard dan header production.
+- Gunakan satu Vercel Function Region `sin1` (Singapore), sesuai batas paket Hobby dan lokasi primary database Supabase.
+- Tidak menggunakan multi-region, tidak mengubah runtime menjadi Edge, dan tidak memindahkan region Supabase.
+- Terapkan melalui `vercel.json` agar konfigurasi tercatat dan konsisten pada deployment repository.
+- Lakukan Preview Deployment dan verifikasi sebelum perubahan dipromosikan ke Production.
+
+Baseline production sebelum implementasi:
+
+- Pengukuran read-only dilakukan pada `/`, `/about`, dan `/services`, masing-masing tiga request.
+- Seluruh response mengembalikan `X-Vercel-Id` dengan jalur `sin1::iad1`, yang menunjukkan request melalui Singapore dan Function dieksekusi di Washington, D.C.
+- Seluruh response mengembalikan `X-Vercel-Cache: MISS`, `Age: 0`, serta `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`.
+- Rentang TTFB yang tercatat: `/` 0,968–3,329 detik; `/about` 0,958–1,339 detik; `/services` 0,844–1,737 detik.
+- Baseline ini hanya sembilan sampel dan bukan benchmark final. Pengukuran p50/p75/p95 minimal 20 kali tetap diperlukan setelah Preview dan Production deployment.
+
+Implementasi lokal:
+
+- Menambahkan `vercel.json` pada root repository.
+- Menetapkan `regions` ke satu region, yaitu `sin1`.
+- Menambahkan referensi schema resmi Vercel agar konfigurasi dapat divalidasi oleh editor/tooling.
+- Konfigurasi project-level ini berlaku untuk Vercel Functions pada deployment dan mengoverride Function Region yang tersimpan di Project Settings.
+- Tidak ada source UI, query, environment variable, database, schema, migration, maupun data Supabase yang diubah.
+
+Verifikasi lokal:
+
+- Parsing JSON berhasil dan memastikan hanya terdapat satu region `sin1`.
+- Pemeriksaan format Prettier untuk `vercel.json` berhasil.
+- `git diff --check` berhasil tanpa whitespace error.
+- Production build Next.js berhasil, termasuk pemeriksaan TypeScript dan prerender route statis.
+- Warning lama `baseline-browser-mapping` dan deprecation konvensi `middleware` tetap muncul; keduanya tidak berasal dari perubahan FE-02 dan tidak diubah dalam scope ini.
+
+Verifikasi setelah deployment yang diwajibkan:
+
+1. Deploy branch perubahan sebagai Preview Deployment.
+2. Pastikan Deployment Summary menunjukkan Function Region `sin1`.
+3. Periksa `/`, `/about`, dan `/services`; seluruh halaman serta data Supabase harus tetap berhasil dimuat.
+4. Periksa header response Preview. Region eksekusi tidak boleh lagi menunjukkan `iad1`; targetnya adalah `sin1`.
+5. Uji login/admin dan minimal satu operasi baca yang membutuhkan session tanpa melakukan perubahan data production.
+6. Setelah Preview lulus, merge/deploy ke Production dan ulangi pemeriksaan header serta TTFB.
+7. Jangan melanjutkan FE-01 sebelum baseline sesudah perubahan region dicatat agar kontribusi FE-02 dapat dibedakan dari efek caching.
