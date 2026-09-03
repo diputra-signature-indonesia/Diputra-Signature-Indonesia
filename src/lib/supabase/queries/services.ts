@@ -1,6 +1,7 @@
 import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 import { ServiceIconKey } from '@/types/dsi-services';
 
@@ -71,10 +72,12 @@ async function fetchServiceCategoryBySlug(slug: string): Promise<ServiceCategory
   return data as ServiceCategory;
 }
 
-export const getServiceCategoryBySlug = unstable_cache(fetchServiceCategoryBySlug, getPublicCacheKeyParts('service-category-by-slug'), {
+const getServiceCategoryBySlugCached = unstable_cache(fetchServiceCategoryBySlug, getPublicCacheKeyParts('service-category-by-slug'), {
   revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
   tags: [PUBLIC_CACHE_TAGS.services],
 });
+
+export const getServiceCategoryBySlug = cache(getServiceCategoryBySlugCached);
 
 /** LIST items by category slug (join) */
 async function fetchServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
@@ -134,10 +137,12 @@ export const getServiceItemDetailsByItemId = unstable_cache(fetchServiceItemDeta
 });
 
 /** Convenience: detail page data */
-export async function getServiceDetailPageData(categorySlug: string, itemSlug: string) {
+async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string) {
   const category = await getServiceCategoryBySlug(categorySlug);
   const item = await getServiceItemByCategoryAndSlug(categorySlug, itemSlug);
   const details = await getServiceItemDetailsByItemId(item.id);
 
   return { category, item, details };
 }
+
+export const getServiceDetailPageData = cache(fetchServiceDetailPageData);

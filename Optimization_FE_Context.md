@@ -466,7 +466,7 @@ Verifikasi setelah deployment yang diwajibkan:
 
 ## Progress FE-01 — Analisis strategi caching data publik (3 September 2026)
 
-Status: **audit source selesai; implementasi belum dilakukan dan menunggu keputusan**.
+Status: **audit source selesai; seluruh keputusan disetujui dan hasil implementasi dicatat pada bagian berikutnya**.
 
 Batas pekerjaan:
 
@@ -600,3 +600,125 @@ Checklist Preview sebelum Production:
 7. Uji satu category/detail service valid serta slug tidak ada tanpa mengubah data Supabase.
 8. Bandingkan title, description, canonical, robots, JSON-LD, heading, internal link, dan status HTTP dengan baseline SEO.
 9. Setelah seluruh pemeriksaan lulus, deploy ke Production dan catat minimal 20 sampel TTFB cold/warm.
+
+## Progress FE-03 — Analisis deduplikasi query metadata dan page (3 September 2026)
+
+Status: **audit source selesai; implementasi belum dilakukan dan menunggu keputusan**.
+
+Batas pekerjaan:
+
+- Audit hanya membaca dynamic route publik, `generateMetadata`, dan public loader hasil FE-01.
+- Tidak ada query, metadata, UI, cache, database, maupun konfigurasi deployment yang diubah pada tahap analisis ini.
+- FE-03 hanya menangani deduplikasi dalam satu server render/request. Optimasi bentuk dan urutan query tetap menjadi scope FE-04.
+
+Temuan pada kode saat ini:
+
+| Route | Pemanggilan yang berulang | Kondisi saat ini |
+| --- | --- | --- |
+| `/blog/[slug]` | `getPublishedBlogPostBySlug(slug)` dipanggil oleh `generateMetadata` dan page | Dua call site memakai slug yang sama. |
+| `/services/[category]` | `getServiceCategoryBySlug(category)` dipanggil oleh metadata, page, dan dari dalam `getServiceItemsByCategorySlug(category)` | Category yang sama dapat diminta melalui tiga jalur dalam satu render. |
+| `/services/[category]/[service]` | `getServiceDetailPageData(category, service)` dipanggil oleh metadata dan page | Seluruh rangkaian category, item, dan detail dapat diminta dua kali. |
+
+Hubungan dengan FE-01:
+
+- `unstable_cache` FE-01 adalah Data Cache lintas request dengan TTL dan invalidasi tag. Lapisan ini mengurangi round-trip Supabase ketika entry sudah tersedia.
+- FE-01 tidak menggantikan request memoization. Pada cold cache atau sesudah invalidasi, call site metadata dan body masih dapat meminta loader yang sama selama satu render.
+- Pada debug cache lokal FE-01, key identik dapat terlihat sebagai cold `FETCH false` lebih dari sekali ketika metadata dan body berjalan pada render yang sama. Karena itu FE-03 tetap relevan walaupun warm request sudah jauh lebih cepat.
+- FE-03 harus menjadi lapisan request-local di luar Data Cache FE-01; TTL, cache tag, dan invalidasi yang sudah ada tidak perlu diubah.
+
+Opsi penyelesaian:
+
+1. **React `cache()` pada shared loader yang memang dipanggil ulang (rekomendasi).** Bungkus fungsi yang sama satu kali pada module scope, lalu ekspor dan gunakan instance memoized tersebut di metadata, page, dan helper. React akan berbagi Promise/hasil untuk argumen primitif yang sama selama satu server request, kemudian membuang memoization tersebut setelah request selesai.
+2. **Membuat aggregate loader khusus untuk setiap route.** Metadata dan page dapat memakai satu object gabungan, tetapi pada category service metadata hanya membutuhkan category sedangkan body membutuhkan list lain. Aggregate loader berisiko mengambil data body yang tidak diperlukan hanya untuk metadata dan mulai mencampur scope FE-04.
+3. **Mengandalkan `unstable_cache` FE-01 saja.** Perubahan tambahan paling sedikit, tetapi cold render dan render setelah invalidasi tetap memiliki peluang kerja duplikat. Opsi ini tidak menyelesaikan tujuan FE-03.
+
+Rancangan yang direkomendasikan:
+
+- Tambahkan `cache` dari React dan buat wrapper pada module scope, bukan di dalam page/component.
+- Terapkan secara targeted pada `getPublishedBlogPostBySlug`, `getServiceCategoryBySlug`, dan `getServiceDetailPageData`.
+- Susunan lapisan untuk loader yang sudah persistent-cached adalah: query Supabase sebagai lapisan terdalam, `unstable_cache` FE-01 sebagai cache lintas request, lalu React `cache()` sebagai deduplikasi per request.
+- `getServiceCategoryBySlug` yang sama harus tetap dipakai oleh metadata, page, dan helper item agar ketiganya membaca memoization store yang sama.
+- Memoize `getServiceDetailPageData` sebagai satu unit agar metadata dan body berbagi satu rangkaian category, item, dan details tanpa mengubah susunan query internalnya pada tahap ini.
+- Jangan membungkus query admin/auth, jangan memindahkan data ke client, dan jangan menambahkan API Route/HTTP fetch hanya untuk memperoleh automatic fetch memoization.
+- Pertahankan title, description, canonical, Open Graph, JSON-LD, status HTTP, `notFound`, payload, visual, serta perilaku cache FE-01.
+
+Mengapa scope targeted direkomendasikan:
+
+- Ketiga loader tersebut sudah terbukti memiliki lebih dari satu call site dalam render route yang sama.
+- Loader list seperti `getPublishedBlogPosts()` dan `getServiceCategories()` belum terbukti diduplikasi metadata/body pada route yang sama, sehingga membungkus seluruh public query belum memberi manfaat terukur.
+- Perubahan targeted memperkecil regression surface pada project production dan membuat hasil trace FE-03 lebih mudah dibandingkan dengan baseline.
+
+Risiko dan guardrail:
+
+- React `cache()` juga memoize error untuk argumen yang sama selama request tersebut. Ini tidak membuat error persistent antar-request, tetapi error handling yang ada harus diuji tetap identik. Perbaikan klasifikasi not-found versus backend error tetap scope FE-16.
+- Setiap pemanggilan `cache()` menghasilkan memoization store berbeda. Wrapper harus dibuat dan diekspor satu kali dari module bersama; membuat wrapper terpisah di page dan metadata tidak akan berdeduplikasi.
+- Argumen yang dipakai saat ini berupa slug string, sehingga equality cache key stabil. Jangan memasukkan Supabase client, cookies, session, atau object mutable sebagai argumen.
+- FE-03 tidak mengurangi query berantai di dalam cold execution pertama. Penggabungan atau paralelisasi query service tetap dilakukan pada FE-04.
+- Tidak ada dampak yang diharapkan pada indexing karena isi metadata, HTML, URL, canonical, JSON-LD, dan status response tidak berubah; yang berubah hanya jumlah eksekusi server untuk data yang sama.
+
+Rencana verifikasi setelah implementasi:
+
+1. Jalankan Prettier, ESLint targeted, TypeScript, dan production build.
+2. Jalankan production server lokal dengan cache debug pada cache yang dingin.
+3. Request satu slug valid untuk masing-masing blog detail, category service, dan detail service.
+4. Pastikan loader identik untuk metadata dan page hanya memulai satu eksekusi pada request yang sama.
+5. Ulangi request untuk memastikan Data Cache FE-01 tetap HIT dan tidak ada perubahan pada tag/TTL.
+6. Bandingkan metadata dan body sebelum/sesudah: title, description, canonical, Open Graph, JSON-LD, heading, link, status valid, serta slug tidak ditemukan harus tetap sama.
+7. Ulangi pemeriksaan pada Preview Vercel sebelum Production dan bandingkan Function duration/query count dengan baseline.
+
+Keputusan yang disetujui:
+
+1. Gunakan React `cache()` sebagai lapisan request memoization di atas `unstable_cache` FE-01.
+2. Batasi scope pada `getPublishedBlogPostBySlug`, `getServiceCategoryBySlug`, dan `getServiceDetailPageData`, bukan seluruh public loader.
+3. Jangan mengubah struktur serta urutan query service pada FE-03; pekerjaan tersebut tetap dibahas terpisah pada FE-04.
+4. Pertahankan perilaku error/not-found saat ini pada FE-03; koreksi semantiknya tetap scope FE-16.
+5. Gunakan acceptance criteria: satu eksekusi shared loader per kombinasi slug dalam satu request, FE-01 tetap HIT lintas request, dan seluruh output UI/SEO tetap identik.
+
+Referensi resmi:
+
+- Next.js, `generateMetadata`: request berbasis `fetch` dimemoize otomatis dan React `cache()` dapat dipakai saat `fetch` tidak tersedia — https://nextjs.org/docs/app/api-reference/functions/generate-metadata
+- Next.js, Metadata and OG images: contoh resmi deduplikasi query yang dipakai oleh metadata dan page dengan React `cache()` — https://nextjs.org/docs/app/getting-started/metadata-and-og-images#memoizing-data-requests
+- React, `cache`: memoization Server Components berlaku per server request, berbagi hasil untuk argumen yang sama, dan error juga dimemoize selama request — https://react.dev/reference/react/cache
+
+## Progress FE-03 — Implementasi request memoization (3 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi; belum di-deploy ke Preview maupun Production**.
+
+Implementasi:
+
+- `getPublishedBlogPostBySlug` sekarang mengekspor wrapper React `cache()` di atas fungsi `unstable_cache` FE-01 yang sudah ada.
+- `getServiceCategoryBySlug` sekarang mengekspor wrapper React `cache()` dengan susunan lapisan yang sama.
+- `getServiceDetailPageData` diubah menjadi implementation function internal dan diekspor melalui satu wrapper React `cache()` pada module scope.
+- Seluruh call site tetap menggunakan nama export yang sama. Route metadata, page body, dan helper item otomatis berbagi instance memoized yang sama tanpa perubahan pada page component.
+- TTL 15 menit, namespace key, tag invalidasi, public Supabase client, dan Data Cache FE-01 tidak berubah.
+- Tidak ada query admin/auth, struktur query, urutan query service, UI, motion, metadata, canonical, Open Graph, JSON-LD, ataupun URL yang diubah.
+
+Verifikasi lokal:
+
+- Prettier pada dua file query yang diubah berhasil.
+- ESLint targeted pada dua file query berhasil. Warning lama `baseline-browser-mapping` tetap muncul dan tidak berasal dari FE-03.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js berhasil.
+- Route map build tetap sama dengan baseline FE-01: route publik berbasis Supabase tetap dynamic (`ƒ`) dan FE-03 tidak mengaktifkan Full Route Cache.
+- `git diff --check` berhasil tanpa whitespace error; pesan LF/CRLF yang muncul hanya line-ending warning repository Windows.
+- Smoke test production server lokal menghasilkan HTTP 200 untuk `/`, `/blog`, category service valid, dan detail service valid.
+- Category dan detail service yang tidak ditemukan tetap menghasilkan HTTP 404.
+- Pada cold category request, key category yang sama hanya mencapai Data Cache sekali meskipun digunakan metadata, page, dan helper item; key item juga dieksekusi satu kali.
+- Pada detail service, rangkaian category, item, dan details hanya terlihat satu kali untuk render tersebut; request berikutnya menunjukkan Data Cache FE-01 tetap HIT.
+- Production server lokal pengujian sudah dihentikan setelah verifikasi.
+
+Batas verifikasi dan temuan lanjutan:
+
+- Dataset lokal saat pengujian tidak memiliki link blog published, sehingga detail blog dengan slug valid belum dapat diuji melalui HTTP. Struktur blog memakai pola wrapper yang sama dan telah lulus TypeScript, ESLint, serta production build.
+- Detail blog dengan slug tidak tersedia masih menghasilkan HTTP 500 karena loader existing memakai `.single()` lalu page tidak menangani exception sebelum `notFound()`. Perilaku ini tidak diubah sesuai keputusan FE-03 dan harus tetap ditangani pada FE-16.
+- Debug invalid blog dapat menjalani render/error handling tambahan dan memperlihatkan lebih dari satu cold lookup. Hasil ini tidak dipakai sebagai bukti kegagalan deduplikasi jalur sukses; jalur error akan diaudit bersama FE-16.
+- Verifikasi Preview tetap diperlukan untuk slug blog production yang valid serta perbandingan Function duration/query count pada runtime Vercel `sin1`.
+
+Checklist Preview sebelum Production:
+
+1. Uji satu blog detail published, satu category service, dan satu detail service dengan slug valid.
+2. Pastikan metadata dan body tetap menampilkan data yang sama tanpa key loader identik dieksekusi ulang dalam satu request.
+3. Ulangi request untuk memastikan Data Cache FE-01 tetap HIT lintas request.
+4. Bandingkan title, description, canonical, Open Graph, JSON-LD, heading, link, dan status HTTP dengan Production saat ini.
+5. Periksa Function duration/query count cold dan warm; jangan mengandalkan TTFB lokal sebagai prediksi Production.
+6. Setelah Preview lulus, deploy ke Production dan ulangi smoke test tanpa melakukan mutation data.

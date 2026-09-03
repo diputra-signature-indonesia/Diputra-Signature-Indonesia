@@ -3,6 +3,7 @@ import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_T
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
 import { Status } from '@/types/blog-status';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 
 export type BlogPost = {
   id: string; // kalau tabelmu pakai uuid id
@@ -197,10 +198,12 @@ async function fetchPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
   return data as BlogPost;
 }
 
-export const getPublishedBlogPostBySlug = unstable_cache(fetchPublishedBlogPostBySlug, getPublicCacheKeyParts('published-blog-post-by-slug'), {
+const getPublishedBlogPostBySlugCached = unstable_cache(fetchPublishedBlogPostBySlug, getPublicCacheKeyParts('published-blog-post-by-slug'), {
   revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
   tags: [PUBLIC_CACHE_TAGS.blog],
 });
+
+export const getPublishedBlogPostBySlug = cache(getPublishedBlogPostBySlugCached);
 
 async function ensureUniqueSlug(baseSlug: string) {
   const supabase = await createSupabaseServerClient();
