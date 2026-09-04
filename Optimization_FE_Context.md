@@ -881,3 +881,166 @@ Batas verifikasi dan checklist Preview:
 5. Pastikan cold request masing-masing hanya menggunakan satu primary relational query dan request berikutnya menjadi cache HIT.
 6. Verifikasi invalidasi tag `public-services` bila tersedia jalur aman tanpa mengubah data Production.
 7. Bandingkan Function duration cold/warm pada Preview Vercel `sin1` sebelum mempromosikan deployment.
+
+## Progress FE-05 — Analisis Loading UI route publik (4 September 2026)
+
+Status: **audit route/layout selesai; keputusan disetujui dan implementasi dicatat pada bagian berikutnya**.
+
+Batas pekerjaan:
+
+- Audit hanya membaca struktur App Router publik, shared site layout, halaman dynamic, komponen section, style token, serta hasil FE-01 sampai FE-04.
+- Tidak ada `loading.tsx`, Suspense boundary, skeleton, UI, route, source, database, cache, maupun konfigurasi yang diubah pada tahap analisis ini.
+- Loading UI hanya boleh mengubah keadaan sementara selama navigasi/data menunggu. Tampilan halaman setelah data selesai harus identik.
+
+Kondisi saat ini:
+
+- Tidak ditemukan satu pun `loading.tsx`, `error.tsx`, `not-found.tsx`, atau `global-error.tsx` di App Router.
+- Route `/`, `/about`, `/blog`, `/blog/[slug]`, `/services`, `/services/[category]`, dan `/services/[category]/[service]` tetap dynamic karena data Supabase dan keputusan data-cache-only FE-01.
+- `/contact` bersifat static dan tidak memerlukan loading boundary khusus data.
+- Seluruh public page berada di bawah `src/app/(site)/layout.tsx`. Navbar dan footer berada di layout tersebut, sementara page dirender sebagai `children` di dalam `<main>`.
+- Tanpa loading boundary, navigasi ke dynamic route dapat mempertahankan halaman lama tanpa feedback sampai Server Component payload siap, sehingga klik terasa tidak merespons pada cache dingin atau jaringan lambat.
+- FE-01 sampai FE-04 sudah menangani region, cache, deduplikasi, dan query waterfall. FE-05 menjadi feedback UX, bukan pengganti optimasi data.
+
+Perilaku Next.js yang relevan:
+
+- `loading.tsx` otomatis membungkus page dan child segment di bawahnya dengan Suspense.
+- Loading fallback dapat diprefetch untuk dynamic route sehingga navigasi dapat dimulai segera, shared layout tetap interaktif, dan navigasi dapat dibatalkan oleh navigasi baru.
+- `loading.tsx` adalah Server Component secara default; fallback ringan tidak memerlukan JavaScript client tambahan.
+- Skeleton harus memiliki ukuran mendekati konten akhir untuk mengurangi layout shift ketika page asli menggantikan fallback.
+
+Opsi penyelesaian:
+
+1. **Satu generic `src/app/(site)/loading.tsx`.** Diff paling kecil dan mencakup semua route publik, tetapi fallback yang sama tidak cocok untuk homepage, article, category, dan detail. Ia juga ikut membungkus `/contact` serta semua child route dan lebih mudah menghasilkan flash/layout shift yang tidak sesuai bentuk halaman tujuan.
+2. **Route-shaped `loading.tsx` per segment dengan shared skeleton component (rekomendasi).** Homepage, About, blog list/article, services list/category/detail mendapat bentuk fallback yang mendekati first viewport masing-masing. Navbar/footer tetap berasal dari shared layout. Jumlah file lebih banyak, tetapi setiap boundary sederhana dan regression surface visual lebih mudah diuji.
+3. **Refactor setiap page menjadi banyak async child dengan manual Suspense.** Dapat menampilkan Hero/static section asli sambil hanya menunggu section berbasis data. Ini memberi streaming paling granular, tetapi menyentuh struktur banyak page dan Motion boundary, meningkatkan risiko layout shift serta perubahan timing animasi. Direkomendasikan sebagai tahap lanjutan hanya bila segment loading masih belum cukup setelah profiling.
+
+Rancangan yang direkomendasikan:
+
+- Buat satu presentational Server Component loading dengan variant: home, about, list, category, article, dan detail.
+- Tambahkan loading boundary terdekat untuk About, blog list/article, services list/category/detail.
+- Pindahkan homepage secara mekanis ke pathless route group `(home)` lalu letakkan `loading.tsx` di group tersebut. URL tetap `/`, sedangkan static `/contact` tidak ikut dibungkus fallback homepage.
+- Gunakan shared `brand-section-px`, `max-w-[1440px]`, tinggi/aspect ratio first viewport, warna netral brand, dan rounded shape yang sudah ada. Jangan menampilkan teks konten palsu.
+- Skeleton hanya memakai elemen CSS ringan. Jangan mengimpor Framer Motion, Lenis, Swiper, image, icon, atau membuat request data.
+- Gunakan `role="status"`, `aria-live="polite"`, `aria-busy="true"`, satu teks screen-reader `Loading page`, dan tandai shape dekoratif sebagai `aria-hidden`.
+- Gunakan pulse opacity CSS hanya melalui `motion-safe`, tanpa JavaScript; pengguna `prefers-reduced-motion` mendapat skeleton statis.
+- Pertahankan minimum height agar footer tidak meloncat ke first viewport saat loading.
+- Jangan menambahkan spinner fullscreen, overlay yang mengunci navbar, progress palsu, atau perubahan pada final page UI.
+
+Rencana lokasi boundary:
+
+| Target | Boundary yang diusulkan | Bentuk first viewport |
+| --- | --- | --- |
+| `/` | `(site)/(home)/loading.tsx` | dua kolom hero pada desktop, bertumpuk pada mobile |
+| `/about` | `(site)/about/loading.tsx` | media/hero tinggi mendekati `100svh`, maksimal sekitar 700px |
+| `/blog` | `(site)/blog/loading.tsx` | heading/search blocks dan grid card |
+| `/blog/[slug]` | `(site)/blog/[slug]/loading.tsx` | cover aspect `16/7`, title, dan excerpt blocks |
+| `/services` | `(site)/services/loading.tsx` | heading dan grid service cards |
+| `/services/[category]` | `(site)/services/[category]/loading.tsx` | hero media/text mendekati tinggi maksimal 600px |
+| `/services/[category]/[service]` | `(site)/services/[category]/[service]/loading.tsx` | centered title/description dan detail rows |
+
+Trade-off status HTTP dan SEO:
+
+- Metadata route valid tetap dibuat oleh `generateMetadata`; streaming server-rendered tidak menghilangkan title, description, canonical, Open Graph, atau konten akhir dari crawler.
+- Ketika fallback sudah mulai di-stream, header response sudah terkirim dan status tidak dapat diubah kemudian.
+- Karena itu `notFound()` dari dynamic blog/service yang baru diketahui setelah query dapat menghasilkan streamed HTTP 200 dengan `<meta name="robots" content="noindex">`, bukan hard HTTP 404 seperti perilaku lokal sebelum FE-05.
+- Next.js menyatakan response tersebut tidak diindeks, tetapi monitoring atau analytics dapat mengategorikannya sebagai soft 404.
+- Mempertahankan hard 404 sambil tetap memakai automatic segment loading pada resource yang sama memerlukan validasi slug sebelum streaming, misalnya di Proxy/layout. Itu menambah query atau kompleksitas dan tidak direkomendasikan tanpa kebutuhan compliance/monitoring yang jelas.
+
+Risiko dan guardrail:
+
+- Skeleton yang terlalu detail dapat terlihat seperti redesign dan lebih mahal dirender. Gunakan bentuk minimum yang hanya menjaga struktur first viewport.
+- Fallback tanpa ukuran stabil dapat membuat footer muncul lalu bergeser jauh saat data selesai.
+- Pulse cepat dapat membuat UI terasa lebih sibuk dan tidak ramah reduced-motion; gunakan satu pulse lembut atau skeleton statis.
+- Loading fallback dapat sangat singkat pada warm cache dan terlihat berkedip. Uji cache warm serta koneksi cepat; jika mengganggu, gunakan reveal delay CSS kecil tanpa menambah state client.
+- Jangan menampilkan skeleton untuk mutation/form submission; itu bukan scope FE-05.
+- Jangan menambahkan error/not-found design pada patch ini. Hal tersebut tetap FE-15, sedangkan pembedaan error data tetap FE-16.
+- Pathless route group tidak mengubah URL, metadata, atau canonical, tetapi production build dan seluruh link ke `/` wajib diuji setelah pemindahan file homepage.
+
+Rencana verifikasi setelah implementasi:
+
+1. Jalankan production build dan pastikan route map serta URL tidak berubah.
+2. Uji navigasi client-side dari navbar, service cards, blog cards, CTA, serta browser Back/Forward.
+3. Gunakan network throttling Fast 3G/Slow 4G dan cache dingin untuk memastikan fallback terlihat, navbar tetap interaktif, serta navigasi dapat diganti sebelum request selesai.
+4. Uji koneksi cepat/warm cache untuk memastikan tidak ada skeleton flash yang mengganggu.
+5. Bandingkan tinggi first viewport mobile/desktop dan periksa CLS ketika fallback diganti page asli.
+6. Uji keyboard/focus, screen reader announcement tunggal, `prefers-reduced-motion`, dan tidak adanya elemen skeleton yang focusable.
+7. Periksa route valid: title, description, canonical, Open Graph, JSON-LD, heading, dan status tetap sesuai baseline.
+8. Periksa route blog/service tidak valid dan catat apakah status berubah menjadi streamed 200 + `noindex`; hasil harus sesuai keputusan yang dikunci.
+9. Jalankan Prettier, ESLint targeted, TypeScript, `git diff --check`, serta smoke test Preview sebelum Production.
+
+Keputusan yang disetujui:
+
+1. Gunakan route-shaped skeleton per segment dengan satu shared component.
+2. Pindahkan homepage secara mekanis ke pathless `(home)` group agar loading homepage tidak membungkus static `/contact`.
+3. Gunakan segment-level `loading.tsx` terlebih dahulu; granular Suspense tidak termasuk scope FE-05 saat ini.
+4. Gunakan pulse opacity lembut melalui `motion-safe`; reduced-motion mendapat skeleton statis.
+5. Untuk dynamic blog/service invalid, terima standard streaming response HTTP 200 + `noindex` demi immediate route loading.
+6. Final page UI, metadata, cache FE-01, memoization FE-03, query FE-04, serta error UI FE-15 tidak diubah.
+
+Referensi resmi:
+
+- Next.js, `loading.js`: instant loading state, automatic Suspense boundary, shared layout tetap interaktif, SEO, dan konsekuensi status code setelah streaming — https://nextjs.org/docs/app/api-reference/file-conventions/loading
+- Next.js, Linking and Navigating: dynamic route dengan `loading.tsx` dapat diprefetch sebagian dan menampilkan feedback segera — https://nextjs.org/docs/app/getting-started/linking-and-navigating
+- Next.js, Fetching Data: perbedaan route-level `loading.tsx` dan granular Suspense — https://nextjs.org/docs/app/getting-started/fetching-data
+
+## Progress FE-05 — Implementasi Loading UI route publik (4 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi secara statis/server-side; belum di-commit atau di-deploy**.
+
+Implementasi:
+
+- Menambahkan `src/components/layout/public-route-loading.tsx` sebagai presentational Server Component tanpa state, request data, atau Client Component boundary.
+- Shared component menyediakan enam bentuk ringan: `home`, `about`, `list`, `category`, `article`, dan `detail`.
+- Menambahkan loading boundary pada homepage, About, blog list/article, services list/category/detail.
+- Homepage dipindahkan secara mekanis dari `src/app/(site)/page.tsx` ke `src/app/(site)/(home)/page.tsx`. Pathless route group tidak mengubah URL `/`, metadata, canonical, atau isi homepage.
+- Loading homepage berada di `(site)/(home)/loading.tsx`, sehingga `/contact` tidak ikut dibungkus fallback tersebut.
+- Navbar dan footer tetap berasal dari shared site layout dan tidak diganti oleh loading fallback.
+- Skeleton hanya memakai markup dan utility CSS. Framer Motion, Lenis, Swiper, image, icon, serta query Supabase tidak dimuat oleh komponen loading.
+- Animasi pulse hanya aktif melalui `motion-safe:animate-pulse`; pengguna dengan `prefers-reduced-motion` menerima state statis.
+- Wrapper loading memakai `role="status"`, `aria-live="polite"`, `aria-busy="true"`, satu teks screen-reader `Loading page`, dan seluruh shape dekoratif `aria-hidden="true"`.
+- Minimum height dan aspect ratio dipertahankan per variant untuk mengurangi perpindahan footer dan layout shift selama content page menunggu.
+- Tidak ada perubahan pada UI final, data fetching, cache, metadata, Motion animation, ataupun konfigurasi deployment.
+
+Boundary yang dibuat:
+
+| Route | File loading | Variant |
+| --- | --- | --- |
+| `/` | `src/app/(site)/(home)/loading.tsx` | `home` |
+| `/about` | `src/app/(site)/about/loading.tsx` | `about` |
+| `/blog` | `src/app/(site)/blog/loading.tsx` | `list` |
+| `/blog/[slug]` | `src/app/(site)/blog/[slug]/loading.tsx` | `article` |
+| `/services` | `src/app/(site)/services/loading.tsx` | `list` |
+| `/services/[category]` | `src/app/(site)/services/[category]/loading.tsx` | `category` |
+| `/services/[category]/[service]` | `src/app/(site)/services/[category]/[service]/loading.tsx` | `detail` |
+
+Verifikasi otomatis:
+
+- Prettier berhasil pada seluruh file FE-05.
+- ESLint langsung pada seluruh file FE-05 berhasil.
+- Route types diregenerasi dengan `next typegen` setelah path homepage dipindahkan; TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js berhasil.
+- Route map tetap memuat `/` sebagai dynamic route, `/contact` tetap static, dan seluruh public route lain mempertahankan path sebelumnya.
+- Production server lokal mengembalikan HTTP 200 untuk `/`, `/about`, `/blog`, `/services`, `/contact`, satu category valid, dan satu service detail valid.
+- HTML response route dynamic yang ditargetkan memuat teks accessibility `Loading page` serta `aria-busy="true"`, membuktikan fallback ikut di-stream.
+- HTML `/contact` tidak memuat marker loading FE-05.
+- Invalid service category dan service detail lokal mengembalikan streamed HTTP 200 dengan `noindex`, sesuai keputusan yang disetujui.
+- Invalid blog slug juga menghasilkan response HTTP 200 dengan `noindex`, tetapi server masih mencatat error Supabase `PGRST116` karena query tidak menemukan baris. Ini merupakan perilaku error/data yang sudah ada dan tetap menjadi scope FE-16, bukan regression yang diperbaiki dalam FE-05.
+
+Verifikasi manual sebelum Production:
+
+1. Uji navigasi client-side memakai link navbar, card, CTA, serta Back/Forward pada Preview deployment.
+2. Gunakan network throttling dan cache dingin untuk memeriksa skeleton desktop/mobile, navbar tetap interaktif, dan tidak ada footer jump yang mengganggu.
+3. Uji warm cache untuk memastikan fallback singkat tidak terasa berkedip.
+4. Aktifkan `prefers-reduced-motion` dan pastikan skeleton statis.
+5. Bandingkan final UI, title, description, canonical, Open Graph, JSON-LD, heading, serta animasi terhadap Production sebelum patch.
+
+Catatan tooling:
+
+- Browser interaktif tidak tersedia pada sesi implementasi, sehingga screenshot, pengukuran CLS visual, fokus keyboard, dan client navigation masih perlu diuji manual pada Preview deployment.
+- Warning lama `baseline-browser-mapping` dan deprecation konvensi `middleware` tetap muncul saat build; keduanya tidak berasal dari FE-05 dan tidak diubah.
+
+### Penyesuaian FE-05 — Warna skeleton netral (4 September 2026)
+
+- Seluruh aksen merah/burgundy dan kuning pada skeleton dihapus berdasarkan hasil review visual.
+- Semua placeholder sekarang memakai abu-abu netral dari `brand-black` dengan opacity rendah: `10%` untuk shape dan `5%` untuk panel latar About.
+- Struktur, dimensi, minimum height, pulse animation, reduced-motion, accessibility, boundary route, serta final page UI tidak berubah.
