@@ -1,4 +1,4 @@
-import { getPublishedBlogPosts, getServiceCategories, getServiceCategoryBySlug, getServiceItemsByCategorySlug } from '@/lib/supabase/queries';
+import { getPublishedBlogPosts, getServiceCategories, getServiceCategoryPageData } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   const { category } = await params;
 
   try {
-    const cat = await getServiceCategoryBySlug(category);
+    const { category: cat } = await getServiceCategoryPageData(category);
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://diputrasignature.com';
     return {
       title: `${cat.seo_title ?? cat.title} Services in Bali | Diputra Signature Indonesia`,
@@ -39,13 +39,16 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
 
-  let servicesSelected;
-  try {
-    servicesSelected = await getServiceCategoryBySlug(category);
-  } catch {
-    notFound();
-  }
-  const [blogPosts, ServicesCategory, servicesItems] = await Promise.all([getPublishedBlogPosts(3), getServiceCategories(), getServiceItemsByCategorySlug(category)]);
+  const [servicePageDataResult, blogPostsResult, serviceCategoriesResult] = await Promise.allSettled([getServiceCategoryPageData(category), getPublishedBlogPosts(3), getServiceCategories()]);
+
+  if (servicePageDataResult.status === 'rejected') notFound();
+  if (blogPostsResult.status === 'rejected') throw blogPostsResult.reason;
+  if (serviceCategoriesResult.status === 'rejected') throw serviceCategoriesResult.reason;
+
+  const { category: servicesSelected, items: servicesItems } = servicePageDataResult.value;
+  const blogPosts = blogPostsResult.value;
+  const serviceCategories = serviceCategoriesResult.value;
+
   return (
     <MotionProvider>
       <CategoryHeroSection
@@ -63,7 +66,7 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
       <CtaSection heading="Request a Consultation" description="Start Your Legal Process Today" />
       <QnaSection />
       <div className="pb-13">
-        <ServicesSection services={ServicesCategory} excludeSlug={category} />
+        <ServicesSection services={serviceCategories} excludeSlug={category} />
       </div>
       <div className="w-full bg-white pt-13 pb-28 drop-shadow-lg">
         <BlogSection blogPosts={blogPosts} />

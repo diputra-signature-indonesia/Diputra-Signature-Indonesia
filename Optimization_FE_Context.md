@@ -722,3 +722,162 @@ Checklist Preview sebelum Production:
 4. Bandingkan title, description, canonical, Open Graph, JSON-LD, heading, link, dan status HTTP dengan Production saat ini.
 5. Periksa Function duration/query count cold dan warm; jangan mengandalkan TTFB lokal sebagai prediksi Production.
 6. Setelah Preview lulus, deploy ke Production dan ulangi smoke test tanpa melakukan mutation data.
+
+## Progress FE-04 — Analisis query layanan redundan dan berantai (3 September 2026)
+
+Status: **audit source dan schema selesai; seluruh keputusan disetujui dan hasil implementasi dicatat pada bagian berikutnya**.
+
+Batas pekerjaan:
+
+- Audit hanya membaca public service loader, dua dynamic route service, migration schema lokal, constraint/index, dan RLS yang merepresentasikan production.
+- Tidak ada source, UI, query, database, migration, cache, maupun konfigurasi deployment yang diubah pada tahap analisis ini.
+- FE-04 berfokus pada jumlah round-trip dan waterfall data layanan. Deduplikasi metadata/page sudah selesai pada FE-03.
+
+Kondisi setelah FE-03:
+
+| Jalur | Tahap data layanan saat cache dingin | Temuan |
+| --- | --- | --- |
+| `/services/[category]` | category, lalu items berdasarkan `category.id` | React `cache()` mencegah pembacaan category identik berulang, tetapi helper items masih bergantung pada hasil category sebelum query items dimulai. |
+| `/services/[category]/[service]` | category, lalu item, lalu details | Ketiga `await` masih serial. Query item sebenarnya sudah memvalidasi category melalui join dan tidak membutuhkan object category dari query pertama. Hanya details yang benar-benar bergantung pada `item.id`. |
+| Supporting content | primary service data, baru kemudian blog dan seluruh category | `getPublishedBlogPosts(3)` dan `getServiceCategories()` baru dimulai setelah primary service data selesai, walaupun independen. |
+
+Catatan dampak:
+
+- Pada warm Data Cache FE-01, biaya rantai ini sebagian besar hanya cache lookup sehingga dampaknya kecil.
+- Pada cold cache, sesudah invalidasi `public-services`, atau ketika instance cache belum terisi, setiap tahap dapat menambah round-trip Function `sin1` ke Supabase Singapore.
+- FE-03 memastikan satu loader tidak dieksekusi ulang dalam request yang sama, tetapi tidak mengubah tiga query berbeda di dalam detail loader.
+- Query terpisah juga dapat membaca snapshot yang sedikit berbeda bila konten berubah di antara round-trip. Satu relational query membaca category, item, dan details dalam satu statement.
+
+Dukungan schema yang sudah tersedia:
+
+- `services_items.category_id` memiliki foreign key ke `services_categories.id`.
+- `services_item_details.service_item_id` memiliki foreign key ke `services_items.id`.
+- `services_categories.slug` memiliki unique constraint/index.
+- Kombinasi `services_items(category_id, slug)` memiliki unique constraint/index.
+- `services_item_details(service_item_id, sort_order)` memiliki unique index.
+- Relasi tersebut dapat dideteksi otomatis oleh PostgREST/Supabase untuk nested select dan `!inner`; tidak diperlukan perubahan schema untuk implementasi yang direkomendasikan.
+
+Opsi penyelesaian:
+
+1. **Perubahan minimal: teruskan `category.id` dan paralelkan category dengan item.** Category page tetap membutuhkan dua query, sedangkan detail turun dari tiga tahap serial menjadi dua tahap melalui `Promise.all(category, item)` lalu details. Regression surface paling kecil, tetapi FE-04 hanya terselesaikan sebagian dan masih membayar lebih dari satu round-trip saat cold.
+2. **Relational select PostgREST per route (rekomendasi).** Category page mengambil category beserta published items dalam satu query. Detail page mengambil item beserta published category dan ordered details dalam satu query. Hasil dipetakan kembali ke shape props saat ini sehingga UI tidak berubah.
+3. **View atau RPC database.** Dapat mengontrol shape dan SQL secara penuh, tetapi membutuhkan migration production, audit privilege/RLS, versioning function, serta rollback database. Kompleksitas ini belum dibutuhkan karena foreign key yang ada sudah mendukung nested select.
+
+Rancangan yang direkomendasikan:
+
+- Buat route-level loader category yang mengembalikan `{ category, items }` melalui satu query dari `services_categories` dengan embedded `services_items`.
+- Gunakan loader category yang sama pada `generateMetadata` dan page melalui React `cache()` FE-03.
+- Ubah internal `getServiceDetailPageData(categorySlug, itemSlug)` menjadi satu query dari `services_items` dengan embedded published category dan `services_item_details`.
+- Pertahankan return shape detail `{ category, item, details }` sehingga komponen dan call site tidak perlu diubah.
+- Pakai `!inner` pada relasi category untuk memastikan item hanya valid pada category slug yang diminta.
+- Pilih kolom secara eksplisit, filter `is_published` secara eksplisit di setiap level, dan pertahankan urutan items/details berdasarkan `sort_order` ascending.
+- Bungkus hasil relational query dengan `unstable_cache` bertag `public-services`, TTL 15 menit, dan namespace key FE-01; React `cache()` tetap menjadi lapisan terluar per request.
+- Mulai primary route data, blog, dan daftar category secara paralel. Gunakan hasil settled/guard yang mempertahankan prioritas error saat ini: kegagalan primary service tetap menuju `notFound`, sedangkan kegagalan supporting query tetap menjadi server error.
+- Jangan membuat Route Handler internal; Server Component tetap membaca Supabase langsung agar tidak menambah hop HTTP baru.
+
+Perkiraan perubahan round-trip data layanan:
+
+| Route | Sebelum FE-04, cold | Rekomendasi sesudah FE-04, cold |
+| --- | --- | --- |
+| Category | category → items: 2 query dalam 2 tahap | category + embedded items: 1 query |
+| Detail | category → item → details: 3 query dalam 3 tahap | item + embedded category/details: 1 query |
+
+Perhitungan di atas hanya untuk primary data layanan dan tidak menghitung blog/daftar category pendukung. Peningkatan latency production harus tetap dibuktikan melalui Preview, bukan diasumsikan dari jumlah query saja.
+
+Risiko dan guardrail:
+
+- Nested result memiliki shape berbeda dari row datar. Mapping harus dilakukan di server dan tidak boleh meneruskan property relasi tambahan ke Client Component.
+- Embedded one-to-many mengembalikan array kosong ketika tidak ada detail; perilaku ini harus tetap sama dengan query list lama.
+- RLS anon tetap menjadi lapisan keamanan utama, tetapi filter `is_published` eksplisit dipertahankan sebagai kontrak query dan defense-in-depth.
+- Satu tag `public-services` tetap menginvalidasi list maupun detail; tidak ada perubahan invalidation contract FE-01.
+- Error handling tidak diperbaiki pada FE-04. Pembedaan data tidak ditemukan dari gangguan Supabase tetap menjadi scope FE-16.
+- Loader lama yang tidak lagi memiliki consumer dapat dihapus setelah `rg`, TypeScript, build, dan route smoke test membuktikan tidak ada pemakaian. Menghapusnya tidak mengubah database atau cache entry yang sudah ada.
+- Tidak ada dampak yang diharapkan pada SEO karena field metadata, canonical, Open Graph, JSON-LD, URL, serta isi body dipertahankan; hanya sumber data internal yang digabung.
+
+Rencana verifikasi setelah implementasi:
+
+1. Jalankan relational query terhadap Supabase lokal dan validasi shape, published filtering, ownership category, serta urutan nested rows.
+2. Bandingkan output route valid sebelum/sesudah untuk heading, cards, details, metadata, canonical, Open Graph, JSON-LD, dan internal link.
+3. Uji category kosong, item tanpa details, category/item tidak published, pasangan category-item salah, serta slug tidak ditemukan.
+4. Jalankan cache debug pada cold request dan pastikan primary category/detail masing-masing hanya memiliki satu key Data Cache.
+5. Ulangi request dan pastikan key yang sama menjadi HIT; uji invalidasi `public-services` secara lokal bila jalur aman tersedia.
+6. Jalankan Prettier, ESLint targeted, TypeScript, production build, dan smoke test.
+7. Ulangi pada Preview Vercel `sin1` dan bandingkan query count serta Function duration cold/warm sebelum Production.
+
+Keputusan yang disetujui:
+
+1. Gunakan relational select satu query per route, bukan perubahan minimal dua tahap.
+2. Gunakan route-level aggregate loader dengan return shape lama agar metadata, UI, dan komponen tidak berubah.
+3. Mulai supporting query blog dan seluruh category secara paralel dengan primary service data, dengan guard yang mempertahankan perilaku error saat ini.
+4. Gunakan explicit column selection, published filter pada setiap level, dan `sort_order` ascending pada nested items/details.
+5. Hapus helper service lama yang sudah tidak memiliki consumer pada patch yang sama setelah verifikasi.
+6. Jangan menambahkan migration/RPC/Route Handler atau mengubah UI/SEO; cache FE-01 serta memoization FE-03 tetap dipertahankan.
+
+Referensi resmi:
+
+- Supabase, Querying Joins and Nested Tables: relasi otomatis dari foreign key, embedded one-to-many, filter join dengan `!inner`, dan filter pada joined field — https://supabase.com/docs/guides/database/joins-and-nesting
+- Supabase JavaScript `select()`: referenced table, inner join, dan filtering melalui referenced table — https://supabase.com/docs/reference/javascript/select
+- Supabase JavaScript `order()`: pengurutan row pada referenced table dengan `referencedTable` — https://supabase.com/docs/reference/javascript/using-modifiers-order
+- Next.js, Fetching Data: request independen sebaiknya dimulai bersama dan ditunggu dengan `Promise.all` untuk menghindari waterfall — https://nextjs.org/docs/app/getting-started/fetching-data#parallel-data-fetching
+
+## Progress FE-04 — Implementasi relational service queries (3 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi; belum di-commit atau di-deploy ke Preview/Production**.
+
+Implementasi loader:
+
+- Menambahkan `getServiceCategoryPageData(categorySlug)` yang mengambil category dan seluruh published items melalui satu nested select dari `services_categories`.
+- Category dan nested items menggunakan explicit column selection, explicit `is_published` filters, serta nested `sort_order` ascending.
+- `getServiceDetailPageData(categorySlug, itemSlug)` sekarang menjalankan satu query dari `services_items` dengan embedded `services_categories!inner` dan `services_item_details`.
+- Relasi category pada detail difilter dengan category slug serta status published sehingga pasangan category-item yang salah tidak dapat lolos.
+- Detail nested tetap berbentuk array, difilter published, dan diurutkan dengan `sort_order` ascending.
+- Nested response dipetakan di server kembali menjadi `{ category, items }` untuk category dan `{ category, item, details }` untuk detail. Property relasi mentah tidak diteruskan ke komponen.
+- Aggregate category dan detail memakai key Data Cache baru, tag `public-services`, TTL 15 menit, namespace FE-01, dan React `cache()` sebagai lapisan request memoization FE-03.
+- Helper lama `getServiceCategoryBySlug`, `getServiceItemsByCategorySlug`, `getServiceItemByCategoryAndSlug`, dan `getServiceItemDetailsByItemId` dihapus setelah pencarian source memastikan tidak ada consumer lain.
+
+Implementasi route:
+
+- `generateMetadata` dan body category sekarang memakai instance `getServiceCategoryPageData` yang sama.
+- Detail metadata dan body tetap memakai nama `getServiceDetailPageData`, tetapi internalnya sudah menjadi satu relational query.
+- Primary service data, tiga blog terbaru, dan seluruh category sekarang dimulai bersama melalui `Promise.allSettled`.
+- Hasil primary service yang rejected tetap diprioritaskan menjadi `notFound`; error supporting blog/category tetap dilempar sebagai server error. Perbaikan klasifikasi error yang lebih spesifik tetap scope FE-16.
+- Return props, urutan section, UI, motion, metadata fields, canonical, Open Graph, dan URL tidak diubah.
+
+Perubahan jalur cold primary data:
+
+| Route | Sebelum FE-04 | Sesudah FE-04 |
+| --- | --- | --- |
+| Category | category → items, dua query/tahap | category + embedded items, satu query |
+| Detail | category → item → details, tiga query/tahap | item + embedded category/details, satu query |
+
+Verifikasi relational query lokal:
+
+- Read-only query category `legal-and-corporate` berhasil dan mengembalikan tiga item published dalam `sort_order` ascending.
+- Read-only query item `corporate-business` berhasil, relasi category kembali sebagai `legal-and-corporate`, dan array details kosong ditangani dengan benar.
+- Dataset lokal tidak memiliki satu pun `services_item_details` published yang dapat digunakan sebagai fixture non-empty. Ordering untuk array berisi data wajib diuji kembali pada Preview/Production read-only.
+- Tidak ada data, policy, schema, migration, function, atau configuration Supabase yang diubah selama pengujian.
+
+Verifikasi source dan runtime:
+
+- Prettier pada tiga file source berhasil.
+- ESLint targeted pada tiga file source berhasil.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js berhasil; route publik Supabase tetap dynamic (`ƒ`) seperti baseline FE-01.
+- `git diff --check` berhasil tanpa whitespace error; LF/CRLF yang muncul hanya warning line ending repository Windows.
+- Dua putaran smoke test menghasilkan HTTP 200 untuk category dan detail service valid.
+- Category slug tidak tersedia, service slug tidak tersedia, serta pasangan category-item salah masing-masing menghasilkan HTTP 404 pada dua putaran.
+- HTML category memuat tiga link item unik, sesuai jumlah item published dari relational query lokal.
+- Detail response tetap memiliki metadata title, canonical, dan Open Graph title.
+- Cache debug cold menunjukkan satu primary key `public-services` untuk category dan satu primary key untuk detail. Request valid kedua menunjukkan kedua key tersebut menjadi HIT.
+- Blog dan daftar category pendukung terlihat dimulai pada kelompok request yang sama dengan primary data, bukan setelah primary selesai.
+- Server production lokal pada port pengujian dihentikan setelah verifikasi.
+
+Batas verifikasi dan checklist Preview:
+
+1. Uji category yang tidak memiliki item dan item yang memiliki minimal satu detail published.
+2. Pastikan urutan item/detail, jumlah card/detail, dan seluruh teks sama dengan Production sebelum perubahan.
+3. Uji category/item unpublished dan pasangan category-item yang salah; semuanya tidak boleh merender data publik.
+4. Bandingkan title, description, canonical, Open Graph, JSON-LD, heading, CTA, serta internal link pada route valid.
+5. Pastikan cold request masing-masing hanya menggunakan satu primary relational query dan request berikutnya menjadi cache HIT.
+6. Verifikasi invalidasi tag `public-services` bila tersedia jalur aman tanpa mengubah data Production.
+7. Bandingkan Function duration cold/warm pada Preview Vercel `sin1` sebelum mempromosikan deployment.

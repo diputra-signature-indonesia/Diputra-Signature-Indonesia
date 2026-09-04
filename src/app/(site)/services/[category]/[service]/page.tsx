@@ -37,14 +37,16 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ServicesDetailsPage({ params }: { params: Promise<{ category: string; service: string }> }) {
   const { category, service } = await params;
 
-  let servicesDetail;
-  try {
-    servicesDetail = await getServiceDetailPageData(category, service);
-  } catch {
-    notFound();
-  }
+  const [serviceDetailResult, blogPostsResult, serviceCategoriesResult] = await Promise.allSettled([getServiceDetailPageData(category, service), getPublishedBlogPosts(3), getServiceCategories()]);
 
-  const [blogPosts, ServicesCategory] = await Promise.all([getPublishedBlogPosts(3), getServiceCategories()]);
+  if (serviceDetailResult.status === 'rejected') notFound();
+  if (blogPostsResult.status === 'rejected') throw blogPostsResult.reason;
+  if (serviceCategoriesResult.status === 'rejected') throw serviceCategoriesResult.reason;
+
+  const servicesDetail = serviceDetailResult.value;
+  const blogPosts = blogPostsResult.value;
+  const serviceCategories = serviceCategoriesResult.value;
+
   return (
     <MotionProvider>
       <DetailServiceSection
@@ -56,7 +58,7 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
       <CtaSection heading="Didn’t find what you need?" description="Some legal and corporate matters require personalized guidance." />
       <QnaSection />
       <div className="pb-13">
-        <ServicesSection services={ServicesCategory} excludeSlug={category} />
+        <ServicesSection services={serviceCategories} excludeSlug={category} />
       </div>
       <div className="w-full bg-white pt-13 drop-shadow-lg max-md:pb-28">
         <BlogSection blogPosts={blogPosts} />

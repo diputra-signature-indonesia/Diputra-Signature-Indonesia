@@ -49,6 +49,26 @@ export type ServiceItemDetail = {
   is_published: boolean | null;
 };
 
+export type ServiceCategoryPageData = {
+  category: ServiceCategory;
+  items: ServiceItem[];
+};
+
+export type ServiceDetailPageData = {
+  category: ServiceCategory;
+  item: ServiceItem;
+  details: ServiceItemDetail[];
+};
+
+type ServiceCategoryPageRow = ServiceCategory & {
+  services_items: ServiceItem[];
+};
+
+type ServiceDetailPageRow = ServiceItem & {
+  services_categories: ServiceCategory;
+  services_item_details: ServiceItemDetail[];
+};
+
 /** LIST categories (untuk section Services / services page) */
 async function fetchServiceCategories(): Promise<ServiceCategory[]> {
   const supabase = createSupabasePublicServerClient();
@@ -63,86 +83,129 @@ export const getServiceCategories = unstable_cache(fetchServiceCategories, getPu
   tags: [PUBLIC_CACHE_TAGS.services],
 });
 
-/** SINGLE category by slug */
-async function fetchServiceCategoryBySlug(slug: string): Promise<ServiceCategory> {
+/** SINGLE category with its published items */
+async function fetchServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData> {
   const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('services_categories').select('*').eq('slug', slug).eq('is_published', true).single();
+  const { data, error } = await supabase
+    .from('services_categories')
+    .select(
+      `
+      id,
+      slug,
+      seo_title,
+      seo_description,
+      og_image,
+      title,
+      type,
+      short_description,
+      description,
+      hero_heading,
+      hero_image,
+      card_image,
+      card_icon_key,
+      sort_order,
+      is_published,
+      services_items (
+        id,
+        category_id,
+        slug,
+        seo_title,
+        seo_description,
+        og_image,
+        title,
+        description,
+        icon_key,
+        cta_label,
+        cta_type,
+        sort_order,
+        is_published
+      )
+      `
+    )
+    .eq('slug', categorySlug)
+    .eq('is_published', true)
+    .eq('services_items.is_published', true)
+    .order('sort_order', { referencedTable: 'services_items', ascending: true })
+    .single();
 
   if (error) throw error;
-  return data as ServiceCategory;
+  const { services_items: items, ...category } = data as ServiceCategoryPageRow;
+  return { category, items: items ?? [] };
 }
 
-const getServiceCategoryBySlugCached = unstable_cache(fetchServiceCategoryBySlug, getPublicCacheKeyParts('service-category-by-slug'), {
+const getServiceCategoryPageDataCached = unstable_cache(fetchServiceCategoryPageData, getPublicCacheKeyParts('service-category-page-data'), {
   revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
   tags: [PUBLIC_CACHE_TAGS.services],
 });
 
-export const getServiceCategoryBySlug = cache(getServiceCategoryBySlugCached);
+export const getServiceCategoryPageData = cache(getServiceCategoryPageDataCached);
 
-/** LIST items by category slug (join) */
-async function fetchServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
+/** Convenience: detail page data */
+async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData> {
   const supabase = createSupabasePublicServerClient();
-  // 2-step: ambil category id dulu, lalu items
-  const category = await getServiceCategoryBySlug(categorySlug);
-
-  const { data, error } = await supabase.from('services_items').select('*').eq('category_id', category.id).eq('is_published', true).order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as ServiceItem[];
-}
-
-export const getServiceItemsByCategorySlug = unstable_cache(fetchServiceItemsByCategorySlug, getPublicCacheKeyParts('service-items-by-category-slug'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.services],
-});
-
-/** SINGLE item by (category slug + item slug) */
-async function fetchServiceItemByCategoryAndSlug(categorySlug: string, itemSlug: string): Promise<ServiceItem> {
-  const supabase = createSupabasePublicServerClient();
-  // join supaya validasi item benar-benar milik category itu
   const { data, error } = await supabase
     .from('services_items')
     .select(
       `
-      *,
-      services_categories!inner(slug)
-    `
+      id,
+      category_id,
+      slug,
+      seo_title,
+      seo_description,
+      og_image,
+      title,
+      description,
+      icon_key,
+      cta_label,
+      cta_type,
+      sort_order,
+      is_published,
+      services_categories!inner (
+        id,
+        slug,
+        seo_title,
+        seo_description,
+        og_image,
+        title,
+        type,
+        short_description,
+        description,
+        hero_heading,
+        hero_image,
+        card_image,
+        card_icon_key,
+        sort_order,
+        is_published
+      ),
+      services_item_details (
+        id,
+        service_item_id,
+        title,
+        description,
+        cta_description,
+        sort_order,
+        is_published
+      )
+      `
     )
     .eq('services_categories.slug', categorySlug)
+    .eq('services_categories.is_published', true)
     .eq('slug', itemSlug)
     .eq('is_published', true)
+    .eq('services_item_details.is_published', true)
+    .order('sort_order', { referencedTable: 'services_item_details', ascending: true })
     .single();
 
   if (error) throw error;
-  return data as ServiceItem;
+
+  const { services_categories: category, services_item_details: details, ...item } = data as unknown as ServiceDetailPageRow;
+
+  return { category, item, details: details ?? [] };
 }
 
-export const getServiceItemByCategoryAndSlug = unstable_cache(fetchServiceItemByCategoryAndSlug, getPublicCacheKeyParts('service-item-by-category-and-slug'), {
+const getServiceDetailPageDataCached = unstable_cache(fetchServiceDetailPageData, getPublicCacheKeyParts('service-detail-page-data'), {
   revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
   tags: [PUBLIC_CACHE_TAGS.services],
 });
 
-/** LIST details by item id */
-async function fetchServiceItemDetailsByItemId(itemId: string): Promise<ServiceItemDetail[]> {
-  const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('services_item_details').select('*').eq('service_item_id', itemId).eq('is_published', true).order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as ServiceItemDetail[];
-}
-
-export const getServiceItemDetailsByItemId = unstable_cache(fetchServiceItemDetailsByItemId, getPublicCacheKeyParts('service-item-details-by-item-id'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.services],
-});
-
-/** Convenience: detail page data */
-async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string) {
-  const category = await getServiceCategoryBySlug(categorySlug);
-  const item = await getServiceItemByCategoryAndSlug(categorySlug, itemSlug);
-  const details = await getServiceItemDetailsByItemId(item.id);
-
-  return { category, item, details };
-}
-
-export const getServiceDetailPageData = cache(fetchServiceDetailPageData);
+export const getServiceDetailPageData = cache(getServiceDetailPageDataCached);
