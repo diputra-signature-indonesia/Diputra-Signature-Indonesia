@@ -186,6 +186,13 @@ Alasan dependency:
 - Error database tidak boleh dikonversi menjadi cached 404 atau fallback SEO.
 - Unpublish/delete harus menghasilkan status dan metadata yang konsisten sebelum full cached shell dipertimbangkan.
 
+### 5.1 Catatan visual FE-15
+
+- Implementasi awal `error.tsx` dan `not-found.tsx` adalah functional baseline untuk recovery, accessibility, dan reliability; tampilannya belum dianggap sebagai final design system Diputra.
+- Ketika arahan visual/design system Diputra berikutnya tersedia, error dan not-found state perlu direview serta disesuaikan secara khusus agar hierarchy, spacing, warna, copy, dan responsive behavior konsisten dengan halaman publik lain.
+- Penyesuaian visual berikutnya tidak boleh menghilangkan heading semantik, focus-visible, retry manual, link pemulihan, robots `noindex`, sanitasi detail error, atau perbedaan perilaku error versus not-found.
+- Redesign state tersebut harus dipisahkan dari FE-16 agar perubahan visual tidak tercampur dengan perubahan klasifikasi error data.
+
 ## 6. Tahap B — Migrasi final ke Next.js 16 Cache Components
 
 ### 6.1 Target akhir

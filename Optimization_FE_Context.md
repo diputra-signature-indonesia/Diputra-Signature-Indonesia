@@ -1044,3 +1044,155 @@ Catatan tooling:
 - Seluruh aksen merah/burgundy dan kuning pada skeleton dihapus berdasarkan hasil review visual.
 - Semua placeholder sekarang memakai abu-abu netral dari `brand-black` dengan opacity rendah: `10%` untuk shape dan `5%` untuk panel latar About.
 - Struktur, dimensi, minimum height, pulse animation, reduced-motion, accessibility, boundary route, serta final page UI tidak berubah.
+
+## Progress FE-15 — Analisis Error Boundary dan Not-found UI publik (4 September 2026)
+
+Status: **audit source dan rancangan selesai; keputusan disetujui dan implementasi dicatat pada bagian berikutnya**.
+
+Batas pekerjaan:
+
+- Audit hanya membaca struktur App Router, shared public layout, dynamic public pages, loader Supabase, komponen UI yang dapat digunakan ulang, dan dokumentasi resmi Next.js.
+- Tidak ada `error.tsx`, `not-found.tsx`, `global-error.tsx`, query, cache, metadata, UI normal, database, maupun konfigurasi yang diubah pada tahap analisis ini.
+- FE-15 menangani pengalaman ketika error atau resource tidak ditemukan. Klasifikasi penyebab error pada data layer tetap dipisahkan sebagai FE-16.
+
+Kondisi source saat ini:
+
+- Tidak terdapat `error.tsx`, `global-error.tsx`, maupun `not-found.tsx` di seluruh `src/app`.
+- Semua halaman publik berada di bawah `src/app/(site)/layout.tsx`; navbar dan footer berasal dari layout tersebut, sedangkan page dirender sebagai child di dalam `<main>`.
+- Error dari page atau nested component publik dapat ditangani oleh satu `(site)/error.tsx` tanpa mengganti navbar/footer. Error yang terjadi di dalam `(site)/layout.tsx` sendiri tidak dapat ditangkap oleh boundary pada segment yang sama.
+- Site layout tidak menjalankan query data. Risiko error utama saat ini berada di page/loader Supabase, sehingga site-scoped boundary memberi coverage yang paling relevan dengan diff minimum.
+- Root layout hanya menyiapkan font, metadata, global CSS, `<html>`, dan `<body>`. `global-error.tsx` baru diperlukan sebagai last-resort bila root layout/template ikut gagal; kasus tersebut lebih luas daripada public failure UX FE-15.
+- `app/not-found.tsx` diperlukan untuk URL yang tidak cocok dengan route mana pun. Nested `(site)/not-found.tsx` diperlukan agar `notFound()` dari blog/service publik memakai UI yang tetap berada di dalam site shell.
+- Project memiliki satu root layout biasa. Experimental `global-not-found.tsx` tidak diperlukan dan tidak direkomendasikan.
+
+Temuan alur error data:
+
+- `getPublishedBlogPostBySlug()` menggunakan `.single()` dan melempar seluruh error Supabase. Secara type fungsi selalu mengembalikan `BlogPost`, sehingga pengecekan `if (!post) notFound()` pada page tidak menangani kondisi nol baris secara bersih; invalid slug saat pengujian FE-05 masih mencatat `PGRST116`.
+- Page category dan detail service menggunakan `Promise.allSettled()`. Rejection primary service loader selalu dipetakan ke `notFound()`, sedangkan rejection blog list atau service category list diteruskan sebagai error.
+- Karena loader service juga menggunakan `.single()`, primary rejection dapat berarti row tidak ada, timeout, gangguan jaringan, permission/RLS, atau konfigurasi salah. Semua kondisi tersebut saat ini terlihat sebagai 404.
+- `generateMetadata()` blog/service menangkap seluruh error lalu memakai metadata generic. Ini mencegah metadata render ikut crash, tetapi tidak membedakan resource tidak ada dari outage.
+- Tidak ditemukan SDK error reporting atau `instrumentation.ts`. Vercel/server logs tetap menjadi sumber diagnosis yang tersedia saat ini.
+
+Pemisahan tanggung jawab FE-15 dan FE-16:
+
+- FE-15 menyediakan UI fallback yang aman untuk uncaught exception serta UI not-found yang konsisten.
+- FE-16 harus mengubah loader agar hasil `not found` menjadi `null` atau error terklasifikasi, sedangkan error operasional tetap dilempar ke `error.tsx`.
+- Mengimplementasikan FE-15 tanpa FE-16 tetap berguna untuk menghilangkan fallback framework, tetapi sementara waktu missing blog dapat memakai error UI dan outage service dapat memakai not-found UI.
+- Rekomendasi urutan adalah implementasikan boundary FE-15 terlebih dahulu, verifikasi secara terisolasi, lalu lanjutkan FE-16 segera sebagai perubahan correctness terpisah. FE-16 tidak boleh disisipkan diam-diam ke patch FE-15.
+
+Opsi error boundary:
+
+1. **Satu `(site)/error.tsx` untuk seluruh public page (rekomendasi).** Menangkap uncaught error dari page publik dan nested child, mempertahankan site navbar/footer, serta menyediakan satu UX yang konsisten. Diff dan client bundle tambahan paling kecil. Boundary tidak menangkap error pada site layout itu sendiri.
+2. **`error.tsx` per route publik.** Copy dapat dibuat spesifik untuk blog/service dan blast radius reset lebih sempit, tetapi menambah duplikasi, file client, serta matriks pengujian tanpa kebutuhan UX yang terbukti saat ini.
+3. **Root `app/error.tsx` atau `global-error.tsx`.** Coverage lebih luas, termasuk route admin/auth atau root failure tergantung lokasi, tetapi melampaui public scope. `global-error.tsx` juga harus menggantikan root layout serta mendefinisikan `<html>` dan `<body>` sendiri. Tidak direkomendasikan untuk putaran awal.
+
+Opsi not-found:
+
+1. **Nested `(site)/not-found.tsx` + stable root `app/not-found.tsx` dengan shared state content (rekomendasi).** Nested file menangani `notFound()` dari resource publik di dalam site shell; root file menangani semua URL unmatched. Root state dibuat standalone dan ringan karena tidak otomatis berada di dalam `(site)` layout.
+2. **Root `app/not-found.tsx` saja.** File lebih sedikit dan menangani URL unmatched, tetapi dynamic public resource kehilangan kesempatan memakai boundary terdekat dengan site shell dan route context.
+3. **Experimental `app/global-not-found.tsx`.** Melewati layout dan memberi kontrol penuh terhadap global 404, tetapi memerlukan flag experimental, full HTML document, serta import style/font sendiri. Project memiliki root layout tunggal sehingga kompleksitas ini tidak diperlukan.
+
+Rancangan UI yang direkomendasikan:
+
+- Gunakan satu shared presentational state dengan variant `error` dan `not-found`; tidak memakai image, Motion, Lenis tambahan, query data, atau efek berat.
+- Copy tetap bahasa Inggris sesuai `lang="en"` dan seluruh konten situs.
+- Error state: label `500`, heading `Something went wrong`, penjelasan generic tanpa detail internal, primary action `Try again`, dan secondary link `Back to home`.
+- Not-found state: label `404`, heading `Page not found`, penjelasan bahwa alamat mungkin salah atau content sudah tidak tersedia, primary link `Back to home`, dan secondary link `View services`.
+- Gunakan warna brand dan tipografi yang sudah tersedia secara sederhana, minimum height agar footer tidak meloncat, focus-visible yang jelas, serta layout responsive. UI normal tidak berubah.
+- Error fallback memakai `role="alert"` dan heading yang terhubung melalui `aria-labelledby`. Not-found memakai heading semantik tanpa live-region karena bukan perubahan error async di dalam page yang sedang dibaca.
+- `Try again` memanggil `reset()` secara manual untuk mencoba render ulang segment. Tidak ada auto-retry atau retry loop.
+
+Keamanan dan logging:
+
+- Jangan menampilkan `error.message`, stack trace, object Supabase, URL database, atau environment detail kepada user.
+- Next.js menyamarkan message Server Component di production dan menyediakan `error.digest` untuk dicocokkan dengan server logs.
+- Error UI dapat mencatat error melalui client console saat development. Untuk production, gunakan original Vercel Function logs dan digest; integrasi provider eksternal atau `instrumentation.ts` dipisahkan dari FE-15 agar tidak memperluas data yang dikirim keluar.
+- Digest tidak perlu ditampilkan pada UI awal. Jika kelak dibutuhkan customer support, reference code dapat ditambahkan setelah alur support ditentukan.
+
+Pengaruh FE-05 dan SEO:
+
+- `loading.tsx` berada di luar page dan membungkus not-found UI pada hierarchy segment. Skeleton dapat muncul sebelum not-found/error state siap.
+- `notFound()` otomatis menambahkan robots `noindex`.
+- Karena FE-05 sudah mengaktifkan streaming, missing dynamic resource dapat merespons HTTP 200 dengan `noindex` alih-alih hard 404. Trade-off tersebut sudah disetujui pada FE-05 dan tidak diubah dalam FE-15.
+- Root unmatched URL melalui `app/not-found.tsx` tetap dapat memberi status 404 ketika response belum di-stream.
+
+Rencana verifikasi setelah implementasi:
+
+1. Tambahkan test-only failure trigger yang tidak masuk commit, atau gunakan mock terkontrol; jangan memutus koneksi atau mengubah Supabase Production untuk memicu error.
+2. Verifikasi uncaught public page error menampilkan site-scoped error UI, navbar/footer tetap interaktif, dan detail internal tidak terlihat.
+3. Verifikasi `Try again` hanya melakukan retry manual dan mengganti fallback bila render berikutnya berhasil.
+4. Uji invalid blog slug, category, pasangan category-service salah, unpublished resource, dan URL global yang tidak cocok.
+5. Catat status HTTP dan robots `noindex`, khususnya streamed dynamic not-found hasil FE-05.
+6. Uji direct load, client navigation, refresh, Back/Forward, keyboard, mobile/desktop, dan focus-visible.
+7. Pastikan route valid serta UI normal, metadata, cache, Motion, Lenis, dan loading skeleton tidak berubah.
+8. Jalankan Prettier, ESLint targeted, TypeScript, production build, `git diff --check`, dan Preview smoke test.
+9. Setelah FE-15 stabil, kerjakan FE-16 dan ulangi matriks not-found versus operational error.
+
+Keputusan yang disetujui:
+
+1. Gunakan satu `(site)/error.tsx` untuk seluruh public page, bukan boundary per route.
+2. Gunakan dua coverage not-found: `(site)/not-found.tsx` untuk explicit public `notFound()` dan `app/not-found.tsx` untuk URL unmatched.
+3. Gunakan UI minimal berbahasa Inggris dengan action: error `Try again` + `Back to home`; not-found `Back to home` + `View services`.
+4. Retry hanya manual melalui `reset()` tanpa auto-retry.
+5. Detail error/digest tidak ditampilkan; gunakan Vercel logs saat ini dan tunda external observability/instrumentation.
+6. `global-error.tsx` dan experimental `global-not-found.tsx` tidak dibuat pada putaran ini.
+7. FE-15 tidak mengubah klasifikasi query; FE-16 dikerjakan setelahnya untuk membedakan missing resource dari operational error.
+
+Referensi resmi:
+
+- Next.js, `error.js`: segment error boundary, Client Component, sanitized Server Component error, digest, dan manual `reset()` — https://nextjs.org/docs/app/api-reference/file-conventions/error
+- Next.js, Error Handling: expected error, uncaught exception, nested error boundary, dan not-found — https://nextjs.org/docs/app/getting-started/error-handling
+- Next.js, `not-found.js`: nested not-found, root unmatched URL, status streaming, dan experimental global-not-found — https://nextjs.org/docs/app/api-reference/file-conventions/not-found
+- Next.js, `notFound()`: menghentikan render segment dan menyisipkan robots `noindex` — https://nextjs.org/docs/app/api-reference/functions/not-found
+- Next.js, `instrumentation.js`: `onRequestError` untuk provider observability server-side — https://nextjs.org/docs/pages/api-reference/file-conventions/instrumentation
+
+## Progress FE-15 — Implementasi Error Boundary dan Not-found UI publik (5 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi secara statis/server-side; belum di-commit atau di-deploy**.
+
+Implementasi:
+
+- Menambahkan `src/components/layout/public-route-state.tsx` sebagai shared presentational state untuk error dan not-found.
+- Shared state memakai typography, warna, spacing, dan `BrandButton` yang sudah tersedia; tidak menambah image, Motion, Lenis, query, atau dependency baru.
+- Menambahkan `src/app/(site)/error.tsx` sebagai Client Component boundary tunggal untuk seluruh page publik di bawah site layout.
+- Error state menampilkan copy generic `Something went wrong`, action manual `Try again` melalui `reset()`, dan link `Back to home`.
+- Error state memakai `role="alert"` dan `aria-labelledby`; message, stack trace, object Supabase, dan digest tidak dirender kepada user.
+- Menambahkan `src/app/(site)/not-found.tsx` agar explicit `notFound()` pada blog/service memakai custom state di dalam navbar/footer publik.
+- Menambahkan stable `src/app/not-found.tsx` untuk URL global yang tidak cocok dengan route mana pun. Root state dibuat standalone dan ringan karena tidak berada di bawah `(site)` layout.
+- Not-found state menampilkan `404`, `Page not found`, `Back to home`, dan `View services`.
+- `global-error.tsx`, experimental `global-not-found.tsx`, instrumentation eksternal, auto-retry, serta boundary per-route tidak ditambahkan.
+- Loader, query, cache, metadata, normal page UI, FE-05 loading boundary, dan klasifikasi error FE-16 tidak diubah.
+
+Catatan arsitektur visual:
+
+- `V2_Baseline_Architecture.md` sekarang mencatat bahwa UI error/not-found ini adalah functional baseline, bukan final design system Diputra.
+- Future visual review boleh menyesuaikan hierarchy, spacing, warna, copy, dan responsive behavior, tetapi tidak boleh menghilangkan accessibility, retry manual, recovery link, noindex, sanitasi error, atau pemisahan error versus not-found.
+- Redesign visual wajib tetap dipisahkan dari perubahan data correctness FE-16.
+
+Verifikasi:
+
+- Prettier berhasil pada seluruh source FE-15.
+- ESLint langsung pada seluruh source FE-15 berhasil.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js berhasil dan route map publik tidak berubah.
+- `/` dan `/contact` tetap merespons HTTP 200.
+- URL global yang tidak terdaftar merespons HTTP 404, memuat custom `Page not found`, robots `noindex`, dan tidak memuat detail internal.
+- Invalid service category dan pasangan category-service tetap mengikuti keputusan streaming FE-05: response HTTP 200 + `noindex`, diawali loading state lalu resolved melalui RSC.
+- Invalid blog slug tetap menghasilkan server error `PGRST116` dengan digest, lalu ditangani oleh route error boundary pada client. Penyebab dan klasifikasinya tetap dicatat untuk FE-16.
+- Pemeriksaan HTML visible tanpa script memastikan custom not-found tidak tampil pada valid `/` maupun `/contact`.
+- `git diff --check` dijalankan pada pemeriksaan akhir setelah dokumentasi selesai.
+
+Batas verifikasi:
+
+- Browser interaktif tidak tersedia pada sesi implementasi. Tampilan resolved state dynamic setelah hydration, action `Try again`, focus behavior, mobile/desktop, dan client-side navigation tetap perlu diuji manual pada Preview/local production.
+- Recovery sukses setelah `reset()` memerlukan kegagalan sementara yang dapat dipulihkan; jangan memutus atau mengubah Supabase Production untuk mengujinya.
+
+Checklist manual sebelum Production:
+
+1. Jalankan production build lokal atau Preview deployment, lalu buka URL random untuk memeriksa global 404.
+2. Uji invalid blog slug, invalid service category, dan pasangan category-service salah setelah JavaScript/hydration selesai.
+3. Pastikan navbar/footer tetap aktif pada nested state dan tidak muncul pada standalone global 404 sesuai rancangan awal.
+4. Uji `Try again` memakai mock/failure trigger lokal yang aman, bukan dengan mengubah Production.
+5. Uji keyboard, focus-visible, screen reader alert error, mobile, desktop, refresh, Back/Forward, dan client navigation.
+6. Pastikan tidak ada message Supabase, stack trace, URL database, atau digest pada UI.
+7. Setelah FE-15 diterima, lanjutkan FE-16 dan ulangi matriks missing resource versus operational failure.
