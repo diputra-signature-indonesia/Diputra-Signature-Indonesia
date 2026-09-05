@@ -8,32 +8,18 @@ import { getPublishedBlogPostBySlug } from '@/lib/supabase/queries';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  try {
-    const post = await getPublishedBlogPostBySlug(slug);
+  const post = await getPublishedBlogPostBySlug(slug);
 
-    if (!post) {
-      return {
-        title: 'Blog | Diputra Signature Indonesia',
-        description: 'Explore the latest legal, visa, and business insights in Bali.',
-        robots: { index: false, follow: false },
-      };
-    }
+  if (!post) notFound();
 
-    return buildBlogPostMetadata({
-      slug: post.slug,
-      title: post.title,
-      description: post.excerpt,
-      image: post.featured_image ?? '',
-      date: post.published_at ?? '',
-      updatedAt: post.updated_at ?? '',
-    });
-  } catch {
-    return {
-      title: 'Blog | Diputra Signature Indonesia',
-      description: 'Explore the latest legal, visa, and business insights in Bali.',
-      robots: { index: false, follow: false },
-    };
-  }
+  return buildBlogPostMetadata({
+    slug: post.slug,
+    title: post.title,
+    description: post.excerpt,
+    image: post.featured_image ?? '',
+    date: post.published_at ?? '',
+    updatedAt: post.updated_at ?? '',
+  });
 }
 
 export default async function BlogDetailPage({ params }: { params: Promise<{ slug: string }> }) {

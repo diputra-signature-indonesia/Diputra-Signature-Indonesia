@@ -11,41 +11,30 @@ import { MotionProvider } from '@/components/motion';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string; service: string }> }): Promise<Metadata> {
   const { category, service } = await params;
+  const selectedService = await getServiceDetailPageData(category, service);
 
-  try {
-    const selectedService = await getServiceDetailPageData(category, service);
-    return {
-      title: `${selectedService.item.seo_title} in Bali | ${selectedService.category.seo_title} Services`,
-      description: selectedService.item.seo_description,
-      alternates: { canonical: `/services/${category}/${service}` },
-      openGraph: {
-        title: `${selectedService.item.title} Services in Bali`,
-        description: selectedService.item.description ?? '',
-        type: 'article',
-        url: `/services/${category}/${service}`,
-        images: ['/og/og-default.png'],
-      },
-    };
-  } catch {
-    return {
-      title: 'Services | Diputra Signature Indonesia',
-      description: 'Explore our professional legal, visa, and business services in Bali.',
-    };
-  }
+  if (!selectedService) notFound();
+
+  return {
+    title: `${selectedService.item.seo_title} in Bali | ${selectedService.category.seo_title} Services`,
+    description: selectedService.item.seo_description,
+    alternates: { canonical: `/services/${category}/${service}` },
+    openGraph: {
+      title: `${selectedService.item.title} Services in Bali`,
+      description: selectedService.item.description ?? '',
+      type: 'article',
+      url: `/services/${category}/${service}`,
+      images: ['/og/og-default.png'],
+    },
+  };
 }
 
 export default async function ServicesDetailsPage({ params }: { params: Promise<{ category: string; service: string }> }) {
   const { category, service } = await params;
 
-  const [serviceDetailResult, blogPostsResult, serviceCategoriesResult] = await Promise.allSettled([getServiceDetailPageData(category, service), getPublishedBlogPosts(3), getServiceCategories()]);
+  const [servicesDetail, blogPosts, serviceCategories] = await Promise.all([getServiceDetailPageData(category, service), getPublishedBlogPosts(3), getServiceCategories()]);
 
-  if (serviceDetailResult.status === 'rejected') notFound();
-  if (blogPostsResult.status === 'rejected') throw blogPostsResult.reason;
-  if (serviceCategoriesResult.status === 'rejected') throw serviceCategoriesResult.reason;
-
-  const servicesDetail = serviceDetailResult.value;
-  const blogPosts = blogPostsResult.value;
-  const serviceCategories = serviceCategoriesResult.value;
+  if (!servicesDetail) notFound();
 
   return (
     <MotionProvider>

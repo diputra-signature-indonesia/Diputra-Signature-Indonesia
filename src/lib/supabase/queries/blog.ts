@@ -190,11 +190,12 @@ export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost
 }
 
 /** BLOG detail (untuk /blog/[slug]) */
-async function fetchPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
+async function fetchPublishedBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').single();
+  const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
   return data as BlogPost;
 }
 

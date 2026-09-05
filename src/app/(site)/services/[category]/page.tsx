@@ -12,42 +12,34 @@ import { MotionProvider } from '@/components/motion';
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
   const { category } = await params;
+  const pageData = await getServiceCategoryPageData(category);
 
-  try {
-    const { category: cat } = await getServiceCategoryPageData(category);
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://diputrasignature.com';
-    return {
-      title: `${cat.seo_title ?? cat.title} Services in Bali | Diputra Signature Indonesia`,
-      description: cat.seo_description ?? cat.description,
-      alternates: { canonical: `${baseUrl}/services/${category}` },
-      openGraph: {
-        title: `${cat.seo_title ?? cat.title} Services in Bali`,
-        description: cat.short_description ?? '',
-        type: 'website',
-        url: `${baseUrl}/services/${category}`,
-        images: ['/og/og-default.png'],
-      },
-    };
-  } catch {
-    return {
-      title: 'Services | Diputra Signature Indonesia',
-      description: 'Explore our professional legal, visa, and business services in Bali.',
-    };
-  }
+  if (!pageData) notFound();
+
+  const { category: cat } = pageData;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://diputrasignature.com';
+  return {
+    title: `${cat.seo_title ?? cat.title} Services in Bali | Diputra Signature Indonesia`,
+    description: cat.seo_description ?? cat.description,
+    alternates: { canonical: `${baseUrl}/services/${category}` },
+    openGraph: {
+      title: `${cat.seo_title ?? cat.title} Services in Bali`,
+      description: cat.short_description ?? '',
+      type: 'website',
+      url: `${baseUrl}/services/${category}`,
+      images: ['/og/og-default.png'],
+    },
+  };
 }
 
 export default async function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
 
-  const [servicePageDataResult, blogPostsResult, serviceCategoriesResult] = await Promise.allSettled([getServiceCategoryPageData(category), getPublishedBlogPosts(3), getServiceCategories()]);
+  const [servicePageData, blogPosts, serviceCategories] = await Promise.all([getServiceCategoryPageData(category), getPublishedBlogPosts(3), getServiceCategories()]);
 
-  if (servicePageDataResult.status === 'rejected') notFound();
-  if (blogPostsResult.status === 'rejected') throw blogPostsResult.reason;
-  if (serviceCategoriesResult.status === 'rejected') throw serviceCategoriesResult.reason;
+  if (!servicePageData) notFound();
 
-  const { category: servicesSelected, items: servicesItems } = servicePageDataResult.value;
-  const blogPosts = blogPostsResult.value;
-  const serviceCategories = serviceCategoriesResult.value;
+  const { category: servicesSelected, items: servicesItems } = servicePageData;
 
   return (
     <MotionProvider>

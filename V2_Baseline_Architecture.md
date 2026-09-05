@@ -176,7 +176,7 @@ Tahap B baru boleh dimulai setelah:
 5. FE-05 menyediakan loading/Suspense boundary yang telah disetujui.
 6. FE-15 menyediakan error boundary/recovery yang benar.
 7. FE-16 membedakan not-found yang sah dari gangguan Supabase/permission/timeout.
-8. FE-10 diselesaikan atau secara eksplisit diterima sebagai deferred dengan baseline tersimpan.
+8. FE-10 berstatus deferred secara eksplisit dengan baseline profiling putaran pertama tersimpan; penyelesaiannya tetap wajib dijadwalkan sebelum arsitektur V2 dinyatakan final.
 9. Seluruh perubahan di atas memiliki Preview verification dan catatan rollback.
 
 Alasan dependency:
@@ -192,6 +192,15 @@ Alasan dependency:
 - Ketika arahan visual/design system Diputra berikutnya tersedia, error dan not-found state perlu direview serta disesuaikan secara khusus agar hierarchy, spacing, warna, copy, dan responsive behavior konsisten dengan halaman publik lain.
 - Penyesuaian visual berikutnya tidak boleh menghilangkan heading semantik, focus-visible, retry manual, link pemulihan, robots `noindex`, sanitasi detail error, atau perbedaan perilaku error versus not-found.
 - Redesign state tersebut harus dipisahkan dari FE-16 agar perubahan visual tidak tercampur dengan perubahan klasifikasi error data.
+
+### 5.2 Status deferred FE-10
+
+- FE-10 belum selesai dan tidak boleh ditandai sebagai solved. Audit source serta trace development putaran pertama tersimpan di `Optimization_FE_Context.md` sebagai baseline awal.
+- Implementasi ditunda karena bukti saat ini baru menunjukkan biaya main-thread, paint, dan layerization secara umum; penyebab visual tunggal belum terisolasi. Mengubah shadow, overlay, fixed image, filter, transform, atau hierarchy sekarang masih berisiko mengubah desain tanpa bukti manfaat yang cukup.
+- FE-10 dijadwalkan kembali setelah FE-16 serta batch FE-11/FE-12/FE-13 selesai. Penundaan ini tidak menghapus pekerjaan tersebut dari scope V2.
+- Putaran berikutnya harus memakai production build dengan minimal tiga rekaman per route, memisahkan passive scroll dari click/hover/carousel, lalu membandingkan dropped frame, style/layout, paint, dan layerization.
+- Eksperimen efek visual dilakukan sementara dan satu variabel per trace. Source visual hanya boleh diubah setelah hasilnya berulang, manfaatnya terukur, dan perubahan tampilannya disetujui.
+- Exit criteria FE-10: baseline production yang dapat dibandingkan, penyebab dominan yang terisolasi, keputusan implementasi atau documented acceptance, serta Preview verification tanpa regresi visual.
 
 ## 6. Tahap B — Migrasi final ke Next.js 16 Cache Components
 

@@ -1196,3 +1196,298 @@ Checklist manual sebelum Production:
 5. Uji keyboard, focus-visible, screen reader alert error, mobile, desktop, refresh, Back/Forward, dan client navigation.
 6. Pastikan tidak ada message Supabase, stack trace, URL database, atau digest pada UI.
 7. Setelah FE-15 diterima, lanjutkan FE-16 dan ulangi matriks missing resource versus operational failure.
+
+## Pembahasan FE-16 — Klasifikasi not-found dan error operasional Supabase (5 September 2026)
+
+Status: **audit alur kode selesai; rancangan dan keputusan disiapkan; implementasi belum dimulai**.
+
+Urutan pekerjaan yang dikunci:
+
+- FE-15 telah diuji dan di-commit pada `05fb85c`.
+- FE-16 menjadi pekerjaan aktif berikutnya.
+- FE-11, FE-12, dan FE-13 akan dibahas sebagai satu batch setelah FE-16 selesai.
+- FE-10 berstatus deferred, bukan solved, dan dicatat di `V2_Baseline_Architecture.md` untuk dilanjutkan kemudian.
+
+Batas scope:
+
+- Hanya klasifikasi hasil query pada tiga public detail loader serta konsumennya di page dan metadata.
+- Tidak mengubah UI `error.tsx`/`not-found.tsx`, layout, animasi, Lenis, loading skeleton, schema Supabase, RLS, atau konfigurasi production.
+- Pemangkasan `.select('*')` tetap menjadi scope FE-11 dan tidak disisipkan ke FE-16.
+- Tidak menambah observability provider pada tahap ini; error operasional tetap tersedia melalui error boundary dan server/Vercel logs.
+
+Temuan kode:
+
+1. `fetchPublishedBlogPostBySlug()` memakai `.single()`. Slug yang tidak ada atau tidak published menghasilkan error `PGRST116`, bukan `null`, sehingga check `if (!post) notFound()` pada page tidak pernah menangani kasus tersebut sebagaimana dimaksud.
+2. `fetchServiceCategoryPageData()` dan `fetchServiceDetailPageData()` juga memakai `.single()` lalu melempar setiap error.
+3. Dua service page memakai `Promise.allSettled()` dan mengubah rejection primary loader menjadi `notFound()`. Akibatnya timeout, gangguan jaringan, RLS/permission, schema error, dan error Supabase lain dapat ditampilkan sebagai halaman tidak ditemukan.
+4. `generateMetadata()` blog dan service memakai broad `catch` lalu menghasilkan metadata generic. Ini juga menyamarkan error operasional sebagai fallback yang terlihat sah.
+5. FE-15 sudah menyediakan dua jalur UI yang benar: `not-found.tsx` untuk resource yang benar-benar tidak ada dan `error.tsx` untuk uncaught operational failure. FE-16 perlu mengarahkan hasil query ke jalur yang tepat.
+
+Klasifikasi target:
+
+| Kondisi | Hasil loader | Perilaku route |
+| --- | --- | --- |
+| Tidak ada row published yang cocok | `null` | `notFound()` |
+| Slug/category/service salah atau resource unpublished | `null` | `notFound()` |
+| Lebih dari satu row padahal kontraknya tunggal | throw error | Bubble ke `error.tsx` dan server log |
+| Timeout/gangguan jaringan | throw error | Bubble ke `error.tsx` dan server log |
+| RLS/permission/auth error | throw error | Bubble ke `error.tsx` dan server log |
+| Schema/query/Supabase operational error | throw error | Bubble ke `error.tsx` dan server log |
+| Query pendamping blog/category gagal | throw error | Bubble ke `error.tsx`, bukan render data parsial |
+
+Opsi loader:
+
+1. **Gunakan `.maybeSingle()` dan return nullable (rekomendasi).** Supabase menerima tepat nol atau satu row: nol menjadi `data: null`, sedangkan lebih dari satu row serta error operasional tetap berada pada jalur error. Kontrak TypeScript dibuat eksplisit sebagai `T | null`.
+2. **Tetap `.single()` lalu anggap kode `PGRST116` sebagai not-found.** Diff terlihat kecil, tetapi kode tersebut dapat merepresentasikan hasil yang bukan tepat satu row, termasuk data ganda. Pendekatan ini berisiko menyembunyikan pelanggaran integritas sebagai 404 dan tidak direkomendasikan.
+3. **Buat result union khusus, misalnya `{ status: 'found' | 'missing' | 'error' }`.** Paling eksplisit, tetapi menambah wrapper dan branching tanpa kebutuhan yang terbukti untuk tiga loader sederhana. Belum perlu pada putaran pertama.
+
+Rancangan page dan metadata yang direkomendasikan:
+
+1. Ubah hanya tiga public detail loader ke `.maybeSingle()` dan return nullable:
+   - `fetchPublishedBlogPostBySlug(): Promise<BlogPost | null>`;
+   - `fetchServiceCategoryPageData(): Promise<ServiceCategoryPageData | null>`;
+   - `fetchServiceDetailPageData(): Promise<ServiceDetailPageData | null>`.
+2. Pertahankan `throw error` bila Supabase mengembalikan error. Jangan mengubah error menjadi array kosong, `null`, metadata generic, atau stale fallback.
+3. Pada page, panggil `notFound()` hanya saat primary result benar-benar `null`.
+4. Ganti `Promise.allSettled()` pada dua service page dengan `Promise.all()`. Query tetap berjalan paralel, tetapi rejection operasional langsung bubble ke boundary; setelah semua resolve, primary `null` baru dipetakan ke `notFound()`.
+5. Pada `generateMetadata()`, hapus broad `catch`. Jika loader resolve `null`, panggil `notFound()`; jika loader throw, biarkan error bubble. Metadata route valid tetap sama.
+6. Tidak mengubah structured data, canonical URL, tampilan normal, atau copy error/not-found.
+
+Keputusan cache untuk missing resource:
+
+1. **Cache hasil `null` mengikuti TTL/tag yang sudah ada (rekomendasi).** Invalid slug berulang tidak terus membebani Supabase. Mutation blog dari aplikasi sudah menginvalidasi tag; perubahan service yang dilakukan langsung di Supabase mengikuti safety-net TTL 15 menit yang sebelumnya sudah disetujui.
+2. **Jangan cache hasil `null`.** Resource baru terlihat segera tanpa menunggu invalidasi/TTL, tetapi invalid URL berulang selalu menjalankan query dan implementasinya memerlukan jalur cache khusus.
+
+Rekomendasi tahap awal adalah opsi pertama karena konsisten dengan kebijakan FE-01. Konsekuensinya harus diterima secara sadar: resource yang baru dibuat langsung melalui Supabase dapat tetap dianggap missing sampai tag diinvalidasi atau TTL maksimal 15 menit berakhir.
+
+Catatan streaming dan status HTTP:
+
+- FE-05 menyediakan route-level loading UI sehingga dynamic route dapat mulai streaming sebelum hasil loader diketahui.
+- Setelah response mulai streaming dan header terkirim, framework tidak selalu dapat mengganti status HTTP menjadi hard `404` atau `500`; hasil missing/error tetap dibedakan melalui streamed UI, `notFound()`/robots `noindex`, error boundary, dan server logs.
+- Karena trade-off streaming `200` + `noindex` sudah diterima pada FE-05, FE-16 tidak akan menghapus loading boundary atau menahan seluruh response hanya untuk mengejar hard status code.
+- Sasaran utama FE-16 adalah correctness semantik dan UX: missing menampilkan `Page not found`, sedangkan outage/permission/timeout menampilkan `Something went wrong` dan dapat dicoba ulang.
+
+Risiko dan guardrail:
+
+- Jangan menganggap semua `PGRST116` sebagai missing; data ganda harus tetap terlihat sebagai error.
+- Jangan menggunakan service-role key atau melemahkan RLS untuk membuat query berhasil.
+- Jangan mengubah query list/selected columns dalam patch yang sama; itu milik FE-11.
+- Jangan menguji operational failure dengan memutus atau mengubah Supabase Production. Gunakan mock/test-only trigger lokal yang tidak ikut commit.
+- Pastikan return type nullable diterapkan sampai ke seluruh consumer agar tidak ada dereference sebelum null check.
+- Cache hanya hasil query yang sukses, termasuk sukses tanpa row. Exception operasional tidak boleh menjadi cached fallback.
+
+Rencana verifikasi setelah implementasi:
+
+1. Valid blog, category, dan service tetap menampilkan UI, metadata, canonical, serta structured data yang sama.
+2. Invalid slug, invalid category, pasangan category-service salah, dan unpublished resource menampilkan custom `Page not found` serta `noindex`.
+3. Mock timeout/network/permission/query failure menampilkan custom `Something went wrong`, bukan not-found, dan error tetap muncul di server log tanpa bocor ke UI.
+4. Skenario data ganda terkontrol tetap menjadi operational error, bukan 404.
+5. Query primary dan pendamping pada service tetap paralel; tidak ada waterfall baru.
+6. Uji cache miss/hit serta invalidasi blog; verifikasi negative cache mengikuti TTL/tag yang dipilih.
+7. Uji direct load, client navigation, refresh, Back/Forward, dan tombol `Try again` pada local production atau Preview.
+8. Catat HTTP status dan `noindex` secara terpisah agar streamed `200` tidak keliru dianggap klasifikasi UI yang gagal.
+9. Jalankan Prettier, targeted ESLint, TypeScript, production build, `git diff --check`, dan Preview smoke test.
+
+Keputusan yang diperlukan sebelum implementasi:
+
+1. Setujui `.maybeSingle()` + return nullable untuk tiga public detail loader.
+2. Setujui hanya `null` yang memanggil `notFound()`; seluruh error Supabase lain tetap dilempar.
+3. Setujui broad `catch` pada `generateMetadata()` dihapus; missing memanggil `notFound()`, operational error bubble.
+4. Setujui `Promise.allSettled()` service diganti `Promise.all()` sambil mempertahankan eksekusi paralel.
+5. Pilih hasil missing ikut dicache selama maksimal 15 menit/tag invalidation (rekomendasi), atau tidak dicache.
+6. Setujui trade-off streaming FE-05 dipertahankan: correctness UI/noindex/log diprioritaskan tanpa menjamin hard HTTP 404/500 setelah streaming dimulai.
+7. Setujui FE-16 tidak mencakup perubahan UI, query projection FE-11, instrumentation, schema, RLS, atau production configuration.
+
+Referensi resmi:
+
+- Supabase JavaScript, `.maybeSingle()` — https://supabase.com/docs/reference/javascript/using-modifiers-maybesingle
+- Next.js, `notFound()` — https://nextjs.org/docs/app/api-reference/functions/not-found
+- Next.js, error handling — https://nextjs.org/docs/app/getting-started/error-handling
+- Next.js, `generateMetadata()` — https://nextjs.org/docs/app/api-reference/functions/generate-metadata
+- Next.js, loading UI dan streaming — https://nextjs.org/docs/13/app/building-your-application/routing/loading-ui-and-streaming
+
+## Progress FE-16 — Implementasi klasifikasi not-found dan error Supabase (5 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi secara statis serta melalui production smoke test; belum di-commit atau di-deploy**.
+
+Implementasi:
+
+- `fetchPublishedBlogPostBySlug()`, `fetchServiceCategoryPageData()`, dan `fetchServiceDetailPageData()` sekarang memakai `.maybeSingle()` serta mengembalikan tipe nullable.
+- Zero row yang valid menjadi `null`. Error Supabase tetap dilempar, termasuk network, timeout, permission/RLS, query/schema, dan hasil lebih dari satu row.
+- Public blog, service category, dan service detail memanggil `notFound()` hanya setelah loader berhasil resolve dengan `null`.
+- Broad `catch` pada ketiga `generateMetadata()` dihapus. Missing resource mengikuti `notFound()`, sedangkan operational exception tidak lagi diubah menjadi metadata generic.
+- Dua service page sekarang memakai `Promise.all()`, sehingga primary data dan query pendamping tetap dimulai secara paralel sementara seluruh rejection operasional bubble ke FE-15 error boundary.
+- Hasil `null` tetap berada di dalam `unstable_cache` yang sudah ada dan mengikuti service/blog tag serta safety-net TTL 15 menit.
+- UI normal, UI error/not-found, loading boundary, structured data, canonical, query projection, schema, RLS, dan konfigurasi production tidak diubah.
+
+Verifikasi otomatis:
+
+- Prettier berhasil pada lima source yang diubah.
+- Targeted ESLint berhasil tanpa error. Warning lama `baseline-browser-mapping` tetap muncul dan tidak berasal dari FE-16.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js 16.0.10 berhasil; route map tetap mempertahankan blog dan service dynamic routes.
+- `git diff --check` berhasil. Warning normalisasi LF/CRLF tidak menunjukkan whitespace error.
+
+Production-mode smoke test lokal:
+
+| Route uji | HTTP | Resolved UI | `noindex` | Detail Supabase bocor |
+| --- | --- | --- | --- | --- |
+| `/blog/fe16-missing-smoke-test` | `200` streamed | `Page not found` | Ya | Tidak |
+| `/services/fe16-missing-smoke-test` | `200` streamed | `Page not found` | Ya | Tidak |
+| `/services/fe16-missing-category/fe16-missing-service` | `200` streamed | `Page not found` | Ya | Tidak |
+
+Status `200` pada ketiga missing route konsisten dengan loading/streaming FE-05: header telah dikirim sebelum `notFound()` diselesaikan. Klasifikasi final UI, `noindex`, dan tidak adanya error leak sudah sesuai target FE-16.
+
+Batas verifikasi:
+
+- Operational failure sengaja tidak dipicu dengan memutus atau mengubah Supabase Production. Jalur ini telah diverifikasi secara statis: ketiga loader hanya mengembalikan `null` saat `error` kosong dan `data` kosong; setiap `error` tetap dilempar sebelum null check.
+- Mock timeout/network/RLS serta tombol recovery `Try again` masih perlu diuji melalui failure trigger lokal sementara atau Preview yang aman sebelum Production.
+- Valid route tidak diberi perubahan output, tetapi visual/client-navigation regression tetap perlu diperiksa manual pada Preview bersama smoke test final.
+
+Checklist manual sebelum Production:
+
+1. Buka satu blog, category, dan service valid; bandingkan UI, metadata, canonical, dan structured data dengan production saat ini.
+2. Ulangi tiga invalid route dan pastikan resolved state adalah `Page not found`, bukan `Something went wrong`.
+3. Gunakan local-only mock untuk network/permission/query failure; pastikan resolved state adalah `Something went wrong` dan server log mencatat error.
+4. Pastikan `Try again` bekerja setelah local-only failure dihilangkan serta tidak membocorkan message, stack, digest, atau URL Supabase.
+5. Uji refresh, client navigation, Back/Forward, mobile, desktop, keyboard, dan focus-visible.
+6. Setelah Preview lolos, commit FE-16 secara terpisah sebelum memulai batch FE-11/FE-12/FE-13.
+
+## Pembahasan gabungan FE-11, FE-12, dan FE-13 (5 September 2026)
+
+Status: **audit source dan production build output selesai; rancangan serta keputusan disiapkan; implementasi belum dimulai**.
+
+Batas pekerjaan:
+
+- Perubahan FE-16 yang belum di-commit tetap dipertahankan dan tidak ditimpa.
+- FE-11 hanya mengubah projection serta tipe data public read; cache policy, TTL, tag, query filter/order, schema, RLS, dan output UI tidak berubah.
+- FE-12 hanya membersihkan asset setelah pemeriksaan referensi source dan production data; asset yang masih mungkin dipakai melalui URL database tidak boleh dihapus berdasarkan `rg` saja.
+- FE-13 hanya mengubah cara Raleway variable font dideklarasikan; class font, ukuran, line-height, spacing, dan desain tidak berubah.
+- Query admin/auth, asset Supabase Storage, dan optimasi visual FE-10 berada di luar batch ini.
+- Walaupun dibahas bersama, FE-11, FE-12, dan FE-13 direkomendasikan sebagai unit implementasi serta commit terpisah agar rollback production tetap sempit.
+
+### FE-11 — Projection query publik
+
+Temuan terkini:
+
+1. Temuan lama mengenai review publik yang memakai `.select('*')` sudah diselesaikan oleh FE-01. `fetchVisibleStories()` sekarang memilih tepat `id, name, message, created_at`; seluruh field tersebut dipakai carousel.
+2. `fetchServiceCategories()` masih memakai `.select('*')`. `ServicesSection` hanya memerlukan `id`, `slug`, `title`, `type`, `short_description`, `card_image`, dan `card_icon_key`.
+3. `fetchPublishedBlogPosts()` sudah eksplisit tetapi masih mengambil `author_name`, `reading_time_min`, `cover_alt`, dan `status` yang tidak digunakan `BlogSection`. List hanya memakai `slug`, `title`, `excerpt`, `featured_image`, dan `published_at`.
+4. `fetchVisibleTeamMembers()` mengambil enam field. UI hanya membaca `full_name`, `job_title`, dan `avatar_url`; `id` sebaiknya tetap dipertahankan untuk kontrak/stable key, sedangkan `short_bio` dan `display_order` tidak perlu berada di response. Kolom `display_order` tetap dapat dipakai untuk sorting tanpa dikirim sebagai output.
+5. Loader detail blog masih memakai `.select('*')`. Page/metadata/JSON-LD hanya memerlukan `slug`, `title`, `excerpt`, `content_md`, `author_name`, `featured_image`, `published_at`, dan `updated_at`.
+6. Query category dan detail service sudah eksplisit, tetapi masih membawa beberapa kolom parent/child yang tidak digunakan. Contoh terbesar adalah SEO/OG child items pada category page serta hero/card fields category pada detail page.
+7. Semua query tersebut berada di Server Components, tetapi datanya tetap diserialisasi ke cache dan sebagian diteruskan ke Client Components. Projection yang lebih sempit mengurangi transfer Supabase, cache entry, dan RSC serialization walaupun jumlah row saat ini kecil.
+
+Rancangan projection:
+
+| Loader | Rancangan |
+| --- | --- |
+| Service category list | `id, slug, title, type, short_description, card_image, card_icon_key` |
+| Blog list | `slug, title, excerpt, featured_image, published_at` |
+| Review list | Tidak diubah; sudah tepat empat field |
+| Team list | `id, full_name, job_title, avatar_url` |
+| Blog detail | Delapan field yang digunakan page, metadata, dan JSON-LD; hilangkan `*` |
+| Service category page | Parent dan child dipangkas berdasarkan akses aktual page/component |
+| Service detail page | Category, item, dan details dipangkas berdasarkan metadata serta component |
+
+Opsi scope FE-11:
+
+1. **Audit dan rapikan seluruh public read loader di atas (rekomendasi).** Menyelesaikan prinsip FE-11 secara konsisten dan mencegah `.select('*')` baru menjadi satu-satunya fokus. Diff lebih besar, tetapi setiap projection dapat diuji dengan route matrix yang jelas.
+2. **Ubah hanya `.select('*')` pada service list dan blog detail.** Diff paling kecil, tetapi over-selection yang sudah terbukti pada blog/team/service relational query tetap menjadi utang dan FE-11 belum benar-benar selesai.
+3. **Ubah public dan admin query sekaligus.** Tidak direkomendasikan karena admin membutuhkan kontrak berbeda serta menyentuh auth/management flow di luar tujuan perceived performance publik.
+
+Guardrail tipe:
+
+- Buat tipe output sempit untuk list/card/page, misalnya public DTO berbasis `Pick`, bukan melempar hasil parsial ke tipe row penuh dengan type assertion.
+- Pertahankan full/editable type untuk admin dan mutation agar pemangkasan public query tidak merusak form/table.
+- Tipe baru harus mengikuti nullability schema yang sekarang; FE-11 tidak digunakan untuk mengubah asumsi database.
+- Jangan mengubah filter, order, limit, cache key, cache tags, nullable behavior FE-16, atau error propagation.
+
+Keputusan FE-11 yang diperlukan:
+
+1. Pilih seluruh public read loader dirapikan dalam satu FE-11 (rekomendasi), atau hanya dua query yang masih memakai `*`.
+2. Setujui penggunaan public DTO/type sempit dan pemisahannya dari admin/editable type.
+3. Setujui query admin tetap di luar scope.
+
+### FE-12 — Asset lokal besar dan asset yatim
+
+Temuan ukuran dan referensi:
+
+| Asset | Ukuran | Temuan source |
+| --- | ---: | --- |
+| `public/image/about-hero-section.jpg` | 11,33 MB | Tidak direferensikan runtime; About aktif memakai WebP 0,18 MB |
+| `public/image/about-section.png` | 8,15 MB | Hanya berada di blok JSX yang dikomentari |
+| `public/image/services-realestate-image.jpg` | 0,92 MB | Hanya dirujuk module test yang tidak di-import |
+| `public/image/services-legal-image.png` | 0,69 MB | Hanya dirujuk module test yang tidak di-import |
+| `public/image/services-visa-image.png` | 0,66 MB | Hanya dirujuk module test yang tidak di-import |
+
+Kelima kandidat berjumlah sekitar **21,75 MB**. `src/data/dsi-services-test.ts` sendiri tidak memiliki consumer/import aktif. Selain itu ditemukan beberapa asset tanpa referensi source, tetapi ukurannya lebih kecil dan mungkin masih dirujuk oleh nilai URL dalam database production.
+
+Makna performa:
+
+- File di `public` dapat dilayani langsung melalui URL dasar. Namun browser hanya mengunduh file yang benar-benar diminta, sehingga kandidat di atas bukan penyebab TTFB, LCP, atau scroll route publik saat ini.
+- Membersihkannya tetap mengurangi current repository checkout, build/deployment input atau static output, dan risiko file sangat besar dipakai kembali tanpa sengaja.
+- Menghapus file dari current tree tidak mengecilkan riwayat Git lama. History rewrite tidak direkomendasikan untuk repository production aktif.
+
+Opsi FE-12:
+
+1. **Cleanup bertahap setelah audit production reference (rekomendasi).** Periksa kolom/path production yang dapat menyimpan URL lokal (`featured_image`, `content_md`, `hero_image`, `card_image`, `avatar_url`, dan field terkait), lalu hapus hanya file yang tidak dirujuk. Kelima kandidat besar dan module test menjadi batch pertama jika audit bersih.
+2. **Hapus dua original About saja.** Risiko paling rendah dan mengurangi 19,48 MB, tetapi tiga test asset besar serta module mati masih tertinggal.
+3. **Pertahankan semuanya.** Tidak ada regresi, tetapi tidak memberi optimasi housekeeping dan risiko future accidental use tetap ada.
+4. **Kompres tanpa menghapus.** Tidak direkomendasikan untuk file yang tidak digunakan; menambah pekerjaan dan tetap mempertahankan asset mati.
+
+Guardrail asset:
+
+- Jangan menghapus hanya karena tidak ditemukan oleh static search; URL dapat berasal dari Supabase production.
+- Jangan mengubah atau mengompres WebP aktif, image dari Storage, OG image, fallback `news_image.png`, maupun asset yang masuk seed aktif pada putaran ini.
+- Simpan daftar path yang dihapus. Semua file tracked tetap dapat dipulihkan dari commit sebelumnya tanpa history rewrite.
+- Setelah penghapusan, production build dan smoke test harus memastikan tidak ada response image `404` pada route representatif.
+
+Keputusan FE-12 yang diperlukan:
+
+1. Setujui audit read-only terhadap referensi path di database production sebelum file dihapus.
+2. Bila audit bersih, pilih cleanup lima asset + module test (rekomendasi), hanya dua original About, atau tidak ada penghapusan.
+3. Setujui asset kecil yang belum terbukti aman tetap dipertahankan untuk tahap ini.
+
+### FE-13 — Deklarasi Raleway variable font
+
+Koreksi terhadap asumsi awal:
+
+1. Source meminta sembilan weight `100` sampai `900`.
+2. Audit Tailwind/CSS menemukan weight yang dipakai aplikasi adalah `300`, `400`, `500`, `600`, dan `700`; tidak ditemukan pemakaian `100`, `200`, `800`, atau `900`.
+3. Production build menghasilkan lima file WOFF2 dengan total raw **122.252 byte**, tetapi sembilan weight tidak menghasilkan sembilan binary berbeda. CSS berisi 45 rule `@font-face` (9 weight x 5 unicode subset) yang semuanya menunjuk ke lima URL file variable font yang sama.
+4. Karena itu, manfaat FE-13 yang realistis terutama mengurangi deklarasi CSS dan menyatakan kemampuan variable font dengan benar. Penghematan binary font network kemungkinan kecil atau nol karena URL WOFF2 sudah dibagi antar-weight.
+5. Next.js 16.0.10 yang terpasang menyatakan Raleway mendukung `weight: 'variable'` dengan axis `wght` 100–900. Dokumentasi Next.js juga merekomendasikan variable font untuk performa dan fleksibilitas.
+
+Opsi FE-13:
+
+1. **Ganti array sembilan weight menjadi `weight: 'variable'` (rekomendasi).** Seluruh rentang 100–900 tetap tersedia, sehingga class 300–700 sekarang dan kemungkinan weight baru nanti tetap valid. Ini tidak memerlukan perubahan class atau desain dan mengurangi pengulangan `@font-face`.
+2. **Daftarkan hanya `300`, `400`, `500`, `600`, `700`.** Sesuai pemakaian saat ini, tetapi karena Raleway sudah variable, masih menghasilkan rule per weight dan lebih rapuh bila weight lain ditambahkan kemudian.
+3. **Biarkan sembilan weight.** Aman secara visual, tetapi deklarasi CSS tetap redundan.
+
+Guardrail font:
+
+- Pertahankan `subsets: ['latin']`, CSS variable `--font-raleway`, dan `display: 'swap'`.
+- Jangan mengubah utility font-weight, font-size, line-height, letter-spacing, fallback, atau layout.
+- Bandingkan screenshot route publik/admin pada viewport yang sama serta periksa computed font family/weight sebelum Production.
+- Bandingkan jumlah `@font-face`, daftar WOFF2, dan transfer font sebelum/sesudah build; jangan mengklaim penghematan binary bila hasil build tidak berubah.
+
+Keputusan FE-13 yang diperlukan:
+
+1. Pilih `weight: 'variable'` (rekomendasi), lima weight eksplisit, atau pertahankan konfigurasi sekarang.
+2. Setujui tidak ada perubahan class/tampilan sebagai bagian FE-13.
+
+### Urutan implementasi dan verifikasi yang direkomendasikan
+
+1. Commit FE-16 terlebih dahulu sebagai baseline correctness terpisah.
+2. Implementasikan FE-11, jalankan TypeScript/build serta smoke test seluruh public data route, lalu commit terpisah.
+3. Implementasikan FE-13, bandingkan output font dan screenshot, lalu commit terpisah.
+4. Jalankan audit production path untuk FE-12; hapus hanya kandidat yang terbukti aman, jalankan image/network smoke test, lalu commit terpisah.
+5. Deploy ketiganya ke Preview dan bandingkan dengan production sebelum merge/deploy Production.
+
+Referensi resmi:
+
+- Supabase JavaScript `select()` — https://supabase.com/docs/reference/javascript/select
+- Next.js Font Optimization — https://nextjs.org/docs/app/getting-started/fonts
+- Next.js `next/font` API — https://nextjs.org/docs/app/api-reference/components/font
+- Next.js `public` folder — https://nextjs.org/docs/app/api-reference/file-conventions/public-folder

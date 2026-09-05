@@ -84,7 +84,7 @@ export const getServiceCategories = unstable_cache(fetchServiceCategories, getPu
 });
 
 /** SINGLE category with its published items */
-async function fetchServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData> {
+async function fetchServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData | null> {
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_categories')
@@ -126,9 +126,10 @@ async function fetchServiceCategoryPageData(categorySlug: string): Promise<Servi
     .eq('is_published', true)
     .eq('services_items.is_published', true)
     .order('sort_order', { referencedTable: 'services_items', ascending: true })
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
   const { services_items: items, ...category } = data as ServiceCategoryPageRow;
   return { category, items: items ?? [] };
 }
@@ -141,7 +142,7 @@ const getServiceCategoryPageDataCached = unstable_cache(fetchServiceCategoryPage
 export const getServiceCategoryPageData = cache(getServiceCategoryPageDataCached);
 
 /** Convenience: detail page data */
-async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData> {
+async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData | null> {
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_items')
@@ -194,9 +195,10 @@ async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string
     .eq('is_published', true)
     .eq('services_item_details.is_published', true)
     .order('sort_order', { referencedTable: 'services_item_details', ascending: true })
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
 
   const { services_categories: category, services_item_details: details, ...item } = data as unknown as ServiceDetailPageRow;
 
