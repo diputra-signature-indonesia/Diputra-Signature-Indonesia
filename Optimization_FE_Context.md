@@ -1559,3 +1559,52 @@ Catatan rollout:
 
 - FE-13 di-commit terpisah dari FE-11 dan FE-12.
 - Bila Preview menunjukkan perubahan visual yang tidak diharapkan, rollback cukup mengembalikan satu deklarasi weight pada root layout.
+
+## Progress FE-12 — Cleanup asset lokal besar (5 September 2026)
+
+Status: **audit production read-only, cleanup lokal, dan production-mode smoke test selesai; belum di-deploy**.
+
+Audit keamanan sebelum penghapusan:
+
+- Environment lokal hanya menunjuk Supabase local; credential production tidak disalin atau ditambahkan ke repository.
+- Audit memakai public publishable key yang memang tersedia pada JavaScript production dan hanya melakukan anonymous read terhadap data published/visible.
+- Endpoint `blog_posts`, `services_categories`, `services_items`, dan `team_members` seluruhnya merespons HTTP 200 dengan response yang dapat diparse.
+- Lima nama asset kandidat tidak ditemukan pada `featured_image`, `content_md`, `og_image`, `hero_image`, `card_image`, maupun `avatar_url` dari data production yang dapat dibaca publik.
+- Nilai key dan isi record production tidak dicetak, tidak disimpan ke file, dan database tidak dimutasi.
+
+File yang dihapus:
+
+- `public/image/about-hero-section.jpg` — 11.876.217 byte.
+- `public/image/about-section.png` — 8.551.089 byte.
+- `public/image/services-realestate-image.jpg` — 963.994 byte.
+- `public/image/services-legal-image.png` — 721.059 byte.
+- `public/image/services-visa-image.png` — 691.221 byte.
+- `src/data/dsi-services-test.ts` — module test lama tanpa import/consumer.
+
+Cleanup source:
+
+- Blok JSX yang dikomentari dan masih menunjuk `about-section.png` dihapus dari About hero.
+- Elemen spacer yang aktif tetap dipertahankan, sehingga struktur layout dan tampilan tidak berubah.
+- WebP About aktif, image Supabase Storage, OG image, fallback blog, seed aktif, serta asset kecil yang statusnya belum pasti tidak diubah.
+
+Hasil ukuran:
+
+- Total lima binary yang dihapus: **22.803.580 byte atau sekitar 21,75 MB**.
+- Total isi folder `public` setelah cleanup: **4.226.370 byte atau sekitar 4,03 MB**.
+- Git history tidak ditulis ulang; file tetap dapat dipulihkan dari commit sebelumnya.
+
+Verifikasi:
+
+- Static search tidak menemukan referensi kelima filename atau module test pada `src` dan `supabase`.
+- Prettier dan targeted ESLint pada About hero berhasil.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js 16.0.10 berhasil dan route map tidak berubah.
+- Production-mode smoke test `/`, `/about`, `/services`, category valid, serta detail service valid seluruhnya merespons HTTP 200 tanpa digest/error marker dan tanpa referensi filename yang dihapus.
+- `/image/about-hero-section.webp` yang aktif tetap merespons HTTP 200.
+- Lima URL asset yang sengaja dihapus sekarang merespons HTTP 404 pada local production build.
+
+Catatan rollout:
+
+- Direct request lama ke lima path tersebut akan menjadi 404 setelah deployment; audit source dan data published production menunjukkan tidak ada consumer aktif.
+- Preview tetap perlu diperiksa melalui Network panel untuk memastikan tidak ada image 404 dari route/data yang hanya dapat dilihat oleh user authenticated atau kondisi yang tidak tercakup public smoke test.
+- Rollback FE-12 cukup mengembalikan enam file serta komentar source dari commit sebelumnya; tidak ada rollback database.

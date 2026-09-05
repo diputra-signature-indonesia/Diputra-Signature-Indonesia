@@ -8,16 +8,7 @@ export function HeroSection() {
     <section id="hero-section" className="brand-stretch *:font-raleway relative h-svh max-h-[700px] pb-16 lg:pb-24">
       <div className="absolute h-full w-full bg-linear-to-tr from-black via-black/0 to-black/20 max-md:hidden" />
       <div className="brand-section-px relative mx-auto flex h-full max-w-[1440px] flex-col gap-14 md:gap-10 lg:gap-13 xl:gap-14">
-        <div className="relative min-h-0 w-full flex-1">
-          {/* <Image
-            src="/image/about-section.png"
-            alt="Diputra Signature Indonesia team which handles legal, business and immigration consulting services"
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 420px"
-            className="object-cover brightness-90"
-          /> */}
-        </div>
+        <div className="relative min-h-0 w-full flex-1" />
         <div className="my-auto flex flex-col max-md:items-center md:flex-1 lg:w-3xl">
           <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true}>
             <p className="brand-p text-brand-white mt-auto mb-2 max-md:mb-4 max-md:text-center">— Company Overview</p>
