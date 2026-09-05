@@ -14,11 +14,13 @@ export type TeamMember = {
   updated_at: string | null;
 };
 
+export type PublicTeamMember = Pick<TeamMember, 'id' | 'full_name' | 'job_title' | 'avatar_url'>;
+
 /**
  * LIST team members (public website)
  * Hanya yang is_visible = true
  */
-async function fetchVisibleTeamMembers(): Promise<TeamMember[]> {
+async function fetchVisibleTeamMembers(): Promise<PublicTeamMember[]> {
   const supabase = createSupabasePublicServerClient();
 
   const { data, error } = await supabase
@@ -28,16 +30,14 @@ async function fetchVisibleTeamMembers(): Promise<TeamMember[]> {
         id,
         full_name,
         job_title,
-        short_bio,
-        avatar_url,
-        display_order
+        avatar_url
       `
     )
     .eq('is_visible', true)
     .order('display_order', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as TeamMember[];
+  return (data ?? []) as PublicTeamMember[];
 }
 
 export const getVisibleTeamMembers = unstable_cache(fetchVisibleTeamMembers, getPublicCacheKeyParts('visible-team-members'), {

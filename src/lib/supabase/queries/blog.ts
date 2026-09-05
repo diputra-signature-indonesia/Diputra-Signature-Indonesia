@@ -21,6 +21,10 @@ export type BlogPost = {
   updated_at?: string | null;
 };
 
+export type BlogPostSummary = Pick<BlogPost, 'slug' | 'title' | 'excerpt' | 'featured_image' | 'published_at'>;
+
+export type PublishedBlogPost = Pick<BlogPost, 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'featured_image' | 'published_at' | 'updated_at'>;
+
 type GetAdminBlogPostsParams = {
   page: number; // 0-based
   pageSize: number;
@@ -133,7 +137,7 @@ export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsPar
 }
 
 /** BLOG list (untuk /blog) */
-async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
+async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPostSummary[]> {
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
@@ -142,12 +146,8 @@ async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
       slug,
       title,
       excerpt,
-      author_name,
-      reading_time_min,
       featured_image,
-      cover_alt,
-      published_at,
-      status
+      published_at
       `
     )
     .eq('status', 'published')
@@ -155,7 +155,7 @@ async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as BlogPost[];
+  return (data ?? []) as BlogPostSummary[];
 }
 
 export const getPublishedBlogPosts = unstable_cache(fetchPublishedBlogPosts, getPublicCacheKeyParts('published-blog-posts'), {
@@ -190,13 +190,18 @@ export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost
 }
 
 /** BLOG detail (untuk /blog/[slug]) */
-async function fetchPublishedBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+async function fetchPublishedBlogPostBySlug(slug: string): Promise<PublishedBlogPost | null> {
   const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle();
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('slug, title, excerpt, content_md, author_name, featured_image, published_at, updated_at')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
-  return data as BlogPost;
+  return data as PublishedBlogPost;
 }
 
 const getPublishedBlogPostBySlugCached = unstable_cache(fetchPublishedBlogPostBySlug, getPublicCacheKeyParts('published-blog-post-by-slug'), {

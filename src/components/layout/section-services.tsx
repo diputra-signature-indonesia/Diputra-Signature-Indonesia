@@ -1,13 +1,13 @@
 import IconArrow from '@/icons/BrandIconArrow';
 import { getServiceIcon } from '@/icons/services-icons';
-import type { ServiceCategory } from '@/lib/supabase/queries';
+import type { ServiceCategorySummary } from '@/lib/supabase/queries';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
 
 interface category {
-  services: ServiceCategory[];
+  services: ServiceCategorySummary[];
   excludeSlug?: string;
 }
 

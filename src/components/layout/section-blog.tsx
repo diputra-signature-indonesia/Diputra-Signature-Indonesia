@@ -1,11 +1,11 @@
-import type { BlogPost } from '@/lib/supabase/queries';
+import type { BlogPostSummary } from '@/lib/supabase/queries';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
 
 type BlogSectionProps = {
-  blogPosts: BlogPost[]; // berapa item yang tampil
+  blogPosts: BlogPostSummary[]; // berapa item yang tampil
 };
 
 function formatDateParts(iso: string) {

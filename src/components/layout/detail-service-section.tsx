@@ -2,20 +2,19 @@
 
 import IconArrow from '@/icons/BrandIconArrow';
 import IconPlus from '@/icons/BrandIconPlus';
-import type { ServiceItemDetail } from '@/lib/supabase/queries';
+import type { ServiceDetailPageContent } from '@/lib/supabase/queries';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
 
 interface DetailService {
-  categoryTitle: string;
   serviceTitle: string;
   serviceDescription: string;
-  servicesDetail: ServiceItemDetail[];
+  servicesDetail: ServiceDetailPageContent[];
 }
 
-export function DetailServiceSection({ categoryTitle, serviceTitle, serviceDescription, servicesDetail }: DetailService) {
+export function DetailServiceSection({ serviceTitle, serviceDescription, servicesDetail }: DetailService) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   return (
     <section

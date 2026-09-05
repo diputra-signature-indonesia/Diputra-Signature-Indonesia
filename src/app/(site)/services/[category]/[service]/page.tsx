@@ -38,12 +38,7 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
 
   return (
     <MotionProvider>
-      <DetailServiceSection
-        categoryTitle={servicesDetail.category.title ?? ''}
-        serviceTitle={servicesDetail.item.title ?? ''}
-        serviceDescription={servicesDetail.item.description ?? ''}
-        servicesDetail={servicesDetail.details}
-      />
+      <DetailServiceSection serviceTitle={servicesDetail.item.title ?? ''} serviceDescription={servicesDetail.item.description ?? ''} servicesDetail={servicesDetail.details} />
       <CtaSection heading="Didn’t find what you need?" description="Some legal and corporate matters require personalized guidance." />
       <QnaSection />
       <div className="pb-13">

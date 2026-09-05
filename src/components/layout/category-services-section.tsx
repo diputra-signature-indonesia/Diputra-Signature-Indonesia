@@ -1,6 +1,6 @@
 import IconArrow from '@/icons/BrandIconArrow';
 import { ServicesIcon } from '@/icons/service-items-icons';
-import type { ServiceItem } from '@/lib/supabase/queries';
+import type { ServiceCategoryPageItem } from '@/lib/supabase/queries';
 import Link from 'next/link';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
@@ -9,7 +9,7 @@ interface CategoryServicesSectionProps {
   categorySlug: string;
   title: string;
   short_description: string;
-  services: ServiceItem[];
+  services: ServiceCategoryPageItem[];
 }
 
 export function CategoryServicesSection({ categorySlug, title, short_description, services }: CategoryServicesSectionProps) {

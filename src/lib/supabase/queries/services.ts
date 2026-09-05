@@ -49,33 +49,49 @@ export type ServiceItemDetail = {
   is_published: boolean | null;
 };
 
+export type ServiceCategorySummary = Pick<ServiceCategory, 'id' | 'slug' | 'title' | 'type' | 'short_description' | 'card_image' | 'card_icon_key'>;
+
+export type ServiceCategoryPageCategory = Pick<ServiceCategory, 'seo_title' | 'seo_description' | 'title' | 'short_description' | 'description' | 'hero_heading' | 'hero_image'>;
+
+export type ServiceCategoryPageItem = Pick<ServiceItem, 'slug' | 'title' | 'description' | 'icon_key' | 'cta_label' | 'cta_type'>;
+
+export type ServiceDetailPageCategory = Pick<ServiceCategory, 'seo_title'>;
+
+export type ServiceDetailPageItem = Pick<ServiceItem, 'seo_title' | 'seo_description' | 'title' | 'description'>;
+
+export type ServiceDetailPageContent = Pick<ServiceItemDetail, 'title' | 'description' | 'cta_description'>;
+
 export type ServiceCategoryPageData = {
-  category: ServiceCategory;
-  items: ServiceItem[];
+  category: ServiceCategoryPageCategory;
+  items: ServiceCategoryPageItem[];
 };
 
 export type ServiceDetailPageData = {
-  category: ServiceCategory;
-  item: ServiceItem;
-  details: ServiceItemDetail[];
+  category: ServiceDetailPageCategory;
+  item: ServiceDetailPageItem;
+  details: ServiceDetailPageContent[];
 };
 
-type ServiceCategoryPageRow = ServiceCategory & {
-  services_items: ServiceItem[];
+type ServiceCategoryPageRow = ServiceCategoryPageCategory & {
+  services_items: ServiceCategoryPageItem[];
 };
 
-type ServiceDetailPageRow = ServiceItem & {
-  services_categories: ServiceCategory;
-  services_item_details: ServiceItemDetail[];
+type ServiceDetailPageRow = ServiceDetailPageItem & {
+  services_categories: ServiceDetailPageCategory;
+  services_item_details: ServiceDetailPageContent[];
 };
 
 /** LIST categories (untuk section Services / services page) */
-async function fetchServiceCategories(): Promise<ServiceCategory[]> {
+async function fetchServiceCategories(): Promise<ServiceCategorySummary[]> {
   const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('services_categories').select('*').eq('is_published', true).order('sort_order', { ascending: true });
+  const { data, error } = await supabase
+    .from('services_categories')
+    .select('id, slug, title, type, short_description, card_image, card_icon_key')
+    .eq('is_published', true)
+    .order('sort_order', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as ServiceCategory[];
+  return (data ?? []) as ServiceCategorySummary[];
 }
 
 export const getServiceCategories = unstable_cache(fetchServiceCategories, getPublicCacheKeyParts('service-categories'), {
@@ -90,35 +106,20 @@ async function fetchServiceCategoryPageData(categorySlug: string): Promise<Servi
     .from('services_categories')
     .select(
       `
-      id,
-      slug,
       seo_title,
       seo_description,
-      og_image,
       title,
-      type,
       short_description,
       description,
       hero_heading,
       hero_image,
-      card_image,
-      card_icon_key,
-      sort_order,
-      is_published,
       services_items (
-        id,
-        category_id,
         slug,
-        seo_title,
-        seo_description,
-        og_image,
         title,
         description,
         icon_key,
         cta_label,
-        cta_type,
-        sort_order,
-        is_published
+        cta_type
       )
       `
     )
@@ -148,44 +149,17 @@ async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string
     .from('services_items')
     .select(
       `
-      id,
-      category_id,
-      slug,
       seo_title,
       seo_description,
-      og_image,
       title,
       description,
-      icon_key,
-      cta_label,
-      cta_type,
-      sort_order,
-      is_published,
       services_categories!inner (
-        id,
-        slug,
-        seo_title,
-        seo_description,
-        og_image,
-        title,
-        type,
-        short_description,
-        description,
-        hero_heading,
-        hero_image,
-        card_image,
-        card_icon_key,
-        sort_order,
-        is_published
+        seo_title
       ),
       services_item_details (
-        id,
-        service_item_id,
         title,
         description,
-        cta_description,
-        sort_order,
-        is_published
+        cta_description
       )
       `
     )

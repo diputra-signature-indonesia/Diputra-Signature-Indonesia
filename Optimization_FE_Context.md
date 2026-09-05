@@ -1491,3 +1491,35 @@ Referensi resmi:
 - Next.js Font Optimization — https://nextjs.org/docs/app/getting-started/fonts
 - Next.js `next/font` API — https://nextjs.org/docs/app/api-reference/components/font
 - Next.js `public` folder — https://nextjs.org/docs/app/api-reference/file-conventions/public-folder
+
+## Progress FE-11 — Implementasi projection query publik (5 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi; belum di-deploy**.
+
+Implementasi:
+
+- Service category list tidak lagi memakai `.select('*')`; response dibatasi ke tujuh field card yang dipakai `ServicesSection`.
+- Blog list dipangkas dari sembilan menjadi lima field yang dipakai card.
+- Public team list dipangkas dari enam menjadi empat field. `id` dipertahankan dan sekarang dipakai sebagai React key stabil; `short_bio` serta `display_order` tidak lagi dikirim, sementara sorting `display_order` tetap berjalan di query.
+- Public blog detail tidak lagi memakai `.select('*')`; response dibatasi ke delapan field yang dipakai metadata, JSON-LD, heading, dan body.
+- Relational service category page dipangkas pada parent dan child berdasarkan akses aktual page/component.
+- Relational service detail page dipangkas pada category, item, dan detail berdasarkan metadata serta component.
+- Tipe public DTO sempit ditambahkan dan dipisahkan dari full/admin/editable types.
+- Dead `teamList` lokal dan prop `categoryTitle` yang tidak dirender dihapus. Tidak ada UI yang diubah.
+- Review publik tidak diubah karena projection empat field dari FE-01 sudah tepat.
+- Query admin, filter, ordering, limit, cache key/tag/TTL, nullable contract FE-16, schema, dan RLS tidak diubah.
+
+Verifikasi:
+
+- Prettier berhasil pada source FE-11.
+- TypeScript `tsc --noEmit` berhasil.
+- Targeted ESLint berhasil; dua warning dead code yang ditemukan saat audit telah diselesaikan.
+- Production build Next.js 16.0.10 berhasil dan route map tidak berubah.
+- Production-mode smoke test lokal merespons HTTP 200 tanpa server error/digest pada `/`, `/about`, `/blog`, `/services`, category valid, dan detail service valid.
+- Category dan detail service valid tetap memuat konten utama yang diharapkan setelah relational projection dipangkas.
+- `git diff --check` digunakan pada pemeriksaan sebelum commit.
+
+Catatan rollout:
+
+- FE-11 harus di-commit terpisah sebelum FE-13 dan FE-12.
+- Preview perlu membandingkan card service/blog, Team accordion, service category/detail, metadata, canonical, dan structured data dengan baseline FE-16.
