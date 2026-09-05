@@ -1523,3 +1523,39 @@ Catatan rollout:
 
 - FE-11 harus di-commit terpisah sebelum FE-13 dan FE-12.
 - Preview perlu membandingkan card service/blog, Team accordion, service category/detail, metadata, canonical, dan structured data dengan baseline FE-16.
+
+## Progress FE-13 — Implementasi Raleway variable weight (5 September 2026)
+
+Status: **implementasi lokal selesai dan terverifikasi melalui production build; belum di-deploy**.
+
+Implementasi:
+
+- Deklarasi sembilan weight eksplisit pada root layout diganti menjadi `weight: 'variable'`.
+- `subsets: ['latin']`, CSS variable `--font-raleway`, dan `display: 'swap'` tetap dipertahankan.
+- Utility/class font-weight, typography, spacing, line-height, fallback, dan komponen tidak diubah.
+- Raleway tetap menyediakan axis weight penuh 100–900; weight 300–700 yang dipakai aplikasi tetap tersedia tanpa synthetic fallback.
+
+Perbandingan production build:
+
+| Metrik | Sebelum | Sesudah | Perubahan |
+| --- | ---: | ---: | ---: |
+| Total rule `@font-face` termasuk fallback | 46 | 6 | -40 |
+| Ukuran CSS chunk yang memuat font | 79.294 byte | 68.498 byte | -10.796 byte |
+| Jumlah WOFF2 | 5 | 5 | Tidak berubah |
+| Total raw WOFF2 | 122.252 byte | 122.252 byte | Tidak berubah |
+
+Hasil ini mengonfirmasi bahwa FE-13 mengurangi duplikasi CSS, bukan binary font. Generated rule sekarang mendeklarasikan `font-weight: 100 900` pada lima unicode subset yang sama.
+
+Verifikasi:
+
+- Prettier root layout berhasil.
+- Targeted ESLint berhasil tanpa error.
+- TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js 16.0.10 berhasil dan route map tidak berubah.
+- Build pertama di sandbox gagal hanya karena stylesheet Google Fonts baru belum berada di cache dan network dibatasi; build dengan akses network yang disetujui berhasil. Browser production tetap memakai self-hosted output `next/font`, bukan request runtime ke Google.
+- Screenshot/computed-style comparison pada Preview masih diperlukan sebelum Production untuk memastikan parity visual di browser nyata.
+
+Catatan rollout:
+
+- FE-13 di-commit terpisah dari FE-11 dan FE-12.
+- Bila Preview menunjukkan perubahan visual yang tidak diharapkan, rollback cukup mengembalikan satu deklarasi weight pada root layout.
