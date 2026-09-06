@@ -176,7 +176,7 @@ Tahap B baru boleh dimulai setelah:
 5. FE-05 menyediakan loading/Suspense boundary yang telah disetujui.
 6. FE-15 menyediakan error boundary/recovery yang benar.
 7. FE-16 membedakan not-found yang sah dari gangguan Supabase/permission/timeout.
-8. FE-10 berstatus deferred secara eksplisit dengan baseline profiling putaran pertama tersimpan; penyelesaiannya tetap wajib dijadwalkan sebelum arsitektur V2 dinyatakan final.
+8. FE-10 sudah diimplementasikan secara lokal setelah profiling dan perluasan bertahap; Vercel Preview dengan data representatif menjadi exit gate terakhir sebelum statusnya solved.
 9. Seluruh perubahan di atas memiliki Preview verification dan catatan rollback.
 
 Alasan dependency:
@@ -193,14 +193,14 @@ Alasan dependency:
 - Penyesuaian visual berikutnya tidak boleh menghilangkan heading semantik, focus-visible, retry manual, link pemulihan, robots `noindex`, sanitasi detail error, atau perbedaan perilaku error versus not-found.
 - Redesign state tersebut harus dipisahkan dari FE-16 agar perubahan visual tidak tercampur dengan perubahan klasifikasi error data.
 
-### 5.2 Status deferred FE-10
+### 5.2 Status FE-10
 
-- FE-10 belum selesai dan tidak boleh ditandai sebagai solved. Audit source serta trace development putaran pertama tersimpan di `Optimization_FE_Context.md` sebagai baseline awal.
-- Implementasi ditunda karena bukti saat ini baru menunjukkan biaya main-thread, paint, dan layerization secara umum; penyebab visual tunggal belum terisolasi. Mengubah shadow, overlay, fixed image, filter, transform, atau hierarchy sekarang masih berisiko mengubah desain tanpa bukti manfaat yang cukup.
-- FE-10 dijadwalkan kembali setelah FE-16 serta batch FE-11/FE-12/FE-13 selesai. Penundaan ini tidak menghapus pekerjaan tersebut dari scope V2.
-- Putaran berikutnya harus memakai production build dengan minimal tiga rekaman per route, memisahkan passive scroll dari click/hover/carousel, lalu membandingkan dropped frame, style/layout, paint, dan layerization.
-- Eksperimen efek visual dilakukan sementara dan satu variabel per trace. Source visual hanya boleh diubah setelah hasilnya berulang, manfaatnya terukur, dan perubahan tampilannya disetujui.
-- Exit criteria FE-10: baseline production yang dapat dibandingkan, penyebab dominan yang terisolasi, keputusan implementasi atau documented acceptance, serta Preview verification tanpa regresi visual.
+- Production profiling tiga putaran per route sudah mengisolasi first-entry reveal Framer Motion pada kumpulan item berulang sebagai penyebab dominan. Lenis dipertahankan; shadow, filter, fixed About, carousel, dan accordion tidak diubah karena bukan penyebab utama atau tidak memberi manfaat repeatable.
+- Proof-of-concept `ServicesSection` memakai satu shared `IntersectionObserver` dan CSS transition compositor-friendly. Pada `/services`, Task turun 54,6% di desktop dan 61,2% pada mobile-sized; Recalc Style turun 74,2% dan 80,5%; frame miss turun menjadi nol.
+- Setelah POC lolos dan verifikasi visual lokal/lintas perangkat disetujui, pendekatan diperluas ke repeated category cards, blog cards, About advantages/team, serta detail-service items. Hero dan Motion low-count dipertahankan secara sadar.
+- Local production build, route smoke test, serta pemeriksaan Chrome desktop/mobile berhasil. Detail implementasi dan seluruh hasil uji tersimpan di `Optimization_FE_Context.md`.
+- Exit gate terakhir FE-10 adalah Vercel Preview dengan published blog card dan detail-service accordion data yang representatif. Uji fast scroll, final visibility, hover, accordion, navigation, console/network, serta parity SEO/HTTP. Jika lulus, FE-10 dapat ditandai solved tanpa migrasi Motion low-count tambahan.
+- FE-10 tidak mengubah desain, query, cache, metadata, atau status route dan harus tetap menjadi commit/deployment terpisah dari aktivasi Cache Components.
 
 ## 6. Tahap B — Migrasi final ke Next.js 16 Cache Components
 
@@ -350,14 +350,37 @@ Rollback tidak boleh mengubah schema, data, RLS, region Supabase, atau credentia
 - Google Search Central — crawling errors dan soft 404: https://developers.google.com/search/docs/crawling-indexing/troubleshoot-crawling-errors
 - Google Search Central — canonicalization: https://developers.google.com/search/docs/crawling-indexing/canonicalization
 
-## 10. Batas keputusan berikutnya
+## 10. Exit gate terakhir sebelum caching V2 diselesaikan
 
-Dokumen ini menyetujui arsitektur bertahap, tetapi belum menerapkan FE-01. Sebelum source diubah, implementasi Tahap A harus mengikuti seluruh keputusan yang sudah dicatat:
+Status saat ini:
 
-- scoped data cache,
-- public-only,
-- TTL 15 menit,
-- immediate invalidation untuk blog/review,
-- services/team tanpa webhook pada tahap awal,
-- pemangkasan kolom review publik,
-- tanpa Cache Components/full-route cache/perubahan visual.
+- Tahap A FE-01 sudah diterapkan secara lokal memakai scoped `unstable_cache`, public anon client, TTL 15 menit, domain tag, dan immediate invalidation untuk mutation blog/review.
+- Tahap B `cacheComponents` + `use cache` belum diterapkan dan tidak termasuk commit FE-10.
+- FE-10 hanya menyisakan Vercel Preview verification yang dirinci di `Optimization_FE_Context.md`. Setelah lulus, tidak ada pekerjaan UI/UX FE yang menjadi blocker arsitektur caching.
+
+### 10.1 Bukti Tahap A yang wajib disimpan sebelum Tahap B
+
+1. Verifikasi deployment menjalankan Vercel Function di `sin1` dan Supabase production tetap `ap-southeast-1`.
+2. Rekam minimal tiga cold/warm request untuk services, blog, team, dan reviews. Bandingkan query count, Function duration, serta TTFB; jangan memakai `X-Vercel-Cache` sebagai satu-satunya bukti Data Cache.
+3. Buktikan variasi `slug` dan `limit` tidak berbagi entry yang salah serta metadata dan body membaca versi domain cache yang konsisten.
+4. Uji publish, edit, unpublish, dan delete blog serta publish/unpublish/delete review dengan record khusus pengujian; pastikan `updateTag` hanya berjalan setelah mutation berhasil dan output publik segera berubah.
+5. Buktikan perubahan services/team yang dilakukan di luar aplikasi mengikuti fallback TTL maksimum 15 menit. Jangan memutasi data Production hanya untuk pengujian tanpa record khusus, backup, approval, dan jadwal rollback.
+6. Periksa HTML/RSC/browser payload: draft, session, role, data admin, token, dan email review tidak boleh masuk cache publik.
+7. Uji missing slug serta operational failure terkontrol. Missing content harus tetap 404, sedangkan timeout/network/RLS error harus menuju error boundary dan tidak boleh tersimpan sebagai empty result atau cached 404.
+8. Simpan baseline SEO untuk URL representatif pada bagian 7.3 dan pastikan status, canonical, robots, metadata, JSON-LD, H1, serta konten utama sama antara cold dan warm response.
+
+Jika Preview menggunakan database Production yang sama, pengujian mutation tidak boleh dijalankan tanpa record test yang terisolasi dan persetujuan eksplisit. Gunakan local/staging untuk failure injection dan destructive mutation; Preview terhadap Production cukup menjalankan read-only verification.
+
+### 10.2 Acceptance akhir Tahap B
+
+Arsitektur caching V2 baru boleh ditandai selesai bila:
+
+- migration branch/deployment Preview terpisah mengaktifkan `cacheComponents` dan memigrasikan services, blog, team, lalu reviews secara bertahap;
+- tidak ada `unstable_cache` yang tersisa dan seluruh public cache memakai `use cache`, `cacheLife`, serta `cacheTag` yang benar;
+- penanda `connection()` sementara Tahap A sudah dihapus atau ditempatkan ulang berdasarkan kebutuhan boundary Cache Components;
+- production build, public/admin/auth smoke test, cold/warm cache test, invalidation test, TTL fallback, failure classification, dan session-isolation test seluruhnya lulus;
+- diff HTML/head serta SEO regression suite lulus untuk URL representatif, termasuk published, missing, dan unpublish case;
+- rollback ke Tahap A sudah diuji atau setidaknya diverifikasi melalui commit boundary yang jelas;
+- URL/ID Preview, tanggal, commit, hasil metrik sebelum/sesudah, hasil invalidasi, bukti SEO, dan keputusan rollout dicatat di dokumen ini serta `Optimization_FE_Context.md`.
+
+Sesudah Production Deployment, pantau error, cache freshness, Function duration, soft 404, canonical, dan Search Console sesuai bagian 7.4. Monitoring pascadeploy tidak menggantikan acceptance gate Preview.

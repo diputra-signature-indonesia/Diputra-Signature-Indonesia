@@ -5,8 +5,8 @@ import IconPlus from '@/icons/BrandIconPlus';
 import type { ServiceDetailPageContent } from '@/lib/supabase/queries';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
+import { ViewportReveal } from '../viewport-reveal';
 
 interface DetailService {
   serviceTitle: string;
@@ -38,7 +38,7 @@ export function DetailServiceSection({ serviceTitle, serviceDescription, service
         {servicesDetail.map((item, idx) => {
           const isOpen = openIndex === idx;
           return (
-            <Motion as="article" delay={0.2} duration={0.6} y={24} x={0} once={true} key={item.title} className="flex w-full flex-col">
+            <ViewportReveal as="article" delay={0.2} duration={0.6} y={24} x={0} key={item.title} className="flex w-full flex-col">
               <button
                 type="button"
                 aria-controls={`service-detail-panel-${idx}`}
@@ -65,7 +65,7 @@ export function DetailServiceSection({ serviceTitle, serviceDescription, service
                   </BrandButton>
                 </div>
               </div>
-            </Motion>
+            </ViewportReveal>
           );
         })}
       </div>

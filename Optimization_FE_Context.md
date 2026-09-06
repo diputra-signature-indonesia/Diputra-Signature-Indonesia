@@ -1608,3 +1608,188 @@ Catatan rollout:
 - Direct request lama ke lima path tersebut akan menjadi 404 setelah deployment; audit source dan data published production menunjukkan tidak ada consumer aktif.
 - Preview tetap perlu diperiksa melalui Network panel untuk memastikan tidak ada image 404 dari route/data yang hanya dapat dilihat oleh user authenticated atau kondisi yang tidak tercakup public smoke test.
 - Rollback FE-12 cukup mengembalikan enam file serta komentar source dari commit sebelumnya; tidak ada rollback database.
+
+## Progress FE-10 — Production profiling dan isolasi penyebab (5 September 2026)
+
+Status: **baseline production dan isolasi penyebab selesai; implementasi belum dilakukan dan menunggu keputusan**.
+
+Batas dan metode pengujian:
+
+- Pengujian memakai production build lokal melalui `next start` di port 3001, Chrome 152, CPU throttling 4x, dan warm-cache reload.
+- Passive scroll direkam terpisah dari click, hover, dan carousel. Setiap baseline route diulang tiga kali pada viewport desktop 1227 x 922 dan viewport responsif 390 x 844.
+- Metrik frame mengikuti refresh host sekitar 144 Hz. Kolom `>16,7 ms` tetap dicatat sebagai batas pembanding 60 Hz.
+- CDP `Performance.getMetrics`, probe `requestAnimationFrame`, Long Tasks API, dan targeted DevTools trace dipakai bersama. Browser Chrome interaktif dipakai untuk pemeriksaan visual dan console.
+- Viewport 390 x 844 adalah simulasi layout responsif dengan mouse-wheel dan DPR 1, bukan pengganti pengujian GPU/touch pada perangkat mobile fisik atau data Core Web Vitals lapangan.
+- Tidak ada source, style, komponen, parameter Lenis, atau efek visual yang diubah. Seluruh eksperimen visual hanya hidup sementara di sesi browser.
+
+Baseline passive scroll — median tiga putaran:
+
+| Viewport | Route | Task ms/detik | Recalc style ms/detik | Miss terhadap 144 Hz | Frame >16,7 ms | Max frame |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Desktop | `/` | 625,7 | 228,4 | 45 | 10 | 27,7 ms |
+| Desktop | `/about` | 401,5 | 127,7 | 0 | 0 | 7,1 ms |
+| Desktop | `/contact` | 242,7 | 45,1 | 0 | 0 | 7,1 ms |
+| Desktop | `/services` | 454,1 | 239,2 | 28 | 2 | 20,8 ms |
+| Desktop | `/services/legal-and-corporate` | 629,9 | 288,6 | 44 | 6 | 27,7 ms |
+| Desktop | `/services/legal-and-corporate/corporate-business` | 486,3 | 215,7 | 23 | 2 | 20,8 ms |
+| Mobile-sized | `/` | 569,9 | 207,4 | 43 | 2 | 20,8 ms |
+| Mobile-sized | `/about` | 362,6 | 114,2 | 0 | 0 | 7,8 ms |
+| Mobile-sized | `/contact` | 209,1 | 37,3 | 0 | 0 | 7,1 ms |
+| Mobile-sized | `/services` | 479,2 | 256,6 | 11 | 0 | 14,0 ms |
+| Mobile-sized | `/services/legal-and-corporate` | 593,3 | 269,8 | 27 | 0 | 14,0 ms |
+| Mobile-sized | `/services/legal-and-corporate/corporate-business` | 472,3 | 204,9 | 16 | 0 | 14,1 ms |
+
+Tidak ada Long Task di atas 50 ms pada 36 passive-scroll run. Homepage dan category page tetap menjadi hotspot repeatable; `/contact` menjadi kontrol paling ringan. About lebih berat daripada Contact, tetapi tidak menjatuhkan frame pada passive scroll production.
+
+Targeted trace desktop satu putaran:
+
+| Route | UpdateLayoutTree | Paint | Layerize | RasterTask |
+| --- | ---: | ---: | ---: | ---: |
+| `/` | 485,97 ms | 230,95 ms | 267,36 ms | 24,72 ms |
+| `/about` | 208,47 ms | 157,76 ms | 95,24 ms | 15,85 ms |
+| `/contact` | 70,08 ms | 20,50 ms | 39,33 ms | 9,28 ms |
+
+Trace production mengonfirmasi pola putaran development tanpa noise Next.js dev: biaya utama berada pada main-thread animation, style update, paint, dan layerization; raster GPU tetap relatif kecil. Callback Lenis `raf` tetap terlihat, tetapi halaman kontrol yang memakai Lenis sama tidak menunjukkan jank yang sama.
+
+Isolasi reveal animation:
+
+- Setiap route pertama-tama discroll untuk menyelesaikan seluruh `whileInView` dengan `once: true`, lalu passive scroll kedua diukur tiga kali tanpa reload.
+- Homepage turun dari 1.663,75 ms menjadi 425,89 ms Task Duration (-74,4%), category page dari 1.618,24 ms menjadi 409,70 ms (-74,7%), dan About dari 880,83 ms menjadi 307,13 ms (-65,1%).
+- Median `RecalcStyleDuration` ketiga route turun menjadi 0 ms dan missed frame turun menjadi 0.
+- Targeted trace homepage setelah reveal selesai mencatat `UpdateLayoutTree` 0 ms, Paint 19,32 ms (-91,6%), Layerize 5,58 ms (-97,9%), dan RasterTask 3,43 ms (-86,1%) dibanding first-entry trace.
+- Eksperimen CSS yang hanya memaksa opacity/transform ke final state masih menyisakan UpdateLayoutTree 483,74 ms. Paint turun menjadi 63,72 ms dan Layerize menjadi 26,50 ms, tetapi Framer Motion tetap menulis style setiap frame. Jadi sekadar override visual tidak menyelesaikan pekerjaan runtime; scheduling animasinya yang perlu dikurangi atau diganti.
+- Pemetaan per section menunjukkan biaya tersebar ketika kumpulan Motion pertama kali aktif. Pada homepage, spike tertinggi berada di Review, kumpulan article/blog, Contact, dan Services. Ini bukan satu node shadow tunggal.
+
+Eksperimen efek visual satu variabel per pengujian:
+
+- Menghapus seluruh `box-shadow` homepage tidak memberi perbaikan repeatable: Task rate 622,3 versus baseline 625,7 ms/detik.
+- Menghapus seluruh CSS filter/drop-shadow juga tidak memberi perbaikan: 623,6 versus 625,7 ms/detik; targeted trace tetap berada dalam variasi run.
+- Mengubah fixed background About menjadi absolute menurunkan Task rate sekitar 8,6%, tetapi baseline About sudah tanpa dropped frame dan perubahan tersebut menghilangkan perilaku visual fixed/parallax. Fixed image bukan penyebab dominan dan tidak direkomendasikan untuk diubah saat ini.
+- `content-visibility: auto` generik pada semua section mengubah tinggi scroll dari 4.142 px menjadi 5.078–5.451 px dan membuat durasi scroll tidak sebanding. Implementasi generik tersebut ditolak karena intrinsic-size tidak stabil dan berisiko layout jump.
+
+Interaksi terpisah:
+
+- Service-card hover, category-card hover, mouse-drag carousel, Team accordion, dan Q&A accordion diuji tiga kali pada desktop; carousel, Team, dan Q&A juga diuji tiga kali pada viewport mobile-sized.
+- Tidak ada Long Task >50 ms atau frame >33 ms. Mouse-drag carousel tidak menunjukkan dropped-frame problem baru setelah Mousewheel FE-09 dihapus.
+- Team accordion menghasilkan median sekitar 72 Layout events/46–49 ms total, dan Q&A sekitar 58–59 Layout events/29–35 ms total, tetapi keduanya tetap berada dalam frame budget pada CPU 4x. Optimasi accordion tidak menjadi prioritas FE-10.
+
+Diagnosis dan keputusan sementara:
+
+- Penyebab dominan FE-10 sekarang terisolasi pada first-entry reveal animation Framer Motion yang berjumlah banyak, khususnya item berulang di route panjang. `LazyMotion` FE-08 berhasil mengurangi bundle tetapi memang tidak mengurangi VisualElement, style update, atau animasi runtime.
+- Lenis dipertahankan. Shadow, filter, fixed About, carousel, dan accordion tidak memiliki bukti yang cukup untuk diubah.
+- Kandidat implementasi paling aman adalah proof-of-concept sempit pada repeated below-fold items: pertahankan initial/final state, duration, delay, dan easing, tetapi pindahkan reveal transform/opacity dari per-frame Framer Motion ke satu shared IntersectionObserver yang hanya menambah state/class dan CSS transition compositor-friendly.
+- Hero dan low-count Motion tetap dipertahankan pada proof-of-concept pertama. Implementasi baru hanya boleh diperluas bila tiga production run menunjukkan perbaikan repeatable dan screenshot/filmstrip membuktikan tidak ada perubahan visual yang berarti.
+- FE-10 belum boleh ditandai solved sebelum pilihan implementasi disetujui, proof-of-concept diverifikasi, dan Preview tidak menunjukkan regresi visual.
+
+## Progress FE-10 — Proof-of-concept `ViewportReveal` (6 September 2026)
+
+Status: **proof-of-concept lokal berhasil dan lolos performance gate; perluasan ke komponen lain belum dilakukan**.
+
+Implementasi terbatas:
+
+- `ServicesSection` menjadi satu-satunya section yang reveal heading dan kartu berulangnya dipindahkan dari Framer Motion ke `ViewportReveal`.
+- `ViewportReveal` memakai satu shared `IntersectionObserver` tingkat module. Observer hanya menandai elemen satu kali saat memasuki viewport, lalu CSS menjalankan transisi `opacity` dan `transform` tanpa React state atau style update dari JavaScript pada setiap frame.
+- Nilai visual lama dipertahankan: heading berawal dari `x: -100`, kartu dari `x: -20`, durasi 0,6 detik, delay awal 0,2 detik, stagger 0,1 detik, dan easing `ease-out`.
+- Transisi hover `box-shadow` kartu tetap 500 ms dengan easing yang sama. Markup, layout, gambar, brightness, warna, konten, Lenis, dan animasi komponen lain tidak diubah.
+- Wrapper `MotionProvider` di route `/services` dihapus karena route tersebut tidak lagi memiliki consumer Motion. Homepage dan category page tetap memuat provider untuk animasi lain yang belum masuk scope POC.
+- Browser tanpa `IntersectionObserver` mendapat fallback langsung ke final state agar konten tidak tersembunyi permanen.
+
+Hasil production passive scroll — median tiga putaran, CPU throttling 4x:
+
+| Viewport | Route | Task sebelum | Task sesudah | Recalc style sebelum | Recalc style sesudah | Miss sebelum | Miss sesudah |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Desktop | `/services` | 905,02 ms | 410,96 ms (-54,6%) | 476,74 ms | 122,91 ms (-74,2%) | 28 | 0 |
+| Mobile-sized | `/services` | 1.121,26 ms | 434,70 ms (-61,2%) | 600,42 ms | 117,19 ms (-80,5%) | 11 | 0 |
+| Desktop | `/` | 1.663,75 ms | 1.465,91 ms (-11,9%) | 607,24 ms | 414,15 ms (-31,8%) | 45 | 22 |
+| Desktop | `/services/legal-and-corporate` | 1.618,24 ms | 1.440,85 ms (-11,0%) | 741,42 ms | 509,77 ms (-31,2%) | 44 | 15 |
+| Mobile-sized | `/services/legal-and-corporate` | 1.721,68 ms | 1.647,58 ms (-4,3%) | 783,01 ms | 556,38 ms (-28,9%) | 27 | 21 |
+
+Catatan hasil:
+
+- Homepage mobile-sized memiliki variasi antar-run lebih tinggi karena masih berisi banyak Motion di luar `ServicesSection`. Agregat enam run standar menghasilkan Task sekitar 1.656,35 ms (-4,9% dari baseline) dan Recalc Style sekitar 407,18 ms (-35,7%), tanpa regresi konsisten.
+- Targeted homepage trace sesudah POC mencatat `UpdateLayoutTree` 260,20 ms (-46,5%), Paint 196,66 ms (-14,8%), Layerize 261,65 ms (-2,1%), dan RasterTask 19,87 ms (-19,6%). Perbaikan Layerize kecil sehingga tidak boleh diklaim sebagai bottleneck yang sudah selesai.
+- Tidak ada Long Task di atas 50 ms pada hasil sesudah POC. Penurunan terbesar dan paling bersih terjadi di `/services`, sesuai route yang seluruh reveal berulangnya sudah memakai implementasi baru.
+- Pemeriksaan desktop dan mobile-sized membuktikan posisi awal/akhir, durasi, delay, stagger, arah gerak, dan hover shadow tetap setara secara visual. Perbedaan sub-frame antar-engine diterima sesuai keputusan, tanpa perubahan desain yang terlihat.
+- TypeScript, targeted ESLint, Prettier, production build Next.js 16.0.10, pemeriksaan manifest, console browser, serta smoke test route target berhasil. Manifest memastikan `/services` tidak lagi memuat module Motion, sedangkan homepage masih memuatnya.
+
+Keputusan scope berikutnya:
+
+- Performance gate minimal 20% pada route target sudah terlampaui, sehingga pendekatan layak dipakai kembali secara bertahap.
+- POC belum otomatis diperluas dan FE-10 belum ditandai selesai. Setiap perluasan harus menjadi perubahan kecil yang bisa diuji dan di-rollback sendiri; kandidat berikutnya adalah repeated cards pada category service page, kemudian section berulang lain. Hero dan animasi berjumlah rendah tetap memakai Framer Motion sampai ada bukti bahwa migrasi diperlukan.
+- Source saat ini baru terverifikasi pada local production build dan belum mewakili Preview/Production. Finalisasi FE-10 tetap membutuhkan Preview verification tanpa regresi visual.
+
+## Progress FE-10 — Perluasan `ViewportReveal` (6 September 2026)
+
+Status: **implementasi lokal diperluas dan terverifikasi; deployment Preview masih pending**.
+
+Dasar perluasan:
+
+- Pemilik project menyetujui perluasan setelah pemeriksaan visual melalui `localhost:3000` dan perangkat lain melalui alamat development LAN `192.168.77.116:3000` menunjukkan animasi tetap memuaskan serta scroll cepat terasa lebih ringan, tidak terlalu patah-patah, dan tidak mudah tersendat.
+- Hasil tersebut melengkapi performance gate production POC pada `/services`; alamat LAN development bukan pengganti Vercel Preview atau pengukuran production numerik.
+
+Scope yang dimigrasikan:
+
+- `CategoryServicesSection`: heading dan setiap category service card.
+- `BlogSection`: heading, form pencarian nonaktif, dan setiap blog card.
+- `AdvantageSection`: heading dan enam advantage items.
+- `TeamSection`: heading dan setiap team member.
+- `DetailServiceSection`: setiap detail-service accordion item.
+- `/blog` tidak lagi memakai `MotionProvider` karena seluruh consumer Motion pada route tersebut sudah dimigrasikan. Homepage, About, category, dan detail service tetap memakai provider karena masih memiliki hero atau animasi low-count di luar scope.
+
+Kesetaraan perilaku:
+
+- Nilai `x`, `y`, duration, delay, stagger yang sudah ada, final state, dan easing `ease-out` tetap dipertahankan pada setiap komponen.
+- `ViewportReveal` mendapat mode preservasi transition `scale` khusus category card. Computed style production membuktikan `transition-property: opacity, transform, scale` dengan durasi `0.6s, 0.6s, 0.3s`, sehingga hover scale lama tidak hilang akibat CSS reveal.
+- Hero, `ReviewSection`, CTA, Q&A wrapper, Contact, dan komponen dengan Motion berjumlah rendah atau perilaku khusus tidak dimigrasikan. Lenis, carousel, accordion open/close transition, layout, warna, typography, gambar, dan konten tidak diubah.
+
+Verifikasi perluasan:
+
+- Prettier, targeted ESLint, dan TypeScript `tsc --noEmit` berhasil.
+- Production build Next.js 16.0.10 berhasil. Percobaan pertama hanya gagal mengambil Raleway dari Google Fonts karena network sandbox; build ulang dengan akses network berhasil tanpa source fix.
+- Smoke test production pada `/`, `/about`, `/blog`, `/services`, category valid, dan detail service valid seluruhnya merespons HTTP 200 tanpa application-error marker.
+- Chrome production verification membuktikan category card dan About Advantage/Team tampil normal pada desktop serta viewport 390 x 844. Semua category card yang masuk viewport mencapai final state, dan console tidak mencatat warning/error.
+- Build manifest `/blog` tidak lagi memuat module Motion dan tetap memuat `ViewportReveal`. Manifest About, category, serta detail tetap memuat keduanya sesuai pembatasan scope.
+- Database lokal pada verifikasi awal tidak mengembalikan published blog cards maupun `servicesDetail` accordion items. Kesenjangan fixture tersebut kemudian ditutup melalui data dummy lokal yang dijelaskan di bawah; Vercel Preview dengan data representatif tetap diperlukan sebelum Production.
+
+Fixture data lokal untuk pengujian akhir:
+
+- Sembilan `blog_posts` berstatus `published` ditambahkan langsung ke Supabase Docker lokal dengan slug `fe10-local-preview-01` sampai `fe10-local-preview-09` dan penanda judul `[LOCAL FE-10]`.
+- Delapan `services_item_details` published ditambahkan untuk parent `legal-and-corporate/corporate-business`, memakai penanda `[LOCAL FE-10]` dan sort order 901–908.
+- Insert memakai ID deterministik, transaction, dan conflict handling sehingga idempotent bila perlu dijalankan ulang. Tidak ada row existing yang dihapus atau ditimpa berdasarkan ID umum.
+- Fixture tidak ditambahkan ke migration, `seed.sql`, source, atau Git. Data hanya berada pada database Supabase Docker project ini dan tidak dikirim ke Supabase Production.
+- Hasil kosong Blog yang sudah tersimpan sebelumnya dibersihkan dengan menghentikan tepat dev server lama dan menghapus hanya `.next/dev/cache/fetch-cache`. Folder tersebut merupakan generated development cache, dapat dibuat ulang, dan sudah terbentuk kembali setelah `npm run dev` dijalankan.
+- Setelah restart, SSR `/blog` dan `/services/legal-and-corporate/corporate-business` sama-sama memuat penanda fixture. Browser smoke test menampilkan sembilan Blog cards, delapan accordion items, serta berhasil memindahkan expanded state dari detail pertama ke detail kedua.
+
+URL manual lokal:
+
+- Blog cards: `http://localhost:3000/blog`.
+- Detail accordion: `http://localhost:3000/services/legal-and-corporate/corporate-business`.
+- Perangkat lain pada jaringan saat pengujian dapat memakai `http://192.168.79.149:3000`; alamat dari output `npm run dev` tetap menjadi sumber utama karena IP LAN dapat berubah.
+
+Skenario manual fixture:
+
+1. Pada Blog, lakukan reload lalu fast scroll sampai card terakhir dan kembali ke atas. Kesembilan card harus mencapai final opacity/position dan tidak boleh tertinggal transparan.
+2. Ulangi melalui navigasi client-side, Back/Forward, serta viewport desktop dan perangkat mobile pada jaringan lokal.
+3. Pada detail service, fast scroll melewati delapan item lalu buka item yang berbeda secara berurutan. Hanya satu accordion boleh terbuka dan transition open/close tidak boleh berubah.
+4. Pastikan tidak muncul patah-patah baru, layout jump, hydration error, image 404, atau exception `IntersectionObserver` pada console.
+5. Fixture berfungsi untuk verifikasi lokal. Sebelum Production, ulangi smoke visual pada Vercel Preview menggunakan Blog serta detail-service data representatif tanpa menyalin fixture lokal ke Production.
+
+Status penyelesaian:
+
+- Implementasi source FE-10 yang disepakati selesai dan disiapkan sebagai satu commit terpisah bersama catatan ini.
+- FE-10 belum ditandai solved sampai Vercel Preview diverifikasi pada route dengan blog post dan detail-service data yang representatif. Jika Preview lulus tanpa regresi, tidak diperlukan migrasi Motion low-count lainnya untuk menutup FE-10; komponen tersebut dipertahankan secara sadar, bukan menjadi utang yang belum dikerjakan.
+
+Pengujian terakhir sebelum FE-10 ditutup:
+
+1. Deploy commit FE-10 ke Vercel Preview dan pastikan Function tetap berjalan di `sin1`.
+2. Uji first-entry dan fast scroll pada `/`, `/about`, `/services`, satu category, satu detail service yang memiliki accordion item, `/blog` yang memiliki published cards, dan satu halaman blog published.
+3. Jalankan desktop serta mobile browser nyata. Pastikan seluruh elemen yang sudah memasuki viewport mencapai opacity/final position dan tidak tertinggal dalam keadaan tersembunyi setelah scroll cepat, Back/Forward, refresh, atau client navigation.
+4. Pastikan stagger kartu, arah gerak, durasi, hover shadow, hover scale category card, Team accordion, dan detail-service accordion tetap bekerja seperti Production sebelum perubahan.
+5. Periksa console dan Network: tidak boleh ada hydration error, exception `IntersectionObserver`, chunk failure, image 404 baru, atau request Motion yang seharusnya sudah hilang dari route `/services` dan `/blog`.
+6. Bandingkan title, description, canonical, robots, Open Graph, JSON-LD, H1, teks utama, link internal, dan status HTTP dengan Production. Optimasi reveal tidak boleh mengubah output SEO atau membuat konten utama bergantung pada scroll untuk tersedia di HTML.
+7. Bila seluruh pemeriksaan lulus, tandai FE-10 solved dan simpan URL/ID Preview, tanggal, browser/perangkat, route yang diuji, serta hasilnya di dokumen ini. Bila gagal, rollback hanya commit FE-10 dan pertahankan baseline profiling untuk iterasi berikutnya.
+
+Hubungan dengan pekerjaan caching V2:
+
+- Commit FE-10 tidak mengaktifkan `cacheComponents`, tidak mengubah `unstable_cache`, cache key, TTL, tag, invalidasi, query Supabase, metadata, maupun status route.
+- Setelah Preview FE-10 lulus, pekerjaan UI/UX tidak lagi menjadi dependency terbuka untuk Tahap B. Gate berikutnya adalah membuktikan perilaku caching Tahap A pada Vercel dan kemudian menjalankan migrasi Cache Components di branch/deployment terpisah sesuai `V2_Baseline_Architecture.md`.

@@ -1,0 +1,34 @@
+.reveal.reveal {
+  opacity: 0;
+  transform: translate(var(--reveal-x), var(--reveal-y));
+  transition-property: opacity, transform;
+  transition-duration: var(--reveal-duration);
+  transition-delay: var(--reveal-delay);
+  transition-timing-function: ease-out;
+}
+
+.reveal.reveal[data-reveal-visible='true'] {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.revealWithShadow.revealWithShadow {
+  transition-property: opacity, transform, box-shadow;
+  transition-duration: var(--reveal-duration), var(--reveal-duration), 500ms;
+  transition-delay: var(--reveal-delay), var(--reveal-delay), 0ms;
+  transition-timing-function: ease-out, ease-out, cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.revealWithScale.revealWithScale {
+  transition-property: opacity, transform, scale;
+  transition-duration: var(--reveal-duration), var(--reveal-duration), 300ms;
+  transition-delay: var(--reveal-delay), var(--reveal-delay), 0ms;
+  transition-timing-function: ease-out, ease-out, cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.revealWithScale.revealWithShadow {
+  transition-property: opacity, transform, scale, box-shadow;
+  transition-duration: var(--reveal-duration), var(--reveal-duration), 300ms, 500ms;
+  transition-delay: var(--reveal-delay), var(--reveal-delay), 0ms, 0ms;
+  transition-timing-function: ease-out, ease-out, cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 0.2, 1);
+}

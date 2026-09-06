@@ -1,5 +1,4 @@
 import { BlogSection } from '@/components/layout/section-blog';
-import { MotionProvider } from '@/components/motion';
 import { getPublishedBlogPosts } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { connection } from 'next/server';
@@ -27,11 +26,9 @@ export default async function BlogListPage() {
   await connection();
   const blogPosts = await getPublishedBlogPosts(12);
   return (
-    <MotionProvider>
-      <div className="py-13">
-        <h1 className="sr-only">Blog & Insights</h1>
-        <BlogSection blogPosts={blogPosts} />
-      </div>
-    </MotionProvider>
+    <div className="py-13">
+      <h1 className="sr-only">Blog & Insights</h1>
+      <BlogSection blogPosts={blogPosts} />
+    </div>
   );
 }
