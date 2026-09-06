@@ -1,6 +1,7 @@
 'use client';
 
 import { submitReviewAction } from '@/app/review-request/[token]/actions';
+import { REVIEW_INPUT_LIMITS, validateReviewInput } from '@/lib/review-validation';
 import { useState } from 'react';
 import { BrandButton } from '../ui/button';
 
@@ -54,19 +55,18 @@ export default function ReviewRequestClient({ token, status }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!message.trim()) return alert('Review message is required');
+
+    const validation = validateReviewInput({ token, name, email, message });
+    if (!validation.ok) return alert(validation.message);
 
     setIsSubmitting(true);
     try {
-      await submitReviewAction({
-        token,
-        name,
-        email,
-        message,
-      });
+      const result = await submitReviewAction(validation.data);
+      if (!result.ok) return alert(result.message);
+
       setDone(true);
-    } catch (err: any) {
-      alert(err?.message ?? 'Failed to submit review');
+    } catch {
+      alert('Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,6 +86,8 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          required
+          maxLength={REVIEW_INPUT_LIMITS.name}
           placeholder="e.g. John"
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
         />
@@ -97,6 +99,7 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          maxLength={REVIEW_INPUT_LIMITS.email}
           placeholder="your-email@example.com"
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"
         />
@@ -108,6 +111,8 @@ export default function ReviewRequestClient({ token, status }: Props) {
           name="message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          required
+          maxLength={REVIEW_INPUT_LIMITS.message}
           placeholder="Write your experience..."
           rows={5}
           className="w-full rounded-xl border border-gray-300 px-5 py-2 text-xs sm:text-sm lg:text-base"

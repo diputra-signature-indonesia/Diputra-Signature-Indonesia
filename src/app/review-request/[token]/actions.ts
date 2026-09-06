@@ -1,13 +1,9 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { createHash } from 'crypto';
+import { ReviewInput, validateReviewInput } from '@/lib/review-validation';
 
 type TokenStatus = 'valid' | 'expired' | 'used' | 'invalid';
-
-function hashToken(token: string) {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 export async function getReviewRequestStatusAction(token: string): Promise<TokenStatus> {
   const supabase = await createSupabaseServerClient();
@@ -25,17 +21,46 @@ export async function getReviewRequestStatusAction(token: string): Promise<Token
   return status;
 }
 
-export async function submitReviewAction(input: { token: string; name: string; email: string; message: string }) {
+export type SubmitReviewActionResult = { ok: true; reviewId: string } | { ok: false; message: string };
+
+const REVIEW_RPC_ERROR_MESSAGES: Record<string, string> = {
+  review_invalid_token: 'This review link is invalid.',
+  review_name_required: 'Name is required.',
+  review_name_too_long: 'Name must be 100 characters or fewer.',
+  review_email_invalid: 'Enter a valid email address.',
+  review_message_required: 'Review message is required.',
+  review_message_too_long: 'Review message must be 2,000 characters or fewer.',
+  review_request_unavailable: 'This review link is invalid, expired, or has already been used.',
+};
+
+function getPublicReviewErrorMessage(databaseMessage: string) {
+  return REVIEW_RPC_ERROR_MESSAGES[databaseMessage] ?? 'Failed to submit review. Please try again.';
+}
+
+export async function submitReviewAction(input: ReviewInput): Promise<SubmitReviewActionResult> {
+  const validation = validateReviewInput(input);
+  if (!validation.ok) return validation;
+
   const supabase = await createSupabaseServerClient();
 
   const { error, data } = await supabase.rpc('submit_review', {
-    p_token: input.token,
-    p_name: input.name,
-    p_email: input.email,
-    p_message: input.message,
+    p_token: validation.data.token,
+    p_name: validation.data.name,
+    p_email: validation.data.email,
+    p_message: validation.data.message,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error('submit_review RPC failed', {
+      code: error.code,
+      message: error.message,
+    });
 
-  return { reviewId: data as string };
+    return {
+      ok: false,
+      message: getPublicReviewErrorMessage(error.message),
+    };
+  }
+
+  return { ok: true, reviewId: data as string };
 }
