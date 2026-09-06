@@ -31,7 +31,7 @@ export type DataTableProps<T> = {
 };
 
 const can = (role: UserRole | null) => ({
-  publish: role === 'super_admin' || role === 'admin' || role === 'editor',
+  publish: role === 'super_admin' || role === 'admin' || role === 'staff',
   delete: role === 'super_admin' || role === 'admin',
 });
 

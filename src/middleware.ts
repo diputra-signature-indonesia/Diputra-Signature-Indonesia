@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const ADMIN_ROLES = ['super_admin', 'admin', 'editor', 'contributor'] as const;
+const ADMIN_ROLES = ['super_admin', 'admin', 'staff'] as const;
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();

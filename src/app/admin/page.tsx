@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  const role = (profile?.role as 'super_admin' | 'admin' | 'editor' | 'contributor') ?? null;
+  const role = (profile?.role as 'super_admin' | 'admin' | 'staff') ?? null;
 
   const page = Math.max(0, Number(sp.page ?? '0') || 0);
   const pageSize = [5, 10, 25, 50].includes(Number(sp.pageSize)) ? Number(sp.pageSize) : 10;

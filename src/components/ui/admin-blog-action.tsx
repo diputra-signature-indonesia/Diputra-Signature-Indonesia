@@ -20,7 +20,7 @@ type BlogActionProps = {
 
 const can = (role: UserRole | null) => ({
   approve: role === 'super_admin' || role === 'admin',
-  edit: role === 'super_admin' || role === 'admin' || role === 'editor',
+  edit: role === 'super_admin' || role === 'admin' || role === 'staff',
   delete: role === 'super_admin' || role === 'admin',
 });
 
@@ -30,7 +30,7 @@ function getAllowedActions(role: UserRole | null, status: Status): Action[] {
 
   if (p.edit) actions.push('edit');
 
-  // editor/admin can move draft<->pending
+  // staff/admin can move draft<->pending
   if ((p.edit || p.approve) && status === 'draft') actions.push('toPending');
   if ((p.edit || p.approve) && status === 'pending') actions.push('toDraft');
 
