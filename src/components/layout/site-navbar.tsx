@@ -9,15 +9,24 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-export function SiteNavbar({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
+type SiteNavbarProps = {
+  navItems: NavItem[];
+  contactLink: NavLinkItem;
+};
+
+export function SiteNavbar(props: SiteNavbarProps) {
+  const pathname = usePathname();
+  return <SiteNavbarContent key={pathname} {...props} pathname={pathname} />;
+}
+
+export function SiteNavbarFallback(props: SiteNavbarProps) {
+  return <SiteNavbarContent {...props} pathname="" />;
+}
+
+function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps & { pathname: string }) {
   const [open, setOpen] = useState(false);
   const [serviceDropDown, setServiceDropDown] = useState(false);
-  const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setServiceDropDown(false);
-  }, [pathname]);
 
   useEffect(() => {
     function onDocDown(e: MouseEvent) {

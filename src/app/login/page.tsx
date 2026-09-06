@@ -1,5 +1,7 @@
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import Image from 'next/image';
+import { connection } from 'next/server';
+import { Suspense } from 'react';
 
 const ERROR_TEXT: Record<string, string> = {
   not_whitelisted: 'Akun ini belum diberi akses admin. Hubungi administrator.',
@@ -10,7 +12,20 @@ const ERROR_TEXT: Record<string, string> = {
   oauth_callback_failed: 'Login gagal. Silakan coba lagi.',
 };
 
-export default async function LoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> | { error?: string } }) {
+type LoginPageProps = {
+  searchParams?: Promise<{ error?: string }> | { error?: string };
+};
+
+export default function LoginPage(props: LoginPageProps) {
+  return (
+    <Suspense fallback={null}>
+      <DynamicLoginPage {...props} />
+    </Suspense>
+  );
+}
+
+async function DynamicLoginPage({ searchParams }: LoginPageProps) {
+  await connection();
   const sp = searchParams ? await searchParams : undefined;
   const errorKey = sp?.error ?? '';
   const errorMsg = ERROR_TEXT[errorKey];

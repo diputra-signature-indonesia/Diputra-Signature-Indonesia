@@ -1,9 +1,19 @@
 import { AdminLayoutProvider } from '@/components/layout-admin/admin-layout-provider';
 import { MuiProvider } from '@/components/mui-provider';
 import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
-import type { ReactNode } from 'react';
+import { connection } from 'next/server';
+import { Suspense, type ReactNode } from 'react';
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <DynamicAdminLayout>{children}</DynamicAdminLayout>
+    </Suspense>
+  );
+}
+
+async function DynamicAdminLayout({ children }: { children: ReactNode }) {
+  await connection();
   const author = await getCurrentAuthorFromTeamMember();
   const authorName = author?.nickname || author?.full_name || 'Admin';
   return (

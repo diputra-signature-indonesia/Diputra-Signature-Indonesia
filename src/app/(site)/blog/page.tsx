@@ -1,7 +1,6 @@
 import { BlogSection } from '@/components/layout/section-blog';
 import { getPublishedBlogPosts } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
-import { connection } from 'next/server';
 
 export const metadata: Metadata = {
   title: 'Blog & Insights',
@@ -23,7 +22,6 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogListPage() {
-  await connection();
   const blogPosts = await getPublishedBlogPosts(12);
   return (
     <div className="py-13">

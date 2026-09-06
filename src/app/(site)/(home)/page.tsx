@@ -1,6 +1,5 @@
 import { getPublishedBlogPosts, getServiceCategories, getVisibleStories } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
-import { connection } from 'next/server';
 
 import { AboutSection } from '@/components/layout/home-about-section';
 import { HeroSection } from '@/components/layout/home-hero-section';
@@ -30,7 +29,6 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  await connection();
   const [categoryService, blogPosts, review] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories()]);
   return (
     <MotionProvider>

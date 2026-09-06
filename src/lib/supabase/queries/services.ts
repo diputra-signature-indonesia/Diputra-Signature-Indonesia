@@ -1,7 +1,6 @@
-import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
-import { unstable_cache } from 'next/cache';
-import { cache } from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 
 import { ServiceIconKey } from '@/types/dsi-services';
 
@@ -82,7 +81,11 @@ type ServiceDetailPageRow = ServiceDetailPageItem & {
 };
 
 /** LIST categories (untuk section Services / services page) */
-async function fetchServiceCategories(): Promise<ServiceCategorySummary[]> {
+export async function getServiceCategories(): Promise<ServiceCategorySummary[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_categories')
@@ -94,13 +97,12 @@ async function fetchServiceCategories(): Promise<ServiceCategorySummary[]> {
   return (data ?? []) as ServiceCategorySummary[];
 }
 
-export const getServiceCategories = unstable_cache(fetchServiceCategories, getPublicCacheKeyParts('service-categories'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.services],
-});
-
 /** SINGLE category with its published items */
-async function fetchServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData | null> {
+export async function getServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_categories')
@@ -135,15 +137,12 @@ async function fetchServiceCategoryPageData(categorySlug: string): Promise<Servi
   return { category, items: items ?? [] };
 }
 
-const getServiceCategoryPageDataCached = unstable_cache(fetchServiceCategoryPageData, getPublicCacheKeyParts('service-category-page-data'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.services],
-});
-
-export const getServiceCategoryPageData = cache(getServiceCategoryPageDataCached);
-
 /** Convenience: detail page data */
-async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData | null> {
+export async function getServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_items')
@@ -178,10 +177,3 @@ async function fetchServiceDetailPageData(categorySlug: string, itemSlug: string
 
   return { category, item, details: details ?? [] };
 }
-
-const getServiceDetailPageDataCached = unstable_cache(fetchServiceDetailPageData, getPublicCacheKeyParts('service-detail-page-data'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.services],
-});
-
-export const getServiceDetailPageData = cache(getServiceDetailPageDataCached);

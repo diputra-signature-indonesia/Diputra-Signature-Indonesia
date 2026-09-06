@@ -1793,3 +1793,17 @@ Hubungan dengan pekerjaan caching V2:
 
 - Commit FE-10 tidak mengaktifkan `cacheComponents`, tidak mengubah `unstable_cache`, cache key, TTL, tag, invalidasi, query Supabase, metadata, maupun status route.
 - Setelah Preview FE-10 lulus, pekerjaan UI/UX tidak lagi menjadi dependency terbuka untuk Tahap B. Gate berikutnya adalah membuktikan perilaku caching Tahap A pada Vercel dan kemudian menjalankan migrasi Cache Components di branch/deployment terpisah sesuai `V2_Baseline_Architecture.md`.
+
+## Progress FE-01 Tahap B — Cache Components lokal (6 September 2026)
+
+Status: **implementasi source lokal dan verifikasi dasar selesai; Preview/Production belum dilakukan**.
+
+- Pemilik project menyatakan pengujian visual FE-10 dengan data dummy lokal cukup aman untuk melanjutkan pekerjaan caching V2.
+- `cacheComponents` diaktifkan pada Next.js 16.0.10. Services, blog, team, dan reviews dimigrasikan sekaligus dari `unstable_cache` ke function-level `'use cache'` sesuai keputusan satu commit atomik.
+- Lifetime eksplisit adalah stale 5 menit, revalidate 15 menit, dan expire 1 hari. Empat domain tag serta invalidasi `updateTag()` pada mutation blog/review tetap dipertahankan.
+- Public list route menjadi static; dynamic slug serta admin/auth memakai Partial Prerender/request-time boundary. Tidak ada admin/session/token data yang sengaja dimasukkan ke shared cache.
+- Cache proof PostgreSQL lokal menunjukkan dua request pada detail blog cold menghasilkan satu query `blog_posts`; request kedua menggunakan cache.
+- TypeScript, targeted ESLint, production build, valid-route smoke test, content/metadata check, dan unauthenticated admin redirect berhasil.
+- Read-your-own-writes lokal berhasil melalui UI admin: perubahan judul blog langsung tampil pada `/blog`, unpublish review langsung menghilangkannya dari homepage, dan pemulihan kedua record juga langsung tampil setelah mutation berikutnya. Seluruh data uji telah dikembalikan ke nilai awal.
+- Missing dynamic slug menampilkan not-found UI dan `noindex`, tetapi status HTTP tetap `200` karena respons sudah streaming. Hasil ini konsisten dengan keputusan FE-05 yang telah menerima kontrak streamed `200 + noindex`; hard `404` tidak dipaksakan karena memerlukan query sebelum streaming atau penghapusan loading/PPR.
+- Tidak ada konfigurasi Supabase/Vercel Production, schema, RLS, credential, atau data Production yang diubah.

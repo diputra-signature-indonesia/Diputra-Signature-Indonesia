@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
 export type StoryExperience = {
   id: string;
   name: string | null;
@@ -31,18 +31,17 @@ export type DefaultGeneratedUrl = {
 };
 
 /** LIST stories visible (homepage section) */
-async function fetchVisibleStories(limit = 6): Promise<StoryExperience[]> {
+export async function getVisibleStories(limit = 6): Promise<StoryExperience[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.reviews);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase.from('reviews').select('id, name, message, created_at').eq('is_published', true).order('created_at', { ascending: false }).limit(limit);
 
   if (error) throw error;
   return (data ?? []) as StoryExperience[];
 }
-
-export const getVisibleStories = unstable_cache(fetchVisibleStories, getPublicCacheKeyParts('visible-stories'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.reviews],
-});
 
 export async function getAdminClientStories(limit = 6): Promise<DefaultReview[]> {
   const supabase = await createSupabaseServerClient();

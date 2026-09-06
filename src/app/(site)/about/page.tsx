@@ -5,7 +5,6 @@ import { MotionProvider } from '@/components/motion';
 import { getVisibleTeamMembers } from '@/lib/supabase/queries';
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { connection } from 'next/server';
 
 export const metadata: Metadata = {
   title: 'About Us',
@@ -29,7 +28,6 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  await connection();
   const team = await getVisibleTeamMembers();
   return (
     <MotionProvider>

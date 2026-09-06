@@ -1,9 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getPublicCacheKeyParts, PUBLIC_CACHE_REVALIDATE_SECONDS, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
 import { Status } from '@/types/blog-status';
-import { unstable_cache } from 'next/cache';
-import { cache } from 'react';
+import { cacheLife, cacheTag } from 'next/cache';
 
 export type BlogPost = {
   id: string; // kalau tabelmu pakai uuid id
@@ -137,7 +136,11 @@ export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsPar
 }
 
 /** BLOG list (untuk /blog) */
-async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPostSummary[]> {
+export async function getPublishedBlogPosts(limit = 50): Promise<BlogPostSummary[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.blog);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
@@ -157,11 +160,6 @@ async function fetchPublishedBlogPosts(limit = 50): Promise<BlogPostSummary[]> {
   if (error) throw error;
   return (data ?? []) as BlogPostSummary[];
 }
-
-export const getPublishedBlogPosts = unstable_cache(fetchPublishedBlogPosts, getPublicCacheKeyParts('published-blog-posts'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.blog],
-});
 
 export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost> {
   const supabase = await createSupabaseServerClient();
@@ -190,7 +188,11 @@ export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost
 }
 
 /** BLOG detail (untuk /blog/[slug]) */
-async function fetchPublishedBlogPostBySlug(slug: string): Promise<PublishedBlogPost | null> {
+export async function getPublishedBlogPostBySlug(slug: string): Promise<PublishedBlogPost | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.blog);
+
   const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
@@ -203,13 +205,6 @@ async function fetchPublishedBlogPostBySlug(slug: string): Promise<PublishedBlog
   if (!data) return null;
   return data as PublishedBlogPost;
 }
-
-const getPublishedBlogPostBySlugCached = unstable_cache(fetchPublishedBlogPostBySlug, getPublicCacheKeyParts('published-blog-post-by-slug'), {
-  revalidate: PUBLIC_CACHE_REVALIDATE_SECONDS,
-  tags: [PUBLIC_CACHE_TAGS.blog],
-});
-
-export const getPublishedBlogPostBySlug = cache(getPublishedBlogPostBySlugCached);
 
 async function ensureUniqueSlug(baseSlug: string) {
   const supabase = await createSupabaseServerClient();

@@ -27,6 +27,8 @@ Keputusan:
 
 Status implementasi Tahap A: **selesai secara lokal dan terverifikasi pada 3 September 2026; belum di-deploy ke Preview atau Production**.
 
+Status implementasi Tahap B: **selesai di source lokal pada 6 September 2026 dan lulus build/smoke/cache proof; belum di-deploy ke Preview atau Production**. Keputusan FE-05 tetap berlaku: `notFound()` yang terjadi setelah PPR mulai streaming diterima menghasilkan HTTP `200` dengan `noindex`, sesuai kontrak Next.js, bukan status HTTP `404` non-streamed.
+
 Alasan keputusan bertahap:
 
 - Model route saat ini masih memakai banyak request-time API dan query cookie-bound untuk admin/auth.
@@ -355,8 +357,8 @@ Rollback tidak boleh mengubah schema, data, RLS, region Supabase, atau credentia
 Status saat ini:
 
 - Tahap A FE-01 sudah diterapkan secara lokal memakai scoped `unstable_cache`, public anon client, TTL 15 menit, domain tag, dan immediate invalidation untuk mutation blog/review.
-- Tahap B `cacheComponents` + `use cache` belum diterapkan dan tidak termasuk commit FE-10.
-- FE-10 hanya menyisakan Vercel Preview verification yang dirinci di `Optimization_FE_Context.md`. Setelah lulus, tidak ada pekerjaan UI/UX FE yang menjadi blocker arsitektur caching.
+- Tahap B `cacheComponents` + `use cache` sudah diterapkan di source lokal setelah commit FE-10, tetapi belum di-commit atau di-deploy ke Preview/Production.
+- FE-10 sudah dinyatakan aman untuk melanjutkan Tahap B setelah verifikasi visual lokal dengan data dummy. Smoke visual gabungan FE-10 dan Cache Components tetap wajib dijalankan pada Vercel Preview sebelum Production.
 
 ### 10.1 Bukti Tahap A yang wajib disimpan sebelum Tahap B
 
@@ -366,7 +368,7 @@ Status saat ini:
 4. Uji publish, edit, unpublish, dan delete blog serta publish/unpublish/delete review dengan record khusus pengujian; pastikan `updateTag` hanya berjalan setelah mutation berhasil dan output publik segera berubah.
 5. Buktikan perubahan services/team yang dilakukan di luar aplikasi mengikuti fallback TTL maksimum 15 menit. Jangan memutasi data Production hanya untuk pengujian tanpa record khusus, backup, approval, dan jadwal rollback.
 6. Periksa HTML/RSC/browser payload: draft, session, role, data admin, token, dan email review tidak boleh masuk cache publik.
-7. Uji missing slug serta operational failure terkontrol. Missing content harus tetap 404, sedangkan timeout/network/RLS error harus menuju error boundary dan tidak boleh tersimpan sebagai empty result atau cached 404.
+7. Uji missing slug serta operational failure terkontrol. Missing content harus tetap menjalankan semantik `notFound()` dan menghasilkan `noindex`; pada response PPR yang sudah streaming, status HTTP `200` diterima sesuai keputusan FE-05. Timeout/network/RLS error harus menuju error boundary dan tidak boleh tersimpan sebagai empty result atau cached not-found.
 8. Simpan baseline SEO untuk URL representatif pada bagian 7.3 dan pastikan status, canonical, robots, metadata, JSON-LD, H1, serta konten utama sama antara cold dan warm response.
 
 Jika Preview menggunakan database Production yang sama, pengujian mutation tidak boleh dijalankan tanpa record test yang terisolasi dan persetujuan eksplisit. Gunakan local/staging untuk failure injection dan destructive mutation; Preview terhadap Production cukup menjalankan read-only verification.
@@ -375,7 +377,7 @@ Jika Preview menggunakan database Production yang sama, pengujian mutation tidak
 
 Arsitektur caching V2 baru boleh ditandai selesai bila:
 
-- migration branch/deployment Preview terpisah mengaktifkan `cacheComponents` dan memigrasikan services, blog, team, lalu reviews secara bertahap;
+- satu commit atomik pada deployment Preview mengaktifkan `cacheComponents` dan memigrasikan services, blog, team, serta reviews bersama-sama sesuai keputusan pemilik project;
 - tidak ada `unstable_cache` yang tersisa dan seluruh public cache memakai `use cache`, `cacheLife`, serta `cacheTag` yang benar;
 - penanda `connection()` sementara Tahap A sudah dihapus atau ditempatkan ulang berdasarkan kebutuhan boundary Cache Components;
 - production build, public/admin/auth smoke test, cold/warm cache test, invalidation test, TTL fallback, failure classification, dan session-isolation test seluruhnya lulus;
@@ -384,3 +386,39 @@ Arsitektur caching V2 baru boleh ditandai selesai bila:
 - URL/ID Preview, tanggal, commit, hasil metrik sebelum/sesudah, hasil invalidasi, bukti SEO, dan keputusan rollout dicatat di dokumen ini serta `Optimization_FE_Context.md`.
 
 Sesudah Production Deployment, pantau error, cache freshness, Function duration, soft 404, canonical, dan Search Console sesuai bagian 7.4. Monitoring pascadeploy tidak menggantikan acceptance gate Preview.
+
+### 10.3 Implementasi lokal Tahap B — 6 September 2026
+
+Perubahan source:
+
+- `cacheComponents: true` diaktifkan pada `next.config.ts` tanpa upgrade Next.js dan tanpa mengaktifkan `use cache: remote`.
+- Seluruh loader publik services, blog, team, dan reviews dimigrasikan dari `unstable_cache` ke function-level `'use cache'`.
+- Setiap loader memakai `cacheLife({ stale: 300, revalidate: 900, expire: 86400 })` dan salah satu dari empat domain tag yang sudah dikunci.
+- Cache key manual Tahap A dihapus. Function ID, build ID, serta argumen serializable seperti `slug` dan `limit` sekarang menjadi cache key bawaan Next.js.
+- `connection()` sementara Tahap A dihapus dari homepage, About, Services, dan Blog list agar public data dapat masuk static shell.
+- Admin layout, Login, dan review-request tetap request-time melalui `connection()` di dalam Suspense boundary; session, token, query admin, draft, dan mutation tidak masuk shared cache.
+- Navbar/footer menyediakan static fallback karena active-route state memakai `usePathname()`. Link utama tetap tersedia pada static shell, lalu active state diisi saat runtime.
+- Tahun copyright dipindahkan dari `new Date()` di Client Component ke cached server helper. Contact Server Action ditempatkan di Suspense boundary dengan skeleton netral agar tidak memblokir static shell.
+- Semua import/pemakaian `unstable_cache`, `getPublicCacheKeyParts`, dan `PUBLIC_CACHE_REVALIDATE_SECONDS` sudah hilang dari source.
+
+Verifikasi lokal:
+
+- Targeted ESLint dan `tsc --noEmit` berhasil.
+- Production build Next.js 16.0.10 dengan Cache Components berhasil.
+- Manifest build menandai `/`, `/about`, `/blog`, dan `/services` sebagai static dengan revalidate 15 menit/expire 1 hari; dynamic public slug dan route admin/auth menjadi Partial Prerender atau dynamic sesuai kebutuhan.
+- Smoke test production lokal menghasilkan HTTP `200` untuk seluruh route publik valid dan `307` dari `/admin` ke Login ketika tidak memiliki session.
+- Dua request berturut-turut ke satu detail blog yang belum pernah diminta hanya menghasilkan satu query detail `blog_posts` pada `pg_stat_statements`, membuktikan cold miss lalu cache reuse. Variasi list homepage dan Blog tetap menampilkan jumlah data masing-masing tanpa cache-key collision.
+- Uji mutation melalui UI admin lokal berhasil untuk blog dan review. Perubahan judul blog serta publish state review langsung terlihat pada output publik setelah `updateTag()`, kemudian kedua record dikembalikan ke nilai semula dan pemulihannya juga langsung terlihat tanpa menunggu TTL.
+- HTML publik tetap memuat konten server-rendered, title/canonical yang diuji, dan data dummy FE-10. Public review query tetap hanya memilih `id`, `name`, `message`, dan `created_at`.
+
+Temuan status missing:
+
+- Missing blog/category/service menjalankan `notFound()` dan menghasilkan not-found UI serta `<meta name="robots" content="noindex">`.
+- Karena dynamic route memakai loading/PPR, header sudah dikirim saat `notFound()` selesai sehingga respons browser adalah HTTP `200`. Next.js mendokumentasikan perilaku ini untuk streamed responses.
+- Percobaan memblokir streaming metadata dengan `htmlLimitedBots: /.*/` tidak mengubah status dan telah dibatalkan karena hanya menambah risiko TTFB.
+- Memaksa HTTP `404` memerlukan pemeriksaan existence sebelum streaming, misalnya query tambahan pada Proxy atau menghilangkan streaming/loading route dinamis. Keduanya menambah latency atau mengurangi UX, sehingga tidak dipilih dan keputusan FE-05 untuk menerima streamed `200 + noindex` dipertahankan.
+
+Exit gate yang masih terbuka:
+
+1. Deploy satu commit atomik ke Vercel Preview dan jalankan read-only cold/warm test terhadap database Production.
+2. Verifikasi Function tetap di `sin1`, cache reuse benar-benar terjadi pada Vercel, tidak ada session leakage, dan output SEO/visual sama dengan baseline.
