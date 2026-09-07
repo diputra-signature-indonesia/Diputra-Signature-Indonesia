@@ -1718,3 +1718,59 @@ Sebelum migration rename diterapkan ke Production:
 2. Terapkan migration pada maintenance window singkat. Rename merupakan perubahan metadata, tetapi tetap membutuhkan lock tabel selama statement berjalan.
 3. Verifikasi PostgREST/schema cache menampilkan `answer`, data lama tetap utuh, dan log tidak menunjukkan query ke `anwer`.
 4. Jangan mengisi atau mengalihkan frontend ke tabel sampai CMS, policy mutation, cache invalidation, dan migration konten siap sebagai cutover terpisah.
+
+## Progress DB-F — Query performance dan keputusan index (7 September 2026)
+
+Status: **profiling read-only lokal dan Production selesai; tidak ada index baru yang dibenarkan oleh bukti saat ini**.
+
+### Keputusan final pemilik project
+
+1. Seluruh kandidat index dinilai berdasarkan pola query, distribusi row, `EXPLAIN`, dan statistik Production; keberadaan kandidat di audit awal bukan alasan otomatis untuk membuat index.
+2. Pengukuran Production dilakukan secara read-only dan tidak mengaktifkan extension, membuat index, atau mengubah data.
+3. Blog dan review tetap menjadi kandidat pertama untuk diperiksa ulang apabila volume data serta latensinya bertambah.
+4. Index tabel layanan yang sudah digunakan di Production dipertahankan. Tidak ada perubahan atau index tambahan pada `services_categories`, `services_items`, `services_item_details`, maupun `team_members` selama query aktual tetap cepat dan planner tidak membuktikan kebutuhan baru.
+5. Index baru hanya boleh diterapkan bila before/after plan membuktikan index digunakan dan memberi penurunan cost atau latency yang berarti tanpa menduplikasi index yang ada.
+6. Strategi rollout seperti `CREATE INDEX CONCURRENTLY` baru diputuskan ketika benar-benar ada index yang disetujui; tidak ada migration kosong atau spekulatif pada paket ini.
+
+### Bukti lokal
+
+Dataset Docker lokal saat pengukuran berukuran kecil: 9 blog, 6 review, 5 kategori layanan, 23 item layanan, 8 detail layanan, dan 6 anggota tim. Pada ukuran ini PostgreSQL wajar memilih sequential scan untuk beberapa tabel karena biayanya lebih murah daripada membaca index dan heap secara terpisah.
+
+Hasil `EXPLAIN (ANALYZE, BUFFERS)` lokal:
+
+- daftar blog published memakai sequential scan + sort dan selesai sekitar 0,094 ms;
+- daftar review published memakai sequential scan + sort dan selesai sekitar 0,032 ms;
+- kategori layanan memakai sequential scan + sort dan selesai sekitar 0,031 ms;
+- item layanan berdasarkan kategori memakai index unique yang sudah ada, `services_items_category_slug_unique`, dan selesai sekitar 0,086 ms;
+- detail layanan memakai index `services_item_details_unique_order` yang sudah ada dan selesai sekitar 0,446 ms pada pembacaan dingin lokal;
+- anggota tim memakai sequential scan + sort dan selesai sekitar 0,022 ms.
+
+`supabase inspect db table-stats --local` dan `index-stats --local` mengonfirmasi tabel hanya berukuran puluhan kilobyte serta index relasi/order utama pada item dan detail layanan sudah tersedia. Karena data lokal belum representatif untuk pertumbuhan jangka panjang, hasil ini dipakai untuk menolak penambahan index sekarang, bukan untuk menyimpulkan bahwa index tidak akan pernah diperlukan.
+
+### Bukti Production read-only
+
+Dashboard Query Performance Supabase menunjukkan cache hit database sekitar 99,99%. Statistik query aplikasi yang relevan pada akumulasi `pg_stat_statements` yang tampil:
+
+- query daftar blog published: 9.654 call, mean sekitar 2 ms, maksimum 31 ms, cache hit 99,99%;
+- query kategori layanan published: 9.771 call, mean sekitar 2 ms, maksimum 29 ms, cache hit 100%;
+- query review published oleh anon: 7.115 call, mean sekitar 1 ms, maksimum 18 ms, cache hit 100%;
+- query item layanan berdasarkan kategori: 1.523 call, mean sekitar 1 ms, maksimum 24 ms, cache hit 99,98%;
+- query resolved item layanan dan kategorinya: 1.004 call, mean sekitar 1 ms, maksimum 5 ms, cache hit 100%.
+
+Resource database juga tidak menunjukkan tekanan: CPU sekitar 2%, disk I/O sekitar 1%, memory sekitar 46%, disk sekitar 3%, dan peak connection 8 dari 60 pada panel yang diperiksa. Angka ini adalah snapshot observability, bukan SLA permanen, tetapi cukup kuat untuk menunjukkan bahwa query publik yang diaudit bukan bottleneck Production saat ini.
+
+Index Advisor belum aktif pada project Production dan **tidak diaktifkan** selama audit karena aktivasi extension merupakan perubahan state. Data latency dan cache hit yang tersedia sudah cukup untuk mengambil keputusan no-change tanpa memperluas scope atau risiko Production.
+
+### Hasil dan batas keputusan
+
+DB-05 ditutup untuk kondisi dataset dan traffic saat ini sebagai **no schema change required**. Ini merupakan hasil implementasi berbasis bukti: mempertahankan index yang ada adalah pilihan yang lebih aman daripada menambah write overhead, ukuran storage, dan risiko lock untuk query yang rata-rata sudah berada pada kisaran 1–2 ms.
+
+Audit DB-F perlu dibuka kembali bila salah satu kondisi berikut terjadi:
+
+- volume blog, review, layanan, atau anggota tim bertambah secara material;
+- mean/p95 query meningkat secara konsisten atau query aplikasi mulai muncul sebagai kontributor utama database time;
+- `EXPLAIN (ANALYZE, BUFFERS)` pada data representatif menunjukkan sequential scan mahal, sort besar, atau buffer read tinggi;
+- perubahan CMS menghasilkan filter/order baru yang tidak ditopang index saat ini;
+- cache hit menurun atau load database meningkat tanpa penyebab lain yang lebih dominan.
+
+Saat audit dibuka kembali, urutannya tetap: rekam baseline → uji kandidat secara lokal pada data representatif → bandingkan before/after plan → periksa duplicate index dan write overhead → pilih rollout Production. Sampai trigger tersebut muncul, tidak ada migration DB-F yang perlu dibuat.
