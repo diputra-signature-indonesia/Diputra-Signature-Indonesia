@@ -157,7 +157,14 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
           const userReplaced = !!featuredImage?.publicUrl && !!initialCoverPath?.publicUrl && featuredImage.publicUrl !== initialCoverPath.publicUrl;
 
           if (userRemovedInitial || userReplaced) {
-            await deleteImage(initialCoverPath.path);
+            try {
+              await deleteImage(initialCoverPath.path);
+            } catch (error) {
+              // The blog update has already succeeded. A staff member may not
+              // own this legacy object, so leave cleanup to an admin instead
+              // of reporting the completed update as failed.
+              console.error('Failed deleting previous cover after update:', error);
+            }
           }
         }
       } catch (err) {

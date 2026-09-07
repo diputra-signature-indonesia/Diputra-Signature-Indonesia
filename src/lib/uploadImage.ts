@@ -1,24 +1,25 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { BLOG_IMAGE_BUCKET, BLOG_IMAGE_CACHE_CONTROL, BLOG_IMAGE_COVER_FOLDER, BLOG_IMAGE_EDITOR_FOLDER, createBlogImagePath } from '@/lib/blog-image-storage';
 
-export async function uploadEditorImage(file: File) {
+async function uploadBlogImage(file: File, folder: typeof BLOG_IMAGE_EDITOR_FOLDER | typeof BLOG_IMAGE_COVER_FOLDER) {
   const supabase = createSupabaseBrowserClient();
+  const path = createBlogImagePath(folder, file);
 
-  const ext = file.name.split('.').pop();
-  const fileName = `${crypto.randomUUID()}.${ext}`;
-  const path = `blog/${fileName}`;
-
-  const { error } = await supabase.storage
-    .from('images') // pastikan bucket ini ada
-    .upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-    });
+  const { error } = await supabase.storage.from(BLOG_IMAGE_BUCKET).upload(path, file, {
+    cacheControl: BLOG_IMAGE_CACHE_CONTROL,
+    contentType: file.type,
+    upsert: false,
+  });
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from('images').getPublicUrl(path);
+  const { data } = supabase.storage.from(BLOG_IMAGE_BUCKET).getPublicUrl(path);
 
   return { publicUrl: data.publicUrl, path };
+}
+
+export async function uploadEditorImage(file: File) {
+  return uploadBlogImage(file, BLOG_IMAGE_EDITOR_FOLDER);
 }
 
 export function extractImageSrcs(html: string): string[] {
@@ -28,7 +29,7 @@ export function extractImageSrcs(html: string): string[] {
     .filter(Boolean) as string[];
 }
 
-export function publicUrlToPath(publicUrl: string, bucketName = 'images'): string | null {
+export function publicUrlToPath(publicUrl: string, bucketName = BLOG_IMAGE_BUCKET): string | null {
   const marker = `/storage/v1/object/public/${bucketName}/`;
   const idx = publicUrl.indexOf(marker);
   if (idx === -1) return null;
@@ -42,7 +43,7 @@ export async function cleanupUnusedImages(contentHtml: string, uploadedPaths: st
 
   const usedSrcs = extractImageSrcs(contentHtml);
 
-  const usedPathsArr = usedSrcs.map((src) => publicUrlToPath(src, 'images')).filter(Boolean) as string[];
+  const usedPathsArr = usedSrcs.map((src) => publicUrlToPath(src, BLOG_IMAGE_BUCKET)).filter(Boolean) as string[];
 
   if (usedSrcs.length > 0 && usedPathsArr.length === 0) {
     console.warn('cleanupUnusedImages skipped: could not map img src to storage paths');
@@ -52,36 +53,20 @@ export async function cleanupUnusedImages(contentHtml: string, uploadedPaths: st
   const usedPaths = new Set(usedPathsArr);
 
   const unused = uploadedPaths.filter((p) => !usedPaths.has(p));
-  console.warn(uploadedPaths);
-  console.warn(unused);
   if (unused.length === 0) return;
 
-  const { error } = await supabase.storage.from('images').remove(unused);
+  const { error } = await supabase.storage.from(BLOG_IMAGE_BUCKET).remove(unused);
   if (error) throw error;
 }
 
 // blog cover images
 export async function uploadCoverImage(file: File) {
-  const supabase = createSupabaseBrowserClient();
-
-  const ext = file.name.split('.').pop() ?? 'jpg';
-  const fileName = `${crypto.randomUUID()}.${ext}`;
-  const path = `blog_cover/${fileName}`; // folder cover
-
-  const { error } = await supabase.storage.from('images').upload(path, file, {
-    cacheControl: '3600',
-    upsert: false,
-  });
-
-  if (error) throw error;
-
-  const { data } = supabase.storage.from('images').getPublicUrl(path);
-  return { publicUrl: data.publicUrl, path };
+  return uploadBlogImage(file, BLOG_IMAGE_COVER_FOLDER);
 }
 
 // Cover Image Delete
 export async function deleteImage(path: string) {
   const supabase = createSupabaseBrowserClient();
-  const { error } = await supabase.storage.from('images').remove([path]);
+  const { error } = await supabase.storage.from(BLOG_IMAGE_BUCKET).remove([path]);
   if (error) throw error;
 }

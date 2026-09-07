@@ -2,13 +2,13 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import FontFamily from '@tiptap/extension-font-family';
 import { ImageWithSize } from '@/lib/tiptap-image-resizable';
 
+import { BLOG_IMAGE_ACCEPT } from '@/lib/blog-image-storage';
 import { uploadEditorImage } from '@/lib/uploadImage';
 
 import {
@@ -121,21 +121,26 @@ export default function TiptapEditor({ initialContent = '', onChange, onImageUpl
     if (!editor) return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = BLOG_IMAGE_ACCEPT;
 
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
 
-      const { publicUrl, path } = await uploadEditorImage(file);
-      editor
-        .chain()
-        .focus()
-        .setImage({ src: publicUrl })
-        .createParagraphNear() // ⬅️ INI
-        .run();
+      try {
+        const { publicUrl, path } = await uploadEditorImage(file);
+        editor
+          .chain()
+          .focus()
+          .setImage({ src: publicUrl })
+          .createParagraphNear() // ⬅️ INI
+          .run();
 
-      onImageUploaded?.(path);
+        onImageUploaded?.(path);
+      } catch (error) {
+        console.error('Editor image upload failed:', error);
+        alert(error instanceof Error ? error.message : 'Image upload failed. Check storage policy / login status.');
+      }
     };
 
     input.click();

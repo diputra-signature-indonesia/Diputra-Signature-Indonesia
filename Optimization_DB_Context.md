@@ -151,7 +151,7 @@ Keputusan bersama yang perlu diberikan:
 Rekomendasi paket:
 
 - public read tetap dipertahankan untuk asset blog;
-- write/delete hanya untuk staff aktif yang mengelola blog;
+- upload hanya untuk staff aktif; overwrite dinonaktifkan; cleanup staff dibatasi pada object miliknya sendiri yang belum direferensikan blog, sedangkan admin dapat menghapus seluruh media blog;
 - pertahankan UUID + `upsert: false` dan gunakan URL baru saat mengganti file;
 - gunakan TTL panjang untuk upload baru setelah policy dan delete flow lulus.
 
@@ -365,7 +365,8 @@ Solusi yang direkomendasikan:
 
 - buat bucket melalui migration/config yang idempotent;
 - pertahankan public read hanya jika asset memang public;
-- batasi insert/update/delete ke capability staff aktif yang sudah ditentukan DB-02;
+- batasi insert ke staff aktif dan hapus seluruh policy update/overwrite;
+- izinkan staff membersihkan object miliknya sendiri hanya ketika path tersebut belum direferensikan blog; admin/super_admin dapat menghapus seluruh media blog;
 - gunakan path allowlist `blog/` dan `blog_cover/` dengan pemeriksaan yang konsisten;
 - validasi MIME serta ukuran di aplikasi dan konfigurasi bucket; extension file tidak boleh menjadi satu-satunya validasi;
 - uji orphan cleanup dan larang overwrite karena filename menggunakan UUID + `upsert: false`.
@@ -376,7 +377,7 @@ Keputusan yang perlu dikunci:
 2. Batas ukuran dan MIME yang diperbolehkan.
 3. Apakah bucket tetap public atau asset perlu signed URL.
 
-Rekomendasi awal: bucket tetap public untuk asset blog, sedangkan seluruh write/delete hanya untuk staff aktif yang memang mengelola blog.
+Rekomendasi awal: bucket tetap public untuk asset blog; active staff dapat upload dan membersihkan object draft miliknya yang belum direferensikan, sedangkan delete media aktif/legacy dibatasi kepada admin/super_admin.
 
 ### DB-15 — OAuth callback `next` tanpa allowlist
 
@@ -1358,3 +1359,280 @@ Build masih menampilkan warning lama `baseline-browser-mapping` dan deprecation 
 - deploy source yang kompatibel, lalu apply migration dalam rollout terkoordinasi;
 - ulangi review flow anonymous dan authenticated, publish/unpublish admin, role denial, cache freshness, serta monitoring error setelah apply;
 - Production hanya boleh diubah setelah approval eksplisit.
+
+## Progress DB-C — Storage lifecycle (6 September 2026)
+
+Status: **forward migration, source, pgTAP, dan Storage HTTP test selesai serta terverifikasi pada Supabase Docker lokal; belum di-commit, belum di-Preview, dan Production tidak disentuh**.
+
+Paket ini mencakup DB-03 dan DB-14. DB-03 harus diselesaikan lebih dahulu karena TTL panjang hanya aman setelah bucket, policy, path, serta replacement contract benar-benar immutable.
+
+### Bukti kondisi awal lokal dan source
+
+- Supabase Docker lokal tidak memiliki row bucket sama sekali, termasuk bucket `images`;
+- enam policy `storage.objects` dari baseline tetap terpasang walaupun bucket tidak ada;
+- seluruh user `authenticated` saat ini dapat insert dan delete pada `blog/` atau `blog_cover/` tanpa pemeriksaan role maupun `is_active`;
+- policy update lama tidak konsisten: source dibatasi ke `blog/`, sedangkan target dapat berpindah ke `blog/` atau `blog_cover/`;
+- local Storage belum mempunyai object, sehingga belum ada fixture yang dapat membuktikan upload/render/delete end-to-end;
+- source melakukan upload langsung dari browser memakai session user ke bucket `images`;
+- inline image memakai folder `blog/`, sedangkan cover memakai `blog_cover/`;
+- nama baru memakai `crypto.randomUUID()` dan upload memakai `upsert: false`, sehingga replacement secara normal sudah menghasilkan URL baru;
+- extension filename masih diturunkan dari nama file dan picker memakai `image/*`; belum ada validasi ukuran atau allowlist MIME pada source;
+- semua upload baru masih memakai `cacheControl: '3600'`;
+- staff dapat membuat/mengedit draft dan pending blog, sementara form juga memanggil delete untuk membatalkan upload draft, mengganti cover, serta membersihkan inline image yang tidak dipakai;
+- melarang seluruh delete untuk staff tanpa penyesuaian akan meninggalkan orphan object dan pada sebagian flow dapat menampilkan kegagalan walaupun update blog sudah berhasil;
+- pemilik project mengonfirmasi Production mempunyai bucket `images` dengan folder `blog/` dan `blog_cover/`, serta bucket foto anggota bernama `team_profile`;
+- nama `team_profile` tersebut sesuai dengan URL pada `seed.sql`. DB-C tidak akan membuat, rename, mengubah policy, atau menghapus bucket foto tim.
+
+### Rancangan bucket dan upload yang direkomendasikan
+
+1. Buat bucket `images` secara idempotent melalui forward migration.
+2. Pertahankan `public = true` karena object adalah media blog publik, dipakai melalui `getPublicUrl`, Next Image, metadata, dan halaman yang harus dapat dibaca tanpa session.
+3. Tetapkan batas bucket 5 MiB per file.
+4. Izinkan hanya `image/jpeg`, `image/png`, dan `image/webp`; SVG, GIF, video, serta tipe lain ditolak.
+5. Terapkan validasi MIME dan ukuran yang sama di client sebelum upload agar user memperoleh error cepat; bucket tetap menjadi enforcement yang tidak dapat dilewati client.
+6. Turunkan extension output dari MIME yang sudah diizinkan, bukan dari nama asli file.
+7. Insert hanya untuk active `staff`, `admin`, atau `super_admin` melalui helper DB-A.
+8. Path upload baru harus tepat satu folder dan satu UUID filename: `blog/<uuid>.<ext>` atau `blog_cover/<uuid>.<ext>`.
+9. Drop seluruh policy `UPDATE`; replacement harus selalu upload URL baru dengan `upsert: false`.
+10. Public download berasal dari flag public bucket; broad `SELECT` policy untuk `anon` tidak diperlukan dan harus dihapus agar endpoint list metadata tidak terbuka. Tambahkan `SELECT` terbatas bagi role/object yang memerlukan operasi delete karena Storage `remove()` membutuhkan `SELECT` dan `DELETE`.
+
+### Keputusan delete dan cleanup staff
+
+DB-A sebelumnya menetapkan bahwa staff tidak boleh melakukan delete media aktif. Source saat ini tetap memerlukan cleanup object draft. Pilihannya:
+
+- **Opsi A — Staff hanya dapat menghapus object miliknya sendiri yang belum direferensikan blog; admin/super_admin dapat menghapus semua media blog (direkomendasikan).** Policy memeriksa active staff, `owner_id`, folder, dan tidak adanya path pada `featured_image`, `og_image`, maupun `content_md`. Ini mempertahankan cleanup draft tanpa memberi staff hak menghapus media yang sedang dipakai.
+- **Opsi B — Hanya admin/super_admin yang dapat delete.** Paling sederhana dan paling ketat, tetapi cancel/replace oleh staff meninggalkan orphan serta membutuhkan cleanup admin/otomatis.
+- **Opsi C — Staff dapat menghapus semua object miliknya tanpa pemeriksaan referensi.** UX mudah, tetapi staff dapat menghapus gambar miliknya setelah blog dipublikasikan; tidak direkomendasikan.
+
+Jika Opsi A dipilih, capability matrix DB-A diperjelas menjadi: staff tetap tidak dapat menghapus media aktif, tetapi memperoleh capability cleanup terbatas untuk artifact draft miliknya sendiri. Object lama dengan `owner_id` kosong atau milik user lain hanya dapat dihapus admin/super_admin.
+
+Pemeriksaan “belum direferensikan” menggunakan marker path `/storage/v1/object/public/images/<object-name>` pada `featured_image`, `og_image`, dan `content_md`. Ini cukup untuk URL yang dibuat source sekarang, tetapi bukan pengganti relasi media formal. Bila lifecycle asset kelak menjadi lebih kompleks, tabel manifest/reference media menjadi rancangan lanjutan yang lebih kuat.
+
+### DB-14 — Cache immutable asset
+
+Pilihan TTL upload baru:
+
+- **Opsi A — 31.536.000 detik / satu tahun (direkomendasikan).** Cocok dengan UUID path, `upsert: false`, dan replacement memakai URL baru.
+- **Opsi B — 2.592.000 detik / 30 hari.** Lebih konservatif, tetapi browser lebih sering melakukan revalidation.
+- **Opsi C — tetap 3.600 detik / satu jam.** Risiko stale paling kecil bila kontrak overwrite dilanggar, tetapi tidak mengambil manfaat immutable URL.
+
+Rekomendasi Opsi A hanya berlaku untuk upload baru. Metadata object Production lama tidak diubah massal dalam DB-C; perubahan tersebut perlu audit object dan operasi melalui Storage API secara terpisah.
+
+Penghapusan object yang sudah pernah diakses tidak menjamin salinan browser langsung hilang. Karena itu correctness berasal dari URL baru saat replacement, bukan dari asumsi bahwa cache URL lama dapat dipurge dari semua browser.
+
+### Penyesuaian source tanpa perubahan desain
+
+- sentralisasi konstanta bucket, folder, MIME, 5 MiB, dan cache-control;
+- ubah kedua picker menjadi `image/png,image/jpeg,image/webp`;
+- validasi MIME/ukuran sebelum network request;
+- gunakan extension hasil mapping MIME;
+- pertahankan UUID dan `upsert: false`;
+- hapus log debug array path dari cleanup;
+- pertahankan tampilan form; perubahan hanya pada error input dan perilaku Storage;
+- tambahkan allowlist Next Image untuk `127.0.0.1:54321` dan `localhost:54321` hanya pada development agar upload lokal dapat dipreview tanpa memperluas allowlist Production.
+
+### Keputusan yang dikunci sebelum implementasi
+
+1. **Access model bucket:** bucket `images` tetap public.
+2. **Batas upload:** maksimum 5 MiB serta hanya JPEG, PNG, dan WebP.
+3. **Upload:** hanya active staff/admin/super_admin dengan path UUID pada `blog/` atau `blog_cover/`.
+4. **Overwrite:** seluruh policy UPDATE dihapus dan replacement selalu memakai URL baru.
+5. **Delete staff:** Opsi A — staff hanya dapat menghapus object miliknya sendiri yang belum direferensikan blog; admin/super_admin dapat menghapus seluruh media blog.
+6. **Cache TTL:** satu tahun (`31536000`) hanya untuk upload baru.
+7. **Existing Production object:** tidak ada bulk metadata update pada paket DB-C.
+8. **Local preview:** host Storage lokal diizinkan oleh Next Image hanya pada development.
+
+Tidak ada keputusan desain DB-C yang masih terbuka. Audit read-only bucket/object Production tetap menjadi deployment gate agar konfigurasi idempotent dan policy baru kompatibel dengan object existing.
+
+### Urutan implementasi setelah keputusan
+
+1. Audit read-only bucket `images` Production: public flag, limit, MIME, jumlah object, folder, ownership, ukuran, dan nama legacy tanpa mengambil atau menampilkan konten privat.
+2. Buat forward migration DB-C; jangan mengubah baseline.
+3. Bootstrap/update konfigurasi bucket secara idempotent.
+4. Drop enam policy lama; gunakan public bucket untuk serving, lalu buat policy active-staff insert, no-update, limited select/delete untuk cleanup staff, serta limited select/delete admin sesuai keputusan.
+5. Perbarui validasi/path/cache-control source dan development-only Next Image allowlist.
+6. Tambahkan pgTAP untuk konfigurasi bucket, policy matrix, path, role aktif/nonaktif, ownership, referenced/unreferenced delete, dan ketiadaan update grant.
+7. Jalankan Storage API integration test lokal untuk upload valid, MIME/ukuran invalid, overwrite, public GET header, dan delete flow; object test harus dibersihkan melalui Storage API, bukan direct delete metadata.
+8. Jalankan typecheck, ESLint, build, dan smoke test form blog.
+9. Verifikasi manual create/edit/cancel/replace inline image serta cover sebagai staff dan admin.
+10. Review audit Production dan rollback plan sebelum meminta approval deployment terpisah.
+
+### Acceptance criteria DB-C
+
+- fresh local environment mempunyai bucket `images` tanpa setup Dashboard manual;
+- public dapat membaca media, tetapi anon/authenticated non-staff tidak dapat upload, update, atau delete;
+- akun nonaktif kehilangan seluruh capability Storage;
+- active staff hanya dapat upload path valid dan melakukan cleanup yang disetujui;
+- admin/super_admin dapat menjalankan delete flow blog;
+- MIME, ukuran, folder, filename UUID, dan no-overwrite ditegakkan;
+- upload baru memberikan browser cache-control sesuai TTL keputusan;
+- replacement selalu menghasilkan URL baru;
+- test tidak meninggalkan object atau metadata yatim;
+- Production tidak berubah tanpa approval eksplisit.
+
+### Implementasi lokal DB-C
+
+Forward migration:
+
+- `supabase/migrations/20260906190000_harden_blog_image_storage.sql`.
+
+Perubahan database:
+
+- membuat atau memperbarui bucket `images` secara idempotent sebagai public bucket;
+- menetapkan batas 5 MiB dan allowlist `image/jpeg`, `image/png`, serta `image/webp`;
+- menghapus enam policy Storage baseline yang terlalu luas;
+- membatasi insert kepada active staff/admin/super_admin, `owner_id` dari session, dua folder blog, UUID filename, dan extension yang diizinkan;
+- tidak membuat policy `UPDATE`, sehingga overwrite dan perpindahan path ditolak;
+- membatasi metadata `SELECT` staff kepada object miliknya sendiri dan memberi admin akses pada seluruh media dalam dua folder blog;
+- mengizinkan staff menghapus object miliknya hanya bila tidak direferensikan `featured_image`, `og_image`, atau `content_md`;
+- mengizinkan admin/super_admin menghapus media blog, termasuk object legacy yang namanya bukan UUID;
+- tidak membuat atau mengubah bucket `team_profile` dan tidak memodifikasi object Production lama.
+
+Perubahan source:
+
+- konstanta bucket, folder, MIME, 5 MiB, dan TTL satu tahun disentralisasi dalam `src/lib/blog-image-storage.ts`;
+- extension file sekarang berasal dari MIME yang diizinkan, bukan nama file dari user;
+- upload editor dan cover memakai UUID, `contentType` eksplisit, `cacheControl: '31536000'`, dan `upsert: false`;
+- picker cover dan Tiptap hanya menawarkan JPEG, PNG, dan WebP serta menampilkan error validasi sebelum request;
+- cleanup tidak lagi mencetak array path ke console;
+- kegagalan cleanup cover lama setelah update blog tidak lagi membuat UI melaporkan bahwa update database yang sudah sukses sebagai gagal;
+- Next Image mengizinkan `127.0.0.1:54321` dan `localhost:54321` hanya ketika `NODE_ENV=development`; allowlist Production tetap hanya memuat host Supabase Production.
+
+Automated test:
+
+- `supabase/tests/database/db_c_storage_lifecycle.test.sql` menambah 29 assertion policy/configuration;
+- `supabase/tests/storage/db_c_storage_http.mjs` menguji Storage service secara end-to-end memakai user dan object lokal sementara;
+- seluruh fixture HTTP dibersihkan: tidak ada user `db-c-http-*` dan tidak ada object test dalam bucket `images` setelah test.
+
+Hasil verifikasi:
+
+- `npx supabase migration up --local`: **PASS**, migration `20260906190000` tercatat lokal;
+- `npx supabase test db --local`: **PASS**, 3 file dan 107 assertion gabungan DB-A/DB-B/DB-C;
+- Storage HTTP: **PASS** untuk upload PNG, penolakan overwrite, penolakan MIME invalid, penolakan file di atas 5 MiB, public GET, header `max-age=31536000`, dan cleanup staff;
+- `npx supabase db lint --local --level warning`: **PASS**, tanpa schema error;
+- `npx supabase db diff --local --schema public,storage`: **PASS**, tidak ada schema drift;
+- `npx tsc --noEmit`: **PASS**;
+- ESLint source DB-C selain baseline `blog-form.tsx`: **PASS** tanpa error; pemeriksaan penuh `blog-form.tsx` masih menemukan satu error `react-hooks/set-state-in-effect` dan dua warning lama pada baris yang tidak diubah DB-C;
+- `npm run build`: **PASS**.
+
+### Gate yang masih tersisa sebelum rollout Production
+
+1. Uji manual create/edit/cancel/replace untuk inline image dan cover melalui UI lokal sebagai staff dan admin. Atas keputusan pemilik project, pengujian ini ditunda sampai remake admin agar tidak menguji UI yang segera diganti; gate tetap wajib sebelum rollout Production.
+2. Audit read-only bucket `images` Production: konfigurasi, policy, ownership object lama, pola nama legacy, dan object yang masih direferensikan.
+3. Siapkan snapshot/rollback policy Production dan rollout source + migration yang terkoordinasi.
+4. Deploy ke Preview dan ulangi smoke test admin/Storage sebelum meminta approval apply migration Production.
+
+DB-C secara implementasi lokal selesai. Paket belum dianggap selesai di Production sampai empat deployment gate tersebut dilalui dan pemilik project memberi persetujuan eksplisit.
+
+## Progress DB-D — Analisis public entry-point security (6 September 2026)
+
+Status: **audit source dan rancangan selesai; seluruh keputusan pemilik project sudah dikunci pada 7 September 2026; belum ada source/migration DB-D yang diubah dan Production tidak disentuh**.
+
+Paket ini mencakup DB-15 dan DB-13. DB-15 terisolasi pada OAuth callback, sedangkan DB-13 membutuhkan source pengganti yang sudah aktif sebelum direct anon insert ditutup agar form contact Production tidak mengalami downtime.
+
+### Bukti kondisi source dan database
+
+- OAuth callback membaca `next` dari query string dan memberikannya ke `new URL(next, url.origin)` tanpa pembatasan origin/path;
+- pencarian repository tidak menemukan caller yang mengirim parameter `next`; login Google saat ini selalu kembali ke `/auth/callback` lalu menuju `/admin`;
+- contact form memakai Server Action `submitContact` dan seluruh field `name`, `phone`, `email`, serta `message` wajib diisi;
+- Server Action menggunakan cookie-aware anon Supabase client; pengunjung publik karena itu menulis sebagai role `anon`;
+- policy `contact_messages_insert_public` memakai `WITH CHECK (true)` dan grant `INSERT` baseline masih tersedia bagi `anon` serta `authenticated`;
+- siapa pun yang mengetahui URL project dan publishable/anon key dapat melewati form, Server Action, serta validasi UI untuk menulis langsung ke REST API;
+- validasi server sekarang hanya memeriksa field tidak kosong; belum ada batas panjang, format email/telepon, anti-bot token, maupun rate limit;
+- email dikirim best-effort setelah row database tersimpan. Kegagalan email tidak membatalkan penyimpanan contact;
+- payload contact mengandung PII. Log Production tidak boleh memuat isi form, token Turnstile, secret Supabase, atau alamat IP mentah.
+
+### DB-15 — Rancangan redirect OAuth
+
+Pilihan:
+
+- **Opsi A — abaikan/hapus parameter `next` dan selalu redirect sukses ke `/admin` (direkomendasikan).** Tidak ada caller `next` di repository, sehingga opsi ini menutup permukaan open redirect tanpa menghilangkan flow aktif.
+- **Opsi B — pertahankan deep-link internal.** Gunakan helper yang hanya menerima satu leading slash, menolak `//`, protocol/host, backslash, control character, dan target dengan origin berbeda; batasi route kepada `/admin` serta turunannya dan fallback ke `/admin`.
+
+Kedua opsi mempertahankan redirect error menuju `/login`. Opsi A paling kecil dan aman untuk kebutuhan saat ini; Opsi B baru diperlukan bila login kelak harus kembali ke halaman admin tertentu.
+
+### DB-13 — Jalur contact yang direkomendasikan
+
+1. Pertahankan Server Action dan tampilan form yang ada.
+2. Tambahkan Cloudflare Turnstile **Managed** dengan `appearance: interaction-only`, action `contact_submit`, dan hidden response field. Widget hanya muncul bila interaksi dibutuhkan.
+3. Wajibkan verifikasi Siteverify di server sebelum database maupun email dipanggil. Token harus sukses, belum pernah dipakai, belum kedaluwarsa, action benar, dan hostname sesuai environment.
+4. Gunakan Supabase Secret key baru (`sb_secret_...`) melalui client `server-only` khusus; jangan gunakan SSR client berbasis cookie dan jangan memakai nama environment `NEXT_PUBLIC_*`.
+5. Normalisasi dan validasi seluruh field di server sebelum insert. Database menambahkan constraint yang sama sebagai enforcement kedua.
+6. Setelah source pengganti lulus Preview, drop policy `contact_messages_insert_public` serta revoke `INSERT` dari `anon` dan `authenticated`. Staff tetap hanya membaca/mengubah status; admin/super_admin tetap dapat delete.
+7. Terapkan Vercel WAF rate limit langsung pada Server Action `submitContact`, dihitung per IP. Gunakan mode `Log` dahulu, lalu ubah menjadi respons 429 setelah rule terbukti hanya menangkap submit contact.
+8. Pertahankan database sebagai source of truth: email tetap best-effort setelah insert berhasil. Error email dicatat tanpa payload PII.
+
+Rekomendasi ini tidak memerlukan Route Handler baru dan tidak mengubah layout form. Turnstile dapat tidak terlihat bagi traffic normal, tetapi user berisiko dapat melihat challenge sebagai bagian dari proteksi.
+
+### Opsi rate limiting
+
+- **Opsi A — Vercel WAF, 5 request per 10 menit per IP (direkomendasikan).** Vercel saat ini mendukung pencocokan berdasarkan nama Server Action pada Next.js 15.5+ dan fixed-window rate limiting pada Hobby. Hobby mempunyai satu rate-limit rule per project, sehingga slot tersebut perlu dialokasikan untuk contact.
+- **Opsi B — tabel/routine rate limit di Supabase.** Konsisten lintas instance, tetapi menambah penyimpanan fingerprint, cleanup, concurrency logic, dan surface migration.
+- **Opsi C — provider Redis eksternal.** Fleksibel, tetapi menambah service, credential, dependency, biaya, dan operational ownership baru.
+
+WAF adalah lapisan pengurangan beban; Turnstile dan penutupan direct anon insert tetap dibutuhkan. Jalankan rule sebagai `Log` selama observasi awal agar NAT/shared IP pengguna sah tidak langsung terblokir.
+
+### Batas input yang direkomendasikan
+
+- `name`: wajib, 2–100 karakter setelah trim;
+- `email`: wajib, maksimum 254 karakter dan lolos validasi format server;
+- `phone`: wajib, 7–32 karakter; hanya digit, spasi, `+`, `-`, titik, dan tanda kurung;
+- `message`: wajib, 10–5000 karakter setelah trim;
+- NUL/control character ditolak; newline hanya dipertahankan pada message;
+- nilai yang dikirim ke email tetap melalui escaping yang sudah ada.
+
+Constraint Production direkomendasikan dibuat `NOT VALID` terlebih dahulu. Constraint tetap melindungi row baru tanpa menggagalkan migration karena row legacy; data lama diaudit lalu constraint divalidasi pada langkah terpisah.
+
+### Retensi contact
+
+Pilihan:
+
+- **Opsi A — tunda auto-delete sampai remake admin selesai (direkomendasikan untuk paket ini).** Catat calon baseline: spam 30 hari serta closed/replied 12 bulan, tetapi jangan menjalankan penghapusan otomatis sebelum workflow status dan kebutuhan bisnis/legal disetujui.
+- **Opsi B — implementasikan retensi sekarang.** Memerlukan timestamp perubahan status, scheduled cleanup, audit dry-run, dan backup sebelum penghapusan pertama.
+- **Opsi C — simpan tanpa batas.** Paling sederhana tetapi memperbesar akumulasi PII dan tidak direkomendasikan sebagai kebijakan permanen.
+
+### Keputusan yang perlu dikunci sekaligus
+
+1. **Redirect OAuth:** Opsi A selalu `/admin`, atau Opsi B deep-link `/admin/**` tervalidasi.
+2. **Turnstile:** Managed + `appearance: interaction-only` seperti rekomendasi, atau Invisible tanpa footprint visual.
+3. **Credential server:** Supabase Secret key baru yang hanya tersedia di server, atau legacy service-role key.
+4. **Rate limit:** Opsi A Vercel WAF 5/10 menit/IP, Opsi B Supabase, atau Opsi C Redis eksternal.
+5. **Kontrak field:** pertahankan keempat field wajib dan gunakan batas 2–100/254/7–32/10–5000 seperti rekomendasi, atau tentukan batas lain.
+6. **Constraint legacy:** forward migration `NOT VALID` lalu audit/validate terpisah seperti rekomendasi, atau audit Production dahulu sebelum constraint dibuat valid.
+7. **Retensi:** Opsi A ditunda sampai remake admin, Opsi B diterapkan sekarang, atau Opsi C tanpa batas.
+8. **Email failure:** row tetap dianggap berhasil ketika database sukses tetapi email gagal, seperti perilaku sekarang, atau submission harus gagal secara keseluruhan.
+9. **Rollout:** dua tahap—source + environment lebih dahulu, lalu penutupan anon insert—atau satu maintenance window atomik.
+
+### Keputusan final pemilik project — 7 September 2026
+
+1. OAuth callback tidak lagi menerima tujuan dinamis dan selalu redirect sukses ke `/admin`.
+2. Contact memakai Cloudflare Turnstile Managed dengan `appearance: interaction-only` dan action `contact_submit`.
+3. Insert tepercaya memakai Supabase Secret key baru melalui client khusus `server-only` tanpa cookie/session user.
+4. Rate limit memakai Vercel WAF: 5 request per 10 menit per IP, ditargetkan ke Server Action `submitContact`; rule dimulai dalam mode `Log` sebelum diubah menjadi 429.
+5. `name`, `email`, `phone`, dan `message` tetap wajib dengan batas masing-masing 2–100, maksimal 254, 7–32, dan 10–5000 karakter.
+6. Constraint database diperkenalkan sebagai `NOT VALID`, kemudian row legacy diaudit dan constraint divalidasi pada langkah Production terpisah.
+7. Auto-delete contact ditunda sampai remake admin. Calon baseline retensi spam 30 hari serta closed/replied 12 bulan hanya dicatat dan belum dijalankan.
+8. Database tetap menjadi source of truth; insert yang sukses tetap dikembalikan sebagai sukses walaupun pengiriman email gagal.
+9. Rollout Production dilakukan dua tahap: source, secret, Turnstile, dan WAF lebih dahulu; direct insert `anon`/`authenticated` baru ditutup setelah jalur baru terbukti bekerja.
+
+Tidak ada keputusan desain DB-D yang masih terbuka. Implementasi belum dimulai dan tetap memerlukan instruksi eksplisit pemilik project.
+
+### Urutan implementasi setelah keputusan
+
+1. Implementasikan dan test keputusan redirect DB-15 secara terisolasi.
+2. Tambahkan konfigurasi Turnstile, validasi server, field validation, dan dedicated Supabase secret client.
+3. Tambahkan test unit untuk token valid/invalid/expired/replay, action/hostname mismatch, batas field, serta kegagalan email.
+4. Buat forward migration constraint contact dan penutupan policy/grant, tetapi terapkan hanya lokal dahulu.
+5. Tambahkan pgTAP/direct REST test yang membuktikan `anon` dan authenticated tidak dapat insert langsung, sementara trusted server path tetap dapat insert.
+6. Jalankan database test, lint, typecheck, build, dan local Turnstile test key.
+7. Konfigurasikan environment Preview dan deploy source yang sudah memakai secret path tanpa menutup Production policy dahulu.
+8. Buat Vercel WAF rule berdasarkan **Server Action Name** `submitContact` dalam mode `Log`, verifikasi traffic, kemudian atur 5/10 menit/IP dan 429.
+9. Setelah Preview dan Production source smoke test lulus, apply migration yang mencabut direct anon/authenticated insert.
+10. Uji direct REST denial, form sukses, challenge gagal, rate limit, email failure, admin inbox, dan rollback.
+
+Referensi desain yang diverifikasi:
+
+- Cloudflare Turnstile mewajibkan Siteverify server-side; token single-use dan kedaluwarsa dalam lima menit: https://developers.cloudflare.com/turnstile/turnstile-analytics/token-validation/
+- Managed/Invisible mode dan `appearance: interaction-only`: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/
+- Vercel WAF dapat menargetkan Server Action Name dan rate limiting tersedia pada Hobby: https://vercel.com/docs/vercel-firewall/vercel-waf/rule-configuration dan https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting
+- Supabase Secret key menjalankan role `service_role`, bypass RLS, dan hanya boleh dipakai di server: https://supabase.com/docs/guides/getting-started/api-keys

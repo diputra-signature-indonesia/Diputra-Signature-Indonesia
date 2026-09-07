@@ -1,5 +1,6 @@
 'use client';
 
+import { BLOG_IMAGE_ACCEPT, BLOG_IMAGE_MAX_LABEL } from '@/lib/blog-image-storage';
 import { deleteImage, uploadCoverImage } from '@/lib/uploadImage';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
@@ -66,7 +67,7 @@ export default function ImageInputWithPreview({
       onUploadedChange?.(res);
     } catch (err) {
       console.error('Cover upload failed:', err);
-      alert('Upload cover failed. Check storage policy / login status.');
+      alert(err instanceof Error ? err.message : 'Upload cover failed. Check storage policy / login status.');
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -145,7 +146,7 @@ export default function ImageInputWithPreview({
     <div className="flex flex-col gap-3 rounded-sm border border-gray-300">
       <div className="bg-gray-200 px-5 py-4">
         <h2 className="font-semibold">{label}</h2>
-        <p className="mt-1 text-sm text-gray-600">PNG/JPG/WebP, disarankan rasio 16:10 atau 1200×750.</p>
+        <p className="mt-1 text-sm text-gray-600">PNG/JPG/WebP hingga {BLOG_IMAGE_MAX_LABEL}, disarankan rasio 16:10 atau 1200×750.</p>
       </div>
 
       <div className="px-5 pb-5">
@@ -159,7 +160,7 @@ export default function ImageInputWithPreview({
         </div>
 
         {/* Hidden file input */}
-        <input ref={inputRef} name={name} type="file" accept="image/*" onChange={onPickFile} className="hidden" />
+        <input ref={inputRef} name={name} type="file" accept={BLOG_IMAGE_ACCEPT} onChange={onPickFile} className="hidden" />
 
         {/* Actions */}
         <div className="flex flex-wrap justify-between gap-3">
