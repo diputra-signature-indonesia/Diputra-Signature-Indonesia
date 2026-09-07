@@ -1,7 +1,9 @@
 'use client';
 
 import { submitContact, type ContactState } from '@/app/actions/contact';
+import { TurnstileWidget } from '@/components/security/turnstile-widget';
 import IconArrow from '@/icons/BrandIconArrow';
+import { CONTACT_LIMITS } from '@/lib/contact/validation';
 import { useActionState } from 'react';
 import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
@@ -34,6 +36,10 @@ export function ContactForm() {
             <input
               type="text"
               name="name"
+              required
+              minLength={CONTACT_LIMITS.name.min}
+              maxLength={CONTACT_LIMITS.name.max}
+              autoComplete="name"
               defaultValue={state.values?.name ?? ''}
               placeholder="Name"
               aria-invalid={hasError}
@@ -51,6 +57,9 @@ export function ContactForm() {
             <input
               type="email"
               name="email"
+              required
+              maxLength={CONTACT_LIMITS.email.max}
+              autoComplete="email"
               defaultValue={state.values?.email ?? ''}
               placeholder="Email address"
               aria-invalid={hasError}
@@ -70,6 +79,10 @@ export function ContactForm() {
             <input
               type="tel"
               name="phone"
+              required
+              minLength={CONTACT_LIMITS.phone.min}
+              maxLength={CONTACT_LIMITS.phone.max}
+              autoComplete="tel"
               defaultValue={state.values?.phone ?? ''}
               placeholder="Phone number"
               aria-invalid={hasError}
@@ -88,6 +101,9 @@ export function ContactForm() {
 
             <textarea
               name="message"
+              required
+              minLength={CONTACT_LIMITS.message.min}
+              maxLength={CONTACT_LIMITS.message.max}
               defaultValue={state.values?.message ?? ''}
               placeholder="Message"
               aria-invalid={hasError}
@@ -104,6 +120,8 @@ export function ContactForm() {
             //   </p>
             // )}
           */}
+
+            <TurnstileWidget pending={isPending} />
 
             <div className="mt-7 flex flex-col items-end gap-4">
               <p className="brand-p">We will get back to you as soon as possible with clear guidance and support for your legal, visa, or business needs in Bali</p>

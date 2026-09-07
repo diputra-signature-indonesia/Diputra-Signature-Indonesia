@@ -50,8 +50,15 @@ values
   ('30000000-0000-4000-8000-000000000101', 'DB-A hidden', 'Hidden review', false, now()),
   ('30000000-0000-4000-8000-000000000102', 'DB-A public', 'Public review', true, now());
 
-insert into public.contact_messages (id, name, message, status)
-values ('40000000-0000-4000-8000-000000000101', 'DB-A contact', 'Contact message', 'new');
+insert into public.contact_messages (id, name, email, phone, message, status)
+values (
+  '40000000-0000-4000-8000-000000000101',
+  'DB-A contact',
+  'db-a-contact@example.test',
+  '+62 812 3456 7890',
+  'Contact message',
+  'new'
+);
 
 insert into public.team_members (id, full_name, job_title, is_visible)
 values ('50000000-0000-4000-8000-000000000101', 'DB-A member', 'Tester', true);

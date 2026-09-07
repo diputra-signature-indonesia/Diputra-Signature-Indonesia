@@ -5,8 +5,6 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
 
-  const next = url.searchParams.get('next') ?? '/admin';
-
   if (!code) {
     return NextResponse.redirect(new URL('/login?error=missing_code', url.origin));
   }
@@ -19,5 +17,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/login?error=oauth_callback_failed', url.origin));
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  return NextResponse.redirect(new URL('/admin', url.origin));
 }
