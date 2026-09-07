@@ -1524,9 +1524,9 @@ Hasil verifikasi:
 
 DB-C secara implementasi lokal selesai. Paket belum dianggap selesai di Production sampai empat deployment gate tersebut dilalui dan pemilik project memberi persetujuan eksplisit.
 
-## Progress DB-D — Analisis public entry-point security (6 September 2026)
+## Progress DB-D — Public entry-point security (6–7 September 2026)
 
-Status: **audit source dan rancangan selesai; seluruh keputusan pemilik project sudah dikunci pada 7 September 2026; belum ada source/migration DB-D yang diubah dan Production tidak disentuh**.
+Status: **implementasi dan verifikasi otomatis lokal selesai pada 7 September 2026; perubahan DB-D masih berada di worktree, belum di-commit, dan Production tidak disentuh**.
 
 Paket ini mencakup DB-15 dan DB-13. DB-15 terisolasi pada OAuth callback, sedangkan DB-13 membutuhkan source pengganti yang sudah aktif sebelum direct anon insert ditutup agar form contact Production tidak mengalami downtime.
 
@@ -1615,7 +1615,7 @@ Pilihan:
 8. Database tetap menjadi source of truth; insert yang sukses tetap dikembalikan sebagai sukses walaupun pengiriman email gagal.
 9. Rollout Production dilakukan dua tahap: source, secret, Turnstile, dan WAF lebih dahulu; direct insert `anon`/`authenticated` baru ditutup setelah jalur baru terbukti bekerja.
 
-Tidak ada keputusan desain DB-D yang masih terbuka. Implementasi belum dimulai dan tetap memerlukan instruksi eksplisit pemilik project.
+Tidak ada keputusan desain DB-D yang masih terbuka. Implementasi lokal sudah dilakukan setelah instruksi eksplisit pemilik project; konfigurasi Cloudflare/Vercel, Preview smoke test, dan rollout Production tetap menjadi deployment gate terpisah.
 
 ### Urutan implementasi setelah keputusan
 
@@ -1630,9 +1630,91 @@ Tidak ada keputusan desain DB-D yang masih terbuka. Implementasi belum dimulai d
 9. Setelah Preview dan Production source smoke test lulus, apply migration yang mencabut direct anon/authenticated insert.
 10. Uji direct REST denial, form sukses, challenge gagal, rate limit, email failure, admin inbox, dan rollback.
 
+### Hasil implementasi lokal DB-D — 7 September 2026
+
+Perubahan source:
+
+- callback OAuth tidak lagi membaca parameter `next`; pertukaran kode yang sukses selalu diarahkan ke `/admin`;
+- contact form tetap memakai Server Action dan desain yang sama, dengan Turnstile Managed explicit-render ber-action `contact_submit`, `appearance: interaction-only`, ukuran fleksibel, dan reset token setelah setiap percobaan submit;
+- Server Action menormalisasi serta memvalidasi empat field, memverifikasi token Turnstile sebelum melakukan operasi lain, lalu menulis melalui Supabase Secret client khusus `server-only` tanpa cookie/session pengguna;
+- response Turnstile Production wajib memiliki `success`, action yang tepat, dan hostname yang termasuk allowlist. Official dummy key hanya dapat diaktifkan melalui `TURNSTILE_TEST_MODE=true` pada Local/Preview dan ditolak otomatis pada Production;
+- database tetap menjadi source of truth. Exception maupun response error dari Resend setelah insert hanya menghasilkan log generik tanpa payload PII dan tidak mengubah submission menjadi gagal;
+- `.env.example` mendokumentasikan seluruh environment variable baru tanpa menyimpan secret nyata.
+
+Perubahan database lokal:
+
+- migration `20260907090000_harden_contact_submission.sql` menambahkan empat constraint `NOT VALID` untuk kontrak name/email/phone/message. Constraint langsung melindungi row baru tanpa memindai atau memblokir row legacy pada saat migration diterapkan;
+- policy `contact_messages_insert_public` dihapus dan privilege `INSERT` dicabut dari `anon` serta `authenticated`;
+- `service_role` tetap memiliki privilege insert untuk jalur server tepercaya;
+- fixture DB-A disesuaikan agar menggunakan payload contact yang memenuhi kontrak baru.
+
+Bukti verifikasi lokal:
+
+- seluruh database suite lulus: **4 file, 121 test**;
+- pgTAP DB-D membuktikan tidak ada policy insert publik, `anon`/`authenticated` ditolak, `service_role` berhasil menulis, dan payload invalid ditolak constraint;
+- direct HTTP Supabase test membuktikan anon key ditolak, Secret key lokal berhasil menulis, payload invalid ditolak, dan row test dibersihkan;
+- unit validation/Turnstile lulus: **10 test**;
+- TypeScript dan ESLint untuk source DB-D lulus;
+- `supabase db lint --local --level warning` tidak menemukan schema error;
+- `supabase db diff --local --schema public,storage` menghasilkan **No schema changes found**;
+- optimized Production build Next.js 16.0.10 berhasil. Peringatan `baseline-browser-mapping` usang dan konvensi `middleware` deprecated sudah ada di luar scope DB-D.
+
+Deployment gate yang masih wajib:
+
+1. Buat widget Turnstile Production dan pasang site key/secret nyata beserta allowlist hostname pada environment Vercel Preview dan Production. Jangan memakai dummy key pada Production.
+2. Pasang `SUPABASE_SECRET_KEY` baru untuk project Supabase yang sesuai pada Vercel; jangan gunakan prefix `NEXT_PUBLIC_` dan jangan membagikan nilainya ke browser/log.
+3. Deploy source ke Preview dan lakukan smoke test form valid, token/challenge gagal, database row, email best-effort, serta console/log tanpa PII.
+4. Buat Vercel WAF rule untuk Server Action `submitContact` dalam mode `Log`, observasi traffic, lalu aktifkan limit 5 request per 10 menit per IP dengan respons 429.
+5. Untuk rollout Production tanpa downtime, deploy source + environment lebih dahulu ketika policy insert lama masih aktif. Setelah jalur server terbukti, apply migration DB-D dan ulangi direct REST denial serta form sukses.
+6. Audit row contact legacy sebelum menjalankan `VALIDATE CONSTRAINT`; retensi otomatis tetap ditunda sampai remake admin.
+
 Referensi desain yang diverifikasi:
 
 - Cloudflare Turnstile mewajibkan Siteverify server-side; token single-use dan kedaluwarsa dalam lima menit: https://developers.cloudflare.com/turnstile/turnstile-analytics/token-validation/
 - Managed/Invisible mode dan `appearance: interaction-only`: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/
 - Vercel WAF dapat menargetkan Server Action Name dan rate limiting tersedia pada Hobby: https://vercel.com/docs/vercel-firewall/vercel-waf/rule-configuration dan https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting
 - Supabase Secret key menjalankan role `service_role`, bypass RLS, dan hanya boleh dipakai di server: https://supabase.com/docs/guides/getting-started/api-keys
+
+## Progress DB-E — Q&A source of truth dan koreksi schema (7 September 2026)
+
+Status: **keputusan source of truth sudah dikunci; rename schema sudah diterapkan dan terverifikasi pada Supabase Docker lokal; frontend belum dialihkan, migration belum di-commit, dan Production tidak disentuh**.
+
+### Keputusan final pemilik project
+
+1. Menggunakan **Opsi C**: `src/data/dsi-qna.ts` tetap menjadi sumber resmi sementara, kemudian Supabase menjadi sumber resmi saat CMS Q&A dibuat setelah remake admin selesai.
+2. Q&A yang tampil sekarang tetap satu daftar global dan tidak diubah secara visual maupun konten.
+3. Tabel `question_answer` dipertahankan untuk CMS yang akan datang dan saat ini belum digunakan oleh frontend, admin, maupun consumer lain.
+4. Typo kolom `anwer` diperbaiki sekarang menjadi `answer` karena belum ada consumer yang bergantung pada nama lama.
+5. Query publik, cache tag/invalidation, mutation admin, policy CMS, `sort_order`, pemetaan per kategori/service, dan migrasi sepuluh data statis ditunda sebagai satu pekerjaan atomik bersama CMS.
+
+Keputusan ini menyelesaikan konflik DB-09 untuk kondisi sekarang: hanya file statis yang canonical. Supabase belum menjadi sumber kedua sampai seluruh cutover CMS siap. DB-08 diperbaiki lebih dahulu agar generated Database types pada DB-G tidak mengabadikan typo lama.
+
+### Implementasi lokal
+
+- migration `20260907130000_rename_question_answer_column.sql` mengganti `public.question_answer.anwer` menjadi `answer`;
+- operasi rename mempertahankan nilai row, tipe `text`, kontrak `NOT NULL`, primary/foreign key tabel, grant, dan RLS yang sudah ada;
+- migration menerima kondisi schema yang sudah memiliki `answer` sebagai kondisi selesai, tetapi gagal eksplisit bila kedua kolom ada atau keduanya tidak ada agar schema tidak berubah secara ambigu;
+- komentar schema menandai tabel sebagai persiapan CMS dan menyatakan file statis masih canonical;
+- tidak ada import, query Supabase, loading state, cache, layout, atau tampilan Q&A frontend yang diubah;
+- `dokumentasi_V1.md` tidak diubah karena tetap merupakan record kontrak schema V1 sebelum forward migration.
+
+### Bukti verifikasi lokal
+
+- migration `20260907130000` berhasil diterapkan ke Supabase Docker lokal;
+- pgTAP DB-E membuktikan kolom `answer` tersedia, `anwer` sudah tidak ada, tipe tetap `text`, `NOT NULL` tetap aktif, serta insert/read melalui nama baru berhasil;
+- seluruh database suite DB-A sampai DB-E lulus: **5 file, 126 test**;
+- `supabase db lint --local --level warning` lulus tanpa schema error;
+- `supabase db diff --local --schema public,storage` menghasilkan **No schema changes found**;
+- direct REST select pada `answer` menghasilkan HTTP 200, sedangkan nama legacy `anwer` ditolak HTTP 400;
+- tabel lokal tetap tidak memiliki Q&A publik permanen karena fixture test dijalankan dalam transaction yang di-rollback.
+
+### Batas DB-E dan gate Production
+
+DB-E tidak mengaktifkan CMS lebih awal. Sampai cutover berikutnya, perubahan Q&A tetap dilakukan melalui file statis dan deployment aplikasi. Saat CMS dibangun, cutover harus mencakup data migration, generated types, query/cache publik, invalidasi mutation, authorization staff/admin, ordering, empty/error state, SEO output, serta penghapusan pemakaian file statis dalam satu rangkaian terverifikasi.
+
+Sebelum migration rename diterapkan ke Production:
+
+1. Ambil backup/snapshot dan verifikasi read-only bahwa Production masih memiliki `anwer`, belum memiliki `answer`, serta tidak ada view, function, automation, atau external consumer yang memakai nama lama.
+2. Terapkan migration pada maintenance window singkat. Rename merupakan perubahan metadata, tetapi tetap membutuhkan lock tabel selama statement berjalan.
+3. Verifikasi PostgREST/schema cache menampilkan `answer`, data lama tetap utuh, dan log tidak menunjukkan query ke `anwer`.
+4. Jangan mengisi atau mengalihkan frontend ke tabel sampai CMS, policy mutation, cache invalidation, dan migration konten siap sebagai cutover terpisah.
