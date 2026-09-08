@@ -1,4 +1,5 @@
--- Seed data exported from "Supabase Snippet Untitled query.csv".
+-- Deterministic local fixtures for the public team and service pages.
+-- This file is local-development data only and must never be applied to Production.
 --
 -- profile_id is kept only when the referenced local profile already exists.
 -- This lets a fresh local database seed team members without violating the
@@ -24,7 +25,7 @@ with team_member_seed (
       'Loedwig Guntur Naftali Sojuaon Hasugian, S.H.',
       'Associate',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/Lodwig.webp',
+      '/image/developer-face.png',
       true,
       6::bigint,
       '2025-12-26 13:30:26.150069+00'::timestamptz,
@@ -37,7 +38,7 @@ with team_member_seed (
       'I Made Mahendraputra Utama, S.H.',
       'Associate',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/mahendra.webp',
+      '/image/developer-face.png',
       true,
       5::bigint,
       '2025-12-26 13:30:06.825751+00'::timestamptz,
@@ -50,7 +51,7 @@ with team_member_seed (
       'I Putu Gede Dalem, S.H.',
       'Senior Associate',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/dalem.webp',
+      '/image/developer-face.png',
       true,
       3::bigint,
       '2025-12-26 13:29:20.501359+00'::timestamptz,
@@ -63,7 +64,7 @@ with team_member_seed (
       'Anak Agung Ayu Agung Devi Anjani Jelantik, S.H.',
       'Junior Associate',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/Anja.webp',
+      '/image/developer-face.png',
       true,
       4::bigint,
       '2025-12-26 13:29:48.595333+00'::timestamptz,
@@ -76,7 +77,7 @@ with team_member_seed (
       'Anak Agung Gede Bagus Rahardiputra, S.H., M.Kn.',
       'Managing Partner',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/Rahardi.webp',
+      '/image/developer-face.png',
       true,
       1::bigint,
       '2025-12-26 13:22:56.695693+00'::timestamptz,
@@ -89,7 +90,7 @@ with team_member_seed (
       'Anak Agung Ngurah Gede Dhananjaya, S.Kom.',
       'IT Partner',
       null::text,
-      'https://imqjyxydsakfuztyrhev.supabase.co/storage/v1/object/public/team_profile/NgurahDhananjayaa.webp',
+      '/image/developer-face.png',
       true,
       2::bigint,
       '2025-12-26 13:28:48.355069+00'::timestamptz,

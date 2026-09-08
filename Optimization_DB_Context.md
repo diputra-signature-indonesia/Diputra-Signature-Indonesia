@@ -1774,3 +1774,87 @@ Audit DB-F perlu dibuka kembali bila salah satu kondisi berikut terjadi:
 - cache hit menurun atau load database meningkat tanpa penyebab lain yang lebih dominan.
 
 Saat audit dibuka kembali, urutannya tetap: rekam baseline → uji kandidat secara lokal pada data representatif → bandingkan before/after plan → periksa duplicate index dan write overhead → pilih rollout Production. Sampai trigger tersebut muncul, tidak ada migration DB-F yang perlu dibuat.
+
+## Progress DB-G — Type safety dan reproducibility (8 September 2026)
+
+Status: **generated types, typed clients/query, reset lokal, Auth bootstrap, fixture, dan verifikasi lokal selesai; perubahan belum di-commit dan Production tidak disentuh**.
+
+Paket ini menyelesaikan DB-10 dan DB-11 berdasarkan seluruh opsi rekomendasi yang disetujui pemilik project. Generated type memakai migration lokal sebagai kontrak schema yang dituju; seed dan akun hanya berlaku untuk Supabase Docker lokal.
+
+### Keputusan final pemilik project
+
+1. Generated `Database` types dibuat dari schema lokal, disimpan di repository, dan tidak diedit manual.
+2. Generic `Database` diterapkan ke seluruh Supabase client dan query/type assertion lama dirapikan dalam paket yang sama.
+3. Akun Auth lokal dibuat melalui Auth Admin API setelah reset, bukan melalui insert manual ke internal schema Auth.
+4. Capability matrix permanen memakai tujuh akun: active/inactive untuk `super_admin`, `admin`, dan `staff`, ditambah satu authenticated user tanpa profile.
+5. Fixture tampilan memakai asset repository; tidak ada URL asset atau data Production di seed final.
+6. Data layanan dan tim dipertahankan, kemudian ditambah fixture minimum blog, review, review request, dan contact.
+7. Seed dipecah menjadi beberapa SQL file terurut.
+8. Drift check disediakan sebagai command lokal; GitHub Actions ditunda sampai baseline CI project dibuat.
+9. Q&A tetap tidak di-seed karena file statis masih menjadi source of truth sampai cutover CMS DB-E.
+
+### Implementasi DB-10 — Generated Database types
+
+- `src/types/database.generated.ts` dihasilkan melalui Supabase CLI dari schema `public` lokal dan memuat Row/Insert/Update, relationship, RPC, serta enum terbaru.
+- Browser client, authenticated server client, public server client, Secret server client, dan client middleware sekarang semuanya memakai generic `Database`.
+- Type query blog, review, service, team, serta author diturunkan dari helper generated `Tables`/`Enums`; broad assertion terhadap hasil query yang sebelumnya menyembunyikan schema drift dihapus.
+- Type domain/UI tetap dipertahankan hanya ketika mewakili input atau projection tertentu, lalu field databasenya merujuk ke generated row type.
+- `UserRole` dan status blog kini langsung diturunkan dari enum database.
+- Drift yang terbukti oleh compiler diperbaiki:
+  - aksi penolakan blog sekarang menulis `rejected`, sesuai enum database, bukan nilai invalid `reject`;
+  - badge admin mengenali status `rejected`;
+  - `review_requests.expires_at` dikirim sebagai ISO string, bukan object `Date`;
+  - type review tidak lagi mengklaim kolom `status` dan `updated_at` yang tidak tersedia;
+  - nullable field blog/review ditangani eksplisit pada boundary UI tanpa mengubah layout atau desain.
+- Command baru tersedia: `npm run typecheck`, `npm run db:types:generate`, dan `npm run db:types:check`.
+
+### Implementasi DB-11 — Reset, Auth, dan fixture lokal
+
+- `supabase/config.toml` sekarang membaca ordered glob `supabase/seeds/*.sql`.
+- Fixture team/services lama dipertahankan di `10_services_and_team.sql`; enam URL foto dari Supabase Production diganti placeholder repository `/image/developer-face.png`.
+- `20_admin_content.sql` menambahkan empat blog untuk status `draft`, `pending`, `published`, dan `rejected`; tiga review; empat review request valid/expired/used/revoked; serta lima contact untuk seluruh status workflow.
+- Token review lokal bersifat predictable dan non-secret: masing-masing 64 karakter `e`, `f`, `0`, dan `2` untuk valid, expired, used, dan revoked.
+- `scripts/bootstrap-local-auth.mjs` membaca URL/key langsung dari status Supabase lokal, menolak hostname selain `localhost`, `127.0.0.1`, atau `::1`, lalu membuat/memperbarui tujuh akun melalui Auth Admin API.
+- Bootstrap meng-upsert enam profile sesuai role/active state, mempertahankan satu user tanpa profile, menghubungkan tiga akun aktif ke team member, dan membuktikan satu akun dapat login dengan password lokal.
+- Semua akun memakai domain reserved `example.test` dan password development-only yang didokumentasikan di `README_DEV.md`; tidak ada credential Production.
+- Google provider pada `supabase/config.toml` dinonaktifkan agar start/reset Docker tidak bergantung pada OAuth credential eksternal. Konfigurasi Supabase Production tidak berubah, sedangkan Google OAuth tetap diverifikasi pada Preview/Production.
+- Bucket `images` tetap dibuat oleh migration DB-C. Tidak ada object Storage permanen di seed karena HTTP Storage test sudah menguji upload/delete dan membersihkan object test.
+- `npm run db:reset` selalu menjalankan `supabase db reset --local` lalu bootstrap Auth. Tidak ada command DB-G yang memakai `--linked` atau memasukkan seed ke Production.
+
+### Bukti verifikasi lokal
+
+- full `npm run db:reset` berhasil menjalankan seluruh enam migration, dua seed file, restart container, dan bootstrap tujuh akun;
+- bootstrap Auth dijalankan ulang tanpa reset dan tetap menghasilkan tepat tujuh akun, sehingga proses terbukti idempotent;
+- login password fixture diverifikasi melalui local Auth API tanpa mengekspos session;
+- seluruh database suite lulus: **6 file, 145 test**;
+- pgTAP DB-G membuktikan seluruh role/active-state, user tanpa profile, tiga team link, empat status blog, empat state review request, tiga state review, lima status contact, serta tidak adanya URL Supabase Production pada team fixture;
+- `npm run db:types:check` lulus terhadap schema lokal;
+- `npm run typecheck` dan ESLint seluruh source DB-G lulus;
+- `supabase db lint --local --level warning` menghasilkan **No schema errors found**;
+- `supabase db diff --local --schema public,storage` menghasilkan **No schema changes found**;
+- optimized Production build Next.js 16.0.10 berhasil dan menghasilkan 22 route tanpa type error.
+
+Peringatan `baseline-browser-mapping` usang dan konvensi `middleware` deprecated tetap merupakan kondisi sebelumnya dan berada di luar scope DB-G.
+
+### Batas Production dan deployment gate
+
+DB-G tidak memiliki migration database baru. Generated types serta perbaikan source dapat masuk ke Preview bersama aplikasi, sedangkan seed, akun dummy, password lokal, dan konfigurasi Docker tidak boleh diterapkan ke Production. Migration DB-A sampai DB-E tetap mengikuti backup, approval, dan rollout gate yang telah dicatat pada paket masing-masing.
+
+Sebelum DB-G dianggap selesai pada deployment level:
+
+1. Review diff generated type dan source, lalu commit sebagai satu unit DB-G.
+2. Deploy aplikasi ke Preview dan lakukan smoke test public blog/service/team/review, admin list, perubahan status blog menjadi `rejected`, serta pembuatan review request.
+3. Pastikan Vercel build tidak menjalankan `db:reset`, Auth bootstrap, seed, atau type generation yang membutuhkan Supabase Docker.
+4. Jalankan Google OAuth memakai konfigurasi Preview/Production yang memang terpisah dari Docker lokal.
+
+### Temuan tambahan di luar scope DB-G
+
+Reset pertama membuktikan `public.contact_messages.id` belum memiliki primary key atau unique constraint, sehingga PostgreSQL menolak `ON CONFLICT (id)`. Seed contact akhirnya memakai insert biasa karena reset selalu dimulai dari database kosong.
+
+Temuan ini tidak menghalangi type safety atau reproducibility, tetapi perlu dibahas sebagai follow-up database terpisah sebelum seluruh fase DB dinyatakan final. Karena `contact_messages` aktif di Production, primary key tidak ditambahkan tanpa audit read-only terhadap duplicate/null, evaluasi consumer, dan keputusan rollout pemilik project.
+
+Referensi workflow resmi:
+
+- generated types lokal dan regenerasi setelah migration: https://supabase.com/docs/guides/api/rest/generating-types
+- ordered seed files dan eksekusi setelah migration: https://supabase.com/docs/guides/local-development/seeding-your-database
+- reset lokal, test user, dan larangan seed Production: https://supabase.com/docs/guides/local-development/cli-workflows

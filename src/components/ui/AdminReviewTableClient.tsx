@@ -52,6 +52,14 @@ const columns = [
 
 export function AdminReviewTableClient({ data, role }: { data: DefaultReview[]; role: UserRole | null }) {
   return (
-    <ReviewDataTable role={role} data={data} columns={columns} getPublished={(row) => row.is_published} getFeatured={(row) => row.is_featured} getRowKey={(row) => row.id} getId={(row) => row.id} />
+    <ReviewDataTable
+      role={role}
+      data={data}
+      columns={columns}
+      getPublished={(row) => Boolean(row.is_published)}
+      getFeatured={(row) => Boolean(row.is_featured)}
+      getRowKey={(row) => row.id}
+      getId={(row) => row.id}
+    />
   );
 }

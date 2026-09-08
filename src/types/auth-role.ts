@@ -1,1 +1,3 @@
-export type UserRole = 'super_admin' | 'admin' | 'staff';
+import type { Enums } from '@/types/database.generated';
+
+export type UserRole = Enums<'role'>;

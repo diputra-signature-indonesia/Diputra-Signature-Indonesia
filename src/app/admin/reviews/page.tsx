@@ -18,7 +18,7 @@ export default async function AdminReviewPage() {
 
   const { data: profile, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
 
-  const role = (profile?.role as 'super_admin' | 'admin' | 'staff') ?? null;
+  const role = profile?.role ?? null;
 
   const reviewData = await getAdminClientStories();
   const reviewUrlData = await getAdminGeneratedReview();

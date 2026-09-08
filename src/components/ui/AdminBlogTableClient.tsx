@@ -17,7 +17,7 @@ const statusClassMap: Record<string, string> = {
   published: 'bg-green-100 text-green-700',
   draft: 'bg-gray-200 text-gray-700',
   pending: 'bg-yellow-100 text-yellow-700',
-  reject: 'bg-red-100 text-red-700',
+  rejected: 'bg-red-100 text-red-700',
 };
 
 const columns = [

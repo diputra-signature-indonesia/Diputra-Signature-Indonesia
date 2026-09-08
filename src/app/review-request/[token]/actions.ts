@@ -62,5 +62,5 @@ export async function submitReviewAction(input: ReviewInput): Promise<SubmitRevi
     };
   }
 
-  return { ok: true, reviewId: data as string };
+  return { ok: true, reviewId: data };
 }

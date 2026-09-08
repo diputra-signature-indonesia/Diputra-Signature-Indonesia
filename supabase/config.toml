@@ -68,7 +68,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seeds/*.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -195,9 +195,9 @@ password_requirements = ""
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.external.google]
-enabled = true
-client_id = "env(GOOGLE_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
+enabled = false
+client_id = ""
+secret = ""
 skip_nonce_check = false
 
 [auth.rate_limit]

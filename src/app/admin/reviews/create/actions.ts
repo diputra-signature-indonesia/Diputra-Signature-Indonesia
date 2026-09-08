@@ -25,7 +25,7 @@ export async function createReviewRequestAction(formData: FormData) {
     token_hash: tokenHash,
     client_name: clientName,
     client_email: clientEmail || null,
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 hari
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 hari
   });
 
   if (error) {

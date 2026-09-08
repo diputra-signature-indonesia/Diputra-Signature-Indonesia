@@ -1,9 +1,3 @@
-export type ReviewPost = {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  status: 'Shown' | 'Hidden';
-  created_at: string;
-  updated_at: string;
-};
+import type { Tables } from '@/types/database.generated';
+
+export type ReviewPost = Tables<'reviews'>;

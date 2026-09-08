@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "db:reset": "supabase db reset --local && node scripts/bootstrap-local-auth.mjs",
+    "db:test": "supabase test db --local",
+    "db:types:generate": "supabase gen types typescript --local --schema public > src/types/database.generated.ts",
+    "db:types:check": "npm run db:types:generate && git diff --ignore-space-at-eol --exit-code -- src/types/database.generated.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

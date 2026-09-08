@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.generated';
 
 export function createSupabaseSecretServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,7 +11,7 @@ export function createSupabaseSecretServerClient() {
     throw new Error('Supabase server credentials are not configured.');
   }
 
-  return createClient(supabaseUrl, secretKey, {
+  return createClient<Database>(supabaseUrl, secretKey, {
     auth: {
       autoRefreshToken: false,
       detectSessionInUrl: false,

@@ -1,9 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import type { Tables } from '@/types/database.generated';
 
-export type CurrentAuthor = {
-  nickname: string | null;
-  full_name: string | null;
-};
+export type CurrentAuthor = Pick<Tables<'team_members'>, 'nickname' | 'full_name'>;
 
 export async function getCurrentAuthorFromTeamMember(): Promise<CurrentAuthor | null> {
   const supabase = await createSupabaseServerClient();

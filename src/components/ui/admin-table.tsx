@@ -130,7 +130,7 @@ export function DataTable<T>({ role, data, columns, getStatus, getRowKey, getId,
       if (action === 'reject') {
         const ok = confirm('Reject this post?');
         if (!ok) return;
-        await setBlogStatusAction(id, 'reject');
+        await setBlogStatusAction(id, 'rejected');
       }
 
       if (action === 'toPending') {

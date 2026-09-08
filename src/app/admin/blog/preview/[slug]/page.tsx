@@ -11,7 +11,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   return (
     <>
       <article aria-labelledby="post-title" className="py-6">
-        <BlogHeadingSection title={post.title} excerpt={post.excerpt ?? ''} image={post.featured_image ?? ''} />
+        <BlogHeadingSection title={post.title ?? ''} excerpt={post.excerpt ?? ''} image={post.featured_image ?? ''} />
         <BlogBodySection content_md={post.content_md ?? ''} />
       </article>
     </>

@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return buildBlogPostMetadata({
     slug: post.slug,
-    title: post.title,
-    description: post.excerpt,
+    title: post.title ?? '',
+    description: post.excerpt ?? '',
     image: post.featured_image ?? '',
     date: post.published_at ?? '',
     updatedAt: post.updated_at ?? '',
@@ -29,9 +29,9 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
 
   const blogJsonLd = buildDsiBlogPostingJsonLd({
     slug: post.slug,
-    title: post.title,
-    excerpt: post.excerpt,
-    description: post.excerpt,
+    title: post.title ?? '',
+    excerpt: post.excerpt ?? '',
+    description: post.excerpt ?? '',
     date: post.published_at ?? undefined,
     updatedAt: post.updated_at ?? undefined,
     coverImageUrl: post.featured_image ?? undefined,
@@ -42,7 +42,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }} />
       <article aria-labelledby="post-title">
-        <BlogHeadingSection title={post.title} excerpt={post.excerpt ?? ''} image={post.featured_image ?? ''} />
+        <BlogHeadingSection title={post.title ?? ''} excerpt={post.excerpt ?? ''} image={post.featured_image ?? ''} />
         <BlogBodySection content_md={post.content_md ?? ''} />
       </article>
     </>

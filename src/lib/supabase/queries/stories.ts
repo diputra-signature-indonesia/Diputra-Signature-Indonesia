@@ -1,34 +1,14 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
+import type { Tables } from '@/types/database.generated';
 import { cacheLife, cacheTag } from 'next/cache';
-export type StoryExperience = {
-  id: string;
-  name: string | null;
-  message: string | null;
-  created_at: string | null;
-};
 
-export type DefaultReview = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  message: string | null;
-  is_published: boolean;
-  is_featured: boolean;
-  created_at: string | null;
-};
+type ReviewRecord = Tables<'reviews'>;
 
-export type DefaultGeneratedUrl = {
-  id: string;
-  token_hash: string | null;
-  client_name: string | null;
-  client_email: string | null;
-  expires_at: string | null;
-  used_at: string | null;
-  revoked_at: string | null;
-  created_at: string | null;
-};
+export type StoryExperience = Pick<ReviewRecord, 'id' | 'name' | 'message' | 'created_at'>;
+export type DefaultReview = ReviewRecord;
+export type DefaultGeneratedUrl = Tables<'review_requests'>;
 
 /** LIST stories visible (homepage section) */
 export async function getVisibleStories(limit = 6): Promise<StoryExperience[]> {
@@ -40,7 +20,7 @@ export async function getVisibleStories(limit = 6): Promise<StoryExperience[]> {
   const { data, error } = await supabase.from('reviews').select('id, name, message, created_at').eq('is_published', true).order('created_at', { ascending: false }).limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as StoryExperience[];
+  return data ?? [];
 }
 
 export async function getAdminClientStories(limit = 6): Promise<DefaultReview[]> {
@@ -48,7 +28,7 @@ export async function getAdminClientStories(limit = 6): Promise<DefaultReview[]>
   const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as DefaultReview[];
+  return data ?? [];
 }
 
 export async function getAdminGeneratedReview(limit = 6): Promise<DefaultGeneratedUrl[]> {
@@ -56,7 +36,7 @@ export async function getAdminGeneratedReview(limit = 6): Promise<DefaultGenerat
   const { data, error } = await supabase.from('review_requests').select('*').order('created_at', { ascending: false }).limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as DefaultGeneratedUrl[];
+  return data ?? [];
 }
 
 /** LIST stories by category (opsional, kalau nanti dipakai) */

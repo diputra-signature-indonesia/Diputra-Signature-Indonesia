@@ -53,11 +53,11 @@ export default function CreateBlogForm(props: CreateBlogFormProps) {
       const blog = props.initialValues;
       const imageData = blog.featured_image ? { publicUrl: blog.featured_image, path: publicUrlToPath(blog.featured_image, 'images') ?? null } : null;
       const draftHasData = !!draft.title || !!draft.excerpt || !!draft.contentHtml || !!draft.featuredImage?.publicUrl || (draft.uploadedPaths?.length ?? 0) > 0;
-      const htmlToUse = draftHasData ? draft.contentHtml || blog.content_md : blog.content_md;
+      const htmlToUse = draftHasData ? draft.contentHtml || blog.content_md || '' : blog.content_md || '';
 
-      setAuthorName(blog.author_name);
-      setTitle(draftHasData ? draft.title || blog.title : blog.title);
-      setExcerpt(draftHasData ? draft.excerpt || blog.excerpt : blog.excerpt);
+      setAuthorName(blog.author_name ?? '');
+      setTitle(draftHasData ? draft.title || blog.title || '' : blog.title || '');
+      setExcerpt(draftHasData ? draft.excerpt || blog.excerpt || '' : blog.excerpt || '');
       setSlug(blog.slug);
       setContentHtml(htmlToUse);
       setUploadedPaths(draftHasData ? draft.uploadedPaths || [] : []);

@@ -1,28 +1,21 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
-import { Status } from '@/types/blog-status';
+import type { Tables } from '@/types/database.generated';
 import { cacheLife, cacheTag } from 'next/cache';
 
-export type BlogPost = {
-  id: string; // kalau tabelmu pakai uuid id
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string | null;
-  reading_time_min: number | null;
-  featured_image: string | null; // cover src
-  cover_alt: string | null;
-  published_at: string | null; // date/timestamptz
-  status: Status;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+type BlogPostRecord = Tables<'blog_posts'>;
 
-export type BlogPostSummary = Pick<BlogPost, 'slug' | 'title' | 'excerpt' | 'featured_image' | 'published_at'>;
+export type BlogPost = Pick<BlogPostRecord, 'id' | 'title' | 'slug' | 'excerpt' | 'status' | 'created_at' | 'updated_at'>;
 
-export type PublishedBlogPost = Pick<BlogPost, 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'featured_image' | 'published_at' | 'updated_at'>;
+export type BlogPostSummary = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'featured_image' | 'published_at'>;
+
+export type PublishedBlogPost = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'featured_image' | 'published_at' | 'updated_at'>;
+
+export type AdminBlogPostPreview = Pick<
+  BlogPostRecord,
+  'id' | 'title' | 'slug' | 'excerpt' | 'content_md' | 'featured_image' | 'status' | 'published_at' | 'created_at' | 'updated_at' | 'author_name'
+>;
 
 type GetAdminBlogPostsParams = {
   page: number; // 0-based
@@ -30,53 +23,37 @@ type GetAdminBlogPostsParams = {
 };
 
 export type CreateDraftBlogPostInput = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string; // HTML dari Tiptap
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
-  cover_alt: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
+  slug: BlogPostRecord['slug'];
+  title: NonNullable<BlogPostRecord['title']>;
+  excerpt: NonNullable<BlogPostRecord['excerpt']>;
+  content_md: NonNullable<BlogPostRecord['content_md']>; // HTML dari Tiptap
+  author_name: NonNullable<BlogPostRecord['author_name']>;
+  reading_time_min: NonNullable<BlogPostRecord['reading_time_min']>;
+  featured_image: BlogPostRecord['featured_image'];
+  cover_alt: BlogPostRecord['cover_alt'];
+  seo_title: BlogPostRecord['seo_title'];
+  seo_description: BlogPostRecord['seo_description'];
+  og_image: BlogPostRecord['og_image'];
 };
 
 export type DefaultInputBlogPost = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
+  slug: BlogPostRecord['slug'];
+  title: NonNullable<BlogPostRecord['title']>;
+  excerpt: NonNullable<BlogPostRecord['excerpt']>;
+  content_md: NonNullable<BlogPostRecord['content_md']>;
+  author_name: NonNullable<BlogPostRecord['author_name']>;
+  reading_time_min: NonNullable<BlogPostRecord['reading_time_min']>;
+  featured_image: BlogPostRecord['featured_image'];
 };
 
-export type EditableBlogPost = {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
-  cover_alt: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
-};
+export type EditableBlogPost = Pick<
+  BlogPostRecord,
+  'id' | 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'reading_time_min' | 'featured_image' | 'cover_alt' | 'seo_title' | 'seo_description' | 'og_image'
+>;
 
-export type BlogPostRow = {
-  id: string;
-  slug: string;
-  status: Status;
-  created_at: string | null;
-  updated_at: string | null;
-};
+export type BlogPostRow = Pick<BlogPostRecord, 'id' | 'slug' | 'status' | 'created_at' | 'updated_at'>;
 
-export async function getAdminBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+export async function getAdminBlogPostBySlug(slug: string): Promise<AdminBlogPostPreview | null> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -100,7 +77,7 @@ export async function getAdminBlogPostBySlug(slug: string): Promise<BlogPost | n
     .maybeSingle();
 
   if (error) throw error;
-  return (data ?? null) as BlogPost | null;
+  return data;
 }
 
 // admin read all
@@ -130,7 +107,7 @@ export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsPar
   if (error) throw error;
 
   return {
-    data: (data ?? []) as BlogPost[],
+    data: data ?? [],
     count: count ?? 0,
   };
 }
@@ -158,7 +135,7 @@ export async function getPublishedBlogPosts(limit = 50): Promise<BlogPostSummary
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as BlogPostSummary[];
+  return data ?? [];
 }
 
 export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost> {
@@ -184,7 +161,7 @@ export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost
     .eq('slug', slug)
     .single();
   if (error) throw error;
-  return data as EditableBlogPost;
+  return data;
 }
 
 /** BLOG detail (untuk /blog/[slug]) */
@@ -203,7 +180,7 @@ export async function getPublishedBlogPostBySlug(slug: string): Promise<Publishe
 
   if (error) throw error;
   if (!data) return null;
-  return data as PublishedBlogPost;
+  return data;
 }
 
 async function ensureUniqueSlug(baseSlug: string) {
@@ -258,7 +235,7 @@ export async function createDraftBlogPost(input: CreateDraftBlogPostInput): Prom
     .single();
 
   if (error) throw error;
-  return data as BlogPostRow;
+  return data;
 }
 
 export async function updateEditedBlogPost(
