@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_access_requests: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          rejection_reason: string | null
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["admin_access_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["admin_access_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["admin_access_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_access_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author_name: string | null
@@ -456,15 +506,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_admin_access_request: {
+        Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
+        Returns: undefined
+      }
       check_review_request_status: {
         Args: { p_token: string }
         Returns: string
       }
       current_role: { Args: never; Returns: string }
+      ensure_admin_access_request: {
+        Args: never
+        Returns: Database["public"]["Enums"]["admin_access_request_status"]
+      }
+      is_active_super_admin: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_admin_role: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_staff_role: { Args: never; Returns: boolean }
+      reject_admin_access_request: {
+        Args: { p_rejection_reason?: string; p_user_id: string }
+        Returns: undefined
+      }
       set_blog_post_published: {
         Args: { p_is_published: boolean; p_post_id: string }
         Returns: undefined
@@ -480,6 +543,7 @@ export type Database = {
       }
     }
     Enums: {
+      admin_access_request_status: "pending" | "approved" | "rejected"
       blog_status: "draft" | "pending" | "published" | "rejected"
       categories_type: "primary" | "secondary"
       contact_status: "new" | "in_progress" | "replied" | "closed" | "spam"
@@ -612,6 +676,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_access_request_status: ["pending", "approved", "rejected"],
       blog_status: ["draft", "pending", "published", "rejected"],
       categories_type: ["primary", "secondary"],
       contact_status: ["new", "in_progress", "replied", "closed", "spam"],

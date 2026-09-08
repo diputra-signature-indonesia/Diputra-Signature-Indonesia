@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/database.generated';
-
-const ADMIN_ROLES = ['super_admin', 'admin', 'staff'] as const;
+import { isUserRole } from '@/types/auth-role';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
@@ -13,63 +12,47 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
   });
+
+  function redirectWithRefreshedCookies(path: string) {
+    const redirectResponse = NextResponse.redirect(new URL(path, request.url));
+    response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+    return redirectResponse;
+  }
 
   const pathname = request.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith('/admin');
   const isLoginRoute = pathname === '/login';
 
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // belum login + akses /admin -> ke /login
   if (isAdminRoute && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    return redirectWithRefreshedCookies('/login');
   }
 
-  // sudah login + buka /login -> hanya redirect kalau whitelisted + aktif + role allowed
-  if (isLoginRoute && user) {
-    const { data: profile } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single();
-
-    if (profile && profile.is_active && ADMIN_ROLES.includes(profile.role)) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin';
-      return NextResponse.redirect(url);
-    }
-    // kalau tidak whitelisted / tidak aktif / role tidak allowed -> tetap di /login
+  if (!user) {
+    return response;
   }
 
-  // akses /admin + sudah login -> cek whitelist
-  if (isAdminRoute && user) {
-    const { data: profile, error } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).single();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle();
 
-    if (error || !profile) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('error', 'not_whitelisted');
-      return NextResponse.redirect(url);
-    }
+  if (profileError) {
+    return isLoginRoute ? response : redirectWithRefreshedCookies('/login?error=access_check_failed');
+  }
 
-    if (!profile.is_active) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('error', 'inactive');
-      return NextResponse.redirect(url);
-    }
+  if (profile?.is_active && isUserRole(profile.role)) {
+    return isLoginRoute ? redirectWithRefreshedCookies('/admin') : response;
+  }
 
-    if (!ADMIN_ROLES.includes(profile.role)) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.searchParams.set('error', 'forbidden');
-      return NextResponse.redirect(url);
-    }
+  if (isAdminRoute || isLoginRoute) {
+    return redirectWithRefreshedCookies('/auth/access-denied');
   }
 
   return response;
@@ -78,9 +61,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/admin/:path*', '/login'],
 };
-
-// nanti setelah email ada
-// const email = user.email ?? '';
-// if (!email.endsWith('@diputrasignature.com')) {
-//   // reject
-// }

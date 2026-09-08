@@ -71,17 +71,14 @@ select extensions.is(public.current_role(), 'staff', 'active staff resolves from
 select extensions.ok(public.is_staff_role(), 'active staff has staff capability');
 select extensions.ok(not public.is_admin_role(), 'active staff does not have admin capability');
 
-select extensions.results_eq(
+select extensions.throws_ok(
   $$
-    with changed as (
-      update public.profiles
-      set role = 'admin'
-      where id = '00000000-0000-4000-8000-000000000101'
-      returning 1
-    )
-    select count(*)::bigint from changed
+    update public.profiles
+    set role = 'admin'
+    where id = '00000000-0000-4000-8000-000000000101'
   $$,
-  array[0::bigint],
+  '42501',
+  null,
   'staff cannot update their own authorization fields'
 );
 

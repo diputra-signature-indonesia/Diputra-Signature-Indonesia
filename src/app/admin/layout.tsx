@@ -1,4 +1,5 @@
 import { AdminLayoutProvider } from '@/components/layout-admin/admin-layout-provider';
+import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { MuiProvider } from '@/components/mui-provider';
 import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
 import { connection } from 'next/server';
@@ -14,12 +15,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
 async function DynamicAdminLayout({ children }: { children: ReactNode }) {
   await connection();
-  const author = await getCurrentAuthorFromTeamMember();
+  const admin = await requireActiveAdmin();
+  const author = await getCurrentAuthorFromTeamMember(admin.userId);
   const authorName = author?.nickname || author?.full_name || 'Admin';
   return (
     <div className="font-raleway flex max-h-svh min-h-svh flex-col">
       <MuiProvider>
-        <AdminLayoutProvider username={authorName}>{children}</AdminLayoutProvider>
+        <AdminLayoutProvider username={authorName} role={admin.role}>
+          {children}
+        </AdminLayoutProvider>
       </MuiProvider>
     </div>
   );

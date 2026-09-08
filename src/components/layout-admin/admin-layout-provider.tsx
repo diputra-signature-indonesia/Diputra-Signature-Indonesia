@@ -1,5 +1,6 @@
 'use client';
 import { ADMIN_NAV_ITEM } from '@/data/admin-navigation';
+import type { UserRole } from '@/types/auth-role';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
 import { AdminHeader } from './admin-header';
@@ -22,17 +23,18 @@ export function useAdminLayout() {
 
 interface AdminLayoutProviderProps {
   username: string;
+  role: UserRole;
   children: ReactNode;
 }
 
-export function AdminLayoutProvider({ username, children }: AdminLayoutProviderProps) {
+export function AdminLayoutProvider({ username, role, children }: AdminLayoutProviderProps) {
   const [isNavOpen, setIsNavOpen] = useState(true);
 
   return (
     <AdminLayoutContext.Provider value={{ isNavOpen, setIsNavOpen }}>
       <AdminHeader username={username} />
       <div className="flex min-h-0 w-full flex-1">
-        <AdminNav AdminNavItem={ADMIN_NAV_ITEM} />
+        <AdminNav AdminNavItem={ADMIN_NAV_ITEM.filter((item) => !item.roles || item.roles.includes(role))} />
         <div className="flex-1 overflow-y-scroll">{children}</div>
       </div>
     </AdminLayoutContext.Provider>

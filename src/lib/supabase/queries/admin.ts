@@ -3,17 +3,21 @@ import type { Tables } from '@/types/database.generated';
 
 export type CurrentAuthor = Pick<Tables<'team_members'>, 'nickname' | 'full_name'>;
 
-export async function getCurrentAuthorFromTeamMember(): Promise<CurrentAuthor | null> {
+export async function getCurrentAuthorFromTeamMember(userId?: string): Promise<CurrentAuthor | null> {
   const supabase = await createSupabaseServerClient();
 
-  // 1️⃣ ambil user login
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  let profileId = userId;
 
-  if (userError) throw userError;
-  if (!user) return null;
+  if (!profileId) {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) throw userError;
+    if (!user) return null;
+    profileId = user.id;
+  }
 
   // 2️⃣ ambil team_member berdasarkan profile_id
   const { data, error } = await supabase
@@ -24,7 +28,7 @@ export async function getCurrentAuthorFromTeamMember(): Promise<CurrentAuthor | 
       full_name
     `
     )
-    .eq('profile_id', user.id)
+    .eq('profile_id', profileId)
     .single();
 
   if (error) {

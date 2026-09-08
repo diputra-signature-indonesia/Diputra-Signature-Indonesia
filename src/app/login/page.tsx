@@ -10,6 +10,8 @@ const ERROR_TEXT: Record<string, string> = {
   domain_not_allowed: 'Domain email tidak diizinkan.',
   missing_code: 'Login gagal. Silakan coba lagi.',
   oauth_callback_failed: 'Login gagal. Silakan coba lagi.',
+  access_check_failed: 'Status akses tidak dapat diperiksa. Silakan coba lagi.',
+  access_request_failed: 'Permintaan akses tidak dapat dibuat. Silakan coba lagi atau hubungi administrator.',
 };
 
 type LoginPageProps = {
