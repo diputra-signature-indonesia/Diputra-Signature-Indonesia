@@ -67,3 +67,11 @@ export const ADMIN_NAV_ITEM: AdminNavLink[] = [
     activePaths: [`${ADMIN_ROUTE}/access-requests`],
   },
 ];
+
+export function isAdminNavItemActive(item: AdminNavLink, pathname: string) {
+  return item.activePaths?.some((path) => (path === ADMIN_ROUTE ? pathname === path : pathname === path || pathname.startsWith(`${path}/`))) ?? false;
+}
+
+export function getAdminBreadcrumbLabel(pathname: string) {
+  return ADMIN_NAV_ITEM.find((item) => isAdminNavItemActive(item, pathname))?.label ?? 'Admin';
+}

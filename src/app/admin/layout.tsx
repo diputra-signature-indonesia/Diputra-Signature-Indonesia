@@ -25,11 +25,11 @@ async function DynamicAdminLayout({ children }: { children: ReactNode }) {
   await connection();
   const admin = await requireActiveAdmin();
   const author = await getCurrentAuthorFromTeamMember(admin.userId);
-  const authorName = author?.nickname || author?.full_name || 'Admin';
+  const authorName = admin.displayName || author?.nickname || author?.full_name || admin.email?.split('@')[0] || 'Admin';
   return (
     <div className={`${adminSidebarFont.variable} font-raleway flex h-dvh overflow-hidden`}>
       <MuiProvider>
-        <AdminLayoutProvider username={authorName} role={admin.role}>
+        <AdminLayoutProvider username={authorName} avatarUrl={admin.avatarUrl} role={admin.role}>
           {children}
         </AdminLayoutProvider>
       </MuiProvider>

@@ -7,7 +7,15 @@ import { redirect } from 'next/navigation';
 export type ActiveAdminContext = {
   userId: string;
   role: UserRole;
+  displayName: string | null;
+  avatarUrl: string | null;
+  email: string | null;
 };
+
+function metadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
 
 export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
   const supabase = await createSupabaseServerClient();
@@ -30,7 +38,15 @@ export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
     redirect('/auth/access-denied');
   }
 
-  return { userId: user.id, role: profile.role };
+  const metadata = user.user_metadata as Record<string, unknown>;
+
+  return {
+    userId: user.id,
+    role: profile.role,
+    displayName: metadataString(metadata, 'full_name') ?? metadataString(metadata, 'name'),
+    avatarUrl: metadataString(metadata, 'avatar_url') ?? metadataString(metadata, 'picture'),
+    email: user.email ?? null,
+  };
 }
 
 export async function requireActiveSuperAdmin(): Promise<ActiveAdminContext> {
