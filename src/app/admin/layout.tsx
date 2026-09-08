@@ -3,7 +3,15 @@ import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { MuiProvider } from '@/components/mui-provider';
 import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
 import { connection } from 'next/server';
+import { IBM_Plex_Sans } from 'next/font/google';
 import { Suspense, type ReactNode } from 'react';
+
+const adminSidebarFont = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-admin-sidebar',
+  display: 'swap',
+});
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -19,7 +27,7 @@ async function DynamicAdminLayout({ children }: { children: ReactNode }) {
   const author = await getCurrentAuthorFromTeamMember(admin.userId);
   const authorName = author?.nickname || author?.full_name || 'Admin';
   return (
-    <div className="font-raleway flex max-h-svh min-h-svh flex-col">
+    <div className={`${adminSidebarFont.variable} font-raleway flex h-dvh overflow-hidden`}>
       <MuiProvider>
         <AdminLayoutProvider username={authorName} role={admin.role}>
           {children}

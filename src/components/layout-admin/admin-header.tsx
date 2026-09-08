@@ -11,7 +11,7 @@ export function AdminHeader({ username }: AdminHeaderProps) {
   return (
     <header className="font-raleway bg-brand-burgundy flex w-full border-b-2 border-gray-200 px-7 py-5">
       <div className="flex gap-4">
-        <button type="button" onClick={() => setIsNavOpen((p) => !p)} className="cursor-pointer">
+        <button type="button" aria-label="Open navigation" onClick={() => setIsNavOpen((p) => !p)} className="cursor-pointer lg:hidden">
           <IconBurger className="text-white" />
         </button>
         <p className="text-white">{username}</p>
