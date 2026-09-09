@@ -16,27 +16,31 @@ const ADMIN_ROUTE = '/admin';
 export const ADMIN_NAV_ITEM: AdminNavLink[] = [
   {
     label: 'Dashboard',
+    href: `${ADMIN_ROUTE}/dashboard`,
     slug: 'dashboard',
     icon: LayoutDashboard,
-    disabled: true,
+    activePaths: [`${ADMIN_ROUTE}/dashboard`],
   },
   {
     label: 'My Tasks',
+    href: `${ADMIN_ROUTE}/my-tasks`,
     slug: 'my-tasks',
     icon: ListTodo,
-    disabled: true,
+    activePaths: [`${ADMIN_ROUTE}/my-tasks`],
   },
   {
     label: 'All Jobs',
+    href: `${ADMIN_ROUTE}/all-jobs`,
     slug: 'all-jobs',
     icon: BriefcaseBusiness,
-    disabled: true,
+    activePaths: [`${ADMIN_ROUTE}/all-jobs`],
   },
   {
     label: 'SOP',
+    href: `${ADMIN_ROUTE}/sop`,
     slug: 'sop',
     icon: ArrowLeftRight,
-    disabled: true,
+    activePaths: [`${ADMIN_ROUTE}/sop`],
   },
   {
     label: 'Blogpost',
@@ -54,9 +58,10 @@ export const ADMIN_NAV_ITEM: AdminNavLink[] = [
   },
   {
     label: 'Master Data',
+    href: `${ADMIN_ROUTE}/master-data`,
     slug: 'master-data',
     icon: Database,
-    disabled: true,
+    activePaths: [`${ADMIN_ROUTE}/master-data`],
   },
   {
     label: 'User Management',
