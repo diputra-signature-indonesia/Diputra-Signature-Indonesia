@@ -1,6 +1,7 @@
 import { JobDetailContent } from '@/components/admin-job-detail/job-detail-content';
 import { JobDetailTabs, type JobDetailTab } from '@/components/admin-job-detail/job-detail-tabs';
 import { JobTabPlaceholder } from '@/components/admin-job-detail/job-tab-placeholder';
+import { TaskAssignmentContent } from '@/components/admin-job-detail/task-assignment-content';
 import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
 import { jobDetail } from '@/data/admin-job-detail/job-detail-dummy-data';
 import { Pencil } from 'lucide-react';
@@ -28,7 +29,9 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
         }
       />
       <JobDetailTabs jobId={jobId} activeTab={activeTab} />
-      {activeTab === 'detail' ? <JobDetailContent /> : <JobTabPlaceholder tab={activeTab} />}
+      {activeTab === 'detail' ? <JobDetailContent /> : null}
+      {activeTab === 'assignment' ? <TaskAssignmentContent /> : null}
+      {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
     </div>
   );
 }
