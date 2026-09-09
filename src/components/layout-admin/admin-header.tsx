@@ -2,7 +2,8 @@
 
 import { getAdminBreadcrumbLabel } from '@/data/admin-navigation';
 import { Avatar } from '@mui/material';
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Bell, ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdminLayout } from './admin-layout-provider';
 
@@ -23,6 +24,7 @@ export function AdminHeader({ username, avatarUrl }: AdminHeaderProps) {
   const { isNavCollapsed, setIsNavCollapsed, setIsMobileNavOpen } = useAdminLayout();
   const pathname = usePathname();
   const breadcrumbLabel = getAdminBreadcrumbLabel(pathname);
+  const isJobDetail = /^\/admin\/all-jobs\/[^/]+/.test(pathname);
 
   return (
     <header
@@ -47,7 +49,17 @@ export function AdminHeader({ username, avatarUrl }: AdminHeaderProps) {
         >
           {isNavCollapsed ? <PanelLeftOpen aria-hidden="true" className="size-4" strokeWidth={1.8} /> : <PanelLeftClose aria-hidden="true" className="size-4" strokeWidth={1.8} />}
         </button>
-        <span className="truncate pl-0.5 text-xs font-semibold leading-[21px] text-[#8C1010]">{breadcrumbLabel}</span>
+        <div className="flex min-w-0 items-center gap-1.5 pl-0.5 text-xs font-semibold leading-[21px]">
+          {isJobDetail ? (
+            <>
+              <Link href="/admin/all-jobs" className="shrink-0 text-[#5F5553] transition hover:text-[#8C1010]">All Jobs</Link>
+              <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-[#9D9694]" />
+              <span className="truncate text-[#8C1010]">Job Detail</span>
+            </>
+          ) : (
+            <span className="truncate text-[#8C1010]">{breadcrumbLabel}</span>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-4">
