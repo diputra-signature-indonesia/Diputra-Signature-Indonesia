@@ -1,5 +1,11 @@
-import { AdminComingSoonCard } from '@/components/layout-admin/admin-coming-soon-card';
+import { MasterDataWorkspace } from '@/components/admin-master-data/master-data-workspace';
+import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
 
 export default function AdminMasterDataPage() {
-  return <AdminComingSoonCard title="Master Data" description="Pengelolaan data referensi utama akan tersedia di halaman ini." />;
+  return (
+    <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
+      <AdminPageHeader title="Master Data" description="Manage reusable references for jobs, tasks, services, and workflows." />
+      <MasterDataWorkspace />
+    </div>
+  );
 }
