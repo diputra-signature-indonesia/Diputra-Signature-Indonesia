@@ -131,7 +131,7 @@ values
     encode(extensions.digest(repeat('e', 64), 'sha256'), 'hex'),
     'Local Valid Client',
     'valid-client@example.test',
-    now() + interval '7 days',
+    now() + interval '10 years',
     null,
     null,
     now()

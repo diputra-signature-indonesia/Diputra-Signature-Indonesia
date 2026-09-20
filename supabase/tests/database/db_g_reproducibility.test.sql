@@ -11,9 +11,15 @@ select extensions.is(
 );
 
 select extensions.is(
-  (select count(*)::bigint from public.profiles where role = 'super_admin' and is_active),
+  (
+    select count(*)::bigint
+    from public.profiles p
+    join auth.users u on u.id=p.id
+    where p.role='super_admin' and p.is_active
+      and u.raw_user_meta_data->>'local_fixture'='true'
+  ),
   1::bigint,
-  'one active super admin profile exists'
+  'one active local-fixture super admin profile exists'
 );
 
 select extensions.is(
