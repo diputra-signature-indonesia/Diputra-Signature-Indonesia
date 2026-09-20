@@ -50,7 +50,7 @@ export function SopServiceList({ services, selectedId, onSelect }: SopServiceLis
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Service name or category..."
+              placeholder="Internal service name..."
               className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]"
             />
           </label>

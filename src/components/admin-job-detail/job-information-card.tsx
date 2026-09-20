@@ -23,7 +23,7 @@ export function JobInformationCard() {
       <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
         <InformationItem label="Client">{jobDetail.client}</InformationItem>
         <InformationItem label="PIC">{jobDetail.pic}</InformationItem>
-        <InformationItem label="Category">{jobDetail.category}</InformationItem>
+        <InformationItem label="Internal Service">{jobDetail.internalService}</InformationItem>
         <InformationItem label="Priority">{jobDetail.priority}</InformationItem>
         <InformationItem label="Start Date">{jobDetail.startDate}</InformationItem>
         <InformationItem label="Estimated End Date">{jobDetail.estimatedEndDate}</InformationItem>

@@ -16,6 +16,7 @@ export type MasterDataCell =
 
 export type MasterDataRow = {
   id: string;
+  isSystem?: boolean;
   cells: MasterDataCell[];
 };
 
@@ -43,6 +44,7 @@ export const masterDataCategories: MasterDataCategory[] = [
     rows: [
       {
         id: 'priority-high',
+        isSystem: true,
         cells: [
           { type: 'text', value: 'High', secondary: 'Requires immediate attention' },
           { type: 'text', value: 'HIGH', mono: true },
@@ -53,6 +55,7 @@ export const masterDataCategories: MasterDataCategory[] = [
       },
       {
         id: 'priority-medium',
+        isSystem: true,
         cells: [
           { type: 'text', value: 'Medium', secondary: 'Standard operational priority' },
           { type: 'text', value: 'MEDIUM', mono: true },
@@ -63,6 +66,7 @@ export const masterDataCategories: MasterDataCategory[] = [
       },
       {
         id: 'priority-low',
+        isSystem: true,
         cells: [
           { type: 'text', value: 'Low', secondary: 'Can be handled after urgent work' },
           { type: 'text', value: 'LOW', mono: true },
@@ -76,18 +80,17 @@ export const masterDataCategories: MasterDataCategory[] = [
   {
     id: 'service-categories',
     label: 'Service Categories',
-    description: 'Group internal services into consistent operational categories.',
+    description: 'Manage service categories displayed on the landing and client pages.',
     addLabel: 'Add Category',
     icon: 'category',
-    columns: ['Category', 'Code', 'Description', 'Services', 'Status'],
+    columns: ['Category', 'Slug', 'Type', 'Published'],
     rows: [
       {
-        id: 'category-setup-pma',
+        id: 'category-insurance',
         cells: [
-          { type: 'text', value: 'Set Up PMA' },
-          { type: 'text', value: 'SET_UP_PMA', mono: true },
-          { type: 'text', value: 'Foreign-owned company establishment' },
-          { type: 'text', value: '4 services' },
+          { type: 'text', value: 'Insurance', secondary: 'ALLIANZ insurance services' },
+          { type: 'text', value: 'insurance', mono: true },
+          { type: 'badge', value: 'Primary', tone: 'blue' },
           activeBadge,
         ],
       },
@@ -95,19 +98,17 @@ export const masterDataCategories: MasterDataCategory[] = [
         id: 'category-visa',
         cells: [
           { type: 'text', value: 'Visa' },
-          { type: 'text', value: 'VISA', mono: true },
-          { type: 'text', value: 'Visa application and renewal services' },
-          { type: 'text', value: '6 services' },
+          { type: 'text', value: 'visa', mono: true },
+          { type: 'badge', value: 'Primary', tone: 'blue' },
           activeBadge,
         ],
       },
       {
-        id: 'category-itas',
+        id: 'category-legal-corporate',
         cells: [
-          { type: 'text', value: 'ITAS' },
-          { type: 'text', value: 'ITAS', mono: true },
-          { type: 'text', value: 'Stay permit services for foreign nationals' },
-          { type: 'text', value: '3 services' },
+          { type: 'text', value: 'Legal & Corporate' },
+          { type: 'text', value: 'legal-corporate', mono: true },
+          { type: 'badge', value: 'Primary', tone: 'blue' },
           activeBadge,
         ],
       },
@@ -115,9 +116,17 @@ export const masterDataCategories: MasterDataCategory[] = [
         id: 'category-real-estate',
         cells: [
           { type: 'text', value: 'Real Estate' },
-          { type: 'text', value: 'REAL_ESTATE', mono: true },
-          { type: 'text', value: 'Property transaction and due diligence' },
-          { type: 'text', value: '5 services' },
+          { type: 'text', value: 'real-estate', mono: true },
+          { type: 'badge', value: 'Primary', tone: 'blue' },
+          activeBadge,
+        ],
+      },
+      {
+        id: 'category-ip-trademark',
+        cells: [
+          { type: 'text', value: 'IP & Trademark Registration Services' },
+          { type: 'text', value: 'ip-trademark-registration-services', mono: true },
+          { type: 'badge', value: 'Secondary', tone: 'purple' },
           activeBadge,
         ],
       },
@@ -129,14 +138,13 @@ export const masterDataCategories: MasterDataCategory[] = [
     description: 'Maintain the service catalogue and assign its workflow template.',
     addLabel: 'Add Service',
     icon: 'service',
-    columns: ['Service', 'Code', 'Category', 'Workflow', 'Status'],
+    columns: ['Service', 'Code', 'Workflow', 'Status'],
     rows: [
       {
         id: 'service-kitas-renewal',
         cells: [
           { type: 'text', value: 'Investor KITAS Renewal', secondary: 'KITAS extension for company investors' },
           { type: 'text', value: 'KITAS_RENEWAL', mono: true },
-          { type: 'badge', value: 'ITAS', tone: 'purple' },
           { type: 'text', value: 'Visa Workflow', secondary: '3 ordered steps' },
           activeBadge,
         ],
@@ -146,7 +154,6 @@ export const masterDataCategories: MasterDataCategory[] = [
         cells: [
           { type: 'text', value: 'New PMA Registration', secondary: 'Foreign-owned company registration' },
           { type: 'text', value: 'PMA_REGISTRATION', mono: true },
-          { type: 'badge', value: 'Set Up PMA', tone: 'blue' },
           { type: 'text', value: 'General Workflow', secondary: '5 ordered steps' },
           activeBadge,
         ],
@@ -156,7 +163,6 @@ export const masterDataCategories: MasterDataCategory[] = [
         cells: [
           { type: 'text', value: 'Sale and Purchase Deed', secondary: 'Property transfer documentation' },
           { type: 'text', value: 'SALE_PURCHASE_DEED', mono: true },
-          { type: 'badge', value: 'Real Estate', tone: 'yellow' },
           { type: 'text', value: 'General Workflow', secondary: '5 ordered steps' },
           activeBadge,
         ],
@@ -166,7 +172,6 @@ export const masterDataCategories: MasterDataCategory[] = [
         cells: [
           { type: 'text', value: 'Legal Due Diligence', secondary: 'Company and property legal audit' },
           { type: 'text', value: 'LEGAL_DUE_DILIGENCE', mono: true },
-          { type: 'badge', value: 'Real Estate', tone: 'yellow' },
           { type: 'text', value: 'Not assigned', secondary: 'Required before use' },
           { type: 'badge', value: 'Inactive', tone: 'gray' },
         ],
@@ -178,13 +183,13 @@ export const masterDataCategories: MasterDataCategory[] = [
     label: 'Job Statuses',
     description: 'Review the fixed lifecycle statuses available to every job.',
     icon: 'job-status',
-    columns: ['Status', 'Code', 'Color', 'Order', 'Type'],
+    columns: ['Status', 'Code', 'Color', 'Order', 'Availability', 'Type'],
     rows: [
-      { id: 'job-not-started', cells: [{ type: 'text', value: 'Not Started' }, { type: 'text', value: 'NOT_STARTED', mono: true }, { type: 'color', value: 'Gray', color: '#8A94A3' }, { type: 'text', value: '10' }, systemBadge] },
-      { id: 'job-in-progress', cells: [{ type: 'text', value: 'In Progress' }, { type: 'text', value: 'IN_PROGRESS', mono: true }, { type: 'color', value: 'Yellow', color: '#E4B400' }, { type: 'text', value: '20' }, systemBadge] },
-      { id: 'job-on-hold', cells: [{ type: 'text', value: 'On Hold' }, { type: 'text', value: 'ON_HOLD', mono: true }, { type: 'color', value: 'Blue', color: '#194DB8' }, { type: 'text', value: '30' }, systemBadge] },
-      { id: 'job-obstacle', cells: [{ type: 'text', value: 'Obstacle' }, { type: 'text', value: 'OBSTACLE', mono: true }, { type: 'color', value: 'Red', color: '#E33434' }, { type: 'text', value: '40' }, systemBadge] },
-      { id: 'job-completed', cells: [{ type: 'text', value: 'Completed' }, { type: 'text', value: 'COMPLETED', mono: true }, { type: 'color', value: 'Green', color: '#1CA35B' }, { type: 'text', value: '50' }, systemBadge] },
+      { id: 'job-not-started', isSystem: true, cells: [{ type: 'text', value: 'Not Started' }, { type: 'text', value: 'NOT_STARTED', mono: true }, { type: 'color', value: 'Gray', color: '#8A94A3' }, { type: 'text', value: '10' }, activeBadge, systemBadge] },
+      { id: 'job-in-progress', isSystem: true, cells: [{ type: 'text', value: 'In Progress' }, { type: 'text', value: 'IN_PROGRESS', mono: true }, { type: 'color', value: 'Yellow', color: '#E4B400' }, { type: 'text', value: '20' }, activeBadge, systemBadge] },
+      { id: 'job-on-hold', isSystem: true, cells: [{ type: 'text', value: 'On Hold' }, { type: 'text', value: 'ON_HOLD', mono: true }, { type: 'color', value: 'Blue', color: '#194DB8' }, { type: 'text', value: '30' }, activeBadge, systemBadge] },
+      { id: 'job-obstacle', isSystem: true, cells: [{ type: 'text', value: 'Obstacle' }, { type: 'text', value: 'OBSTACLE', mono: true }, { type: 'color', value: 'Red', color: '#E33434' }, { type: 'text', value: '40' }, activeBadge, systemBadge] },
+      { id: 'job-completed', isSystem: true, cells: [{ type: 'text', value: 'Completed' }, { type: 'text', value: 'COMPLETED', mono: true }, { type: 'color', value: 'Green', color: '#1CA35B' }, { type: 'text', value: '50' }, activeBadge, systemBadge] },
     ],
   },
   {
@@ -193,13 +198,13 @@ export const masterDataCategories: MasterDataCategory[] = [
     description: 'Manage global task statuses that PICs can add to a job board.',
     addLabel: 'Add Task Status',
     icon: 'task-status',
-    columns: ['Status', 'Code', 'Color', 'Order', 'Type'],
+    columns: ['Status', 'Code', 'Color', 'Order', 'Availability', 'Type'],
     rows: [
-      { id: 'task-not-started', cells: [{ type: 'text', value: 'Not Started', secondary: 'Default board column' }, { type: 'text', value: 'NOT_STARTED', mono: true }, { type: 'color', value: 'Gray', color: '#8A94A3' }, { type: 'text', value: '10' }, systemBadge] },
-      { id: 'task-in-progress', cells: [{ type: 'text', value: 'In Progress', secondary: 'Default board column' }, { type: 'text', value: 'IN_PROGRESS', mono: true }, { type: 'color', value: 'Yellow', color: '#E4B400' }, { type: 'text', value: '20' }, systemBadge] },
-      { id: 'task-on-hold', cells: [{ type: 'text', value: 'On Hold' }, { type: 'text', value: 'ON_HOLD', mono: true }, { type: 'color', value: 'Blue', color: '#194DB8' }, { type: 'text', value: '30' }, systemBadge] },
-      { id: 'task-obstacle', cells: [{ type: 'text', value: 'Obstacle' }, { type: 'text', value: 'OBSTACLE', mono: true }, { type: 'color', value: 'Red', color: '#E33434' }, { type: 'text', value: '40' }, systemBadge] },
-      { id: 'task-completed', cells: [{ type: 'text', value: 'Completed', secondary: 'Default board column' }, { type: 'text', value: 'COMPLETED', mono: true }, { type: 'color', value: 'Green', color: '#1CA35B' }, { type: 'text', value: '50' }, systemBadge] },
+      { id: 'task-not-started', isSystem: true, cells: [{ type: 'text', value: 'Not Started', secondary: 'Default board column' }, { type: 'text', value: 'NOT_STARTED', mono: true }, { type: 'color', value: 'Gray', color: '#8A94A3' }, { type: 'text', value: '10' }, activeBadge, systemBadge] },
+      { id: 'task-in-progress', isSystem: true, cells: [{ type: 'text', value: 'In Progress', secondary: 'Default board column' }, { type: 'text', value: 'IN_PROGRESS', mono: true }, { type: 'color', value: 'Yellow', color: '#E4B400' }, { type: 'text', value: '20' }, activeBadge, systemBadge] },
+      { id: 'task-on-hold', isSystem: true, cells: [{ type: 'text', value: 'On Hold' }, { type: 'text', value: 'ON_HOLD', mono: true }, { type: 'color', value: 'Blue', color: '#194DB8' }, { type: 'text', value: '30' }, activeBadge, systemBadge] },
+      { id: 'task-obstacle', isSystem: true, cells: [{ type: 'text', value: 'Obstacle' }, { type: 'text', value: 'OBSTACLE', mono: true }, { type: 'color', value: 'Red', color: '#E33434' }, { type: 'text', value: '40' }, activeBadge, systemBadge] },
+      { id: 'task-completed', isSystem: true, cells: [{ type: 'text', value: 'Completed', secondary: 'Default board column' }, { type: 'text', value: 'COMPLETED', mono: true }, { type: 'color', value: 'Green', color: '#1CA35B' }, { type: 'text', value: '50' }, activeBadge, systemBadge] },
     ],
   },
   {

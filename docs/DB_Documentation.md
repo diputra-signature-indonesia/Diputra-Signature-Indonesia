@@ -16,11 +16,12 @@ Sumber review:
 
 ### 1. Ringkasan tabel
 
-- Master Data: `priorities`, `internal_service_categories`, `internal_services`, `job_statuses`, `task_statuses`, `workflow_templates`, `workflow_template_steps`.
+- Master Data baru: `priorities`, `internal_services`, `job_statuses`, `task_statuses`, `workflow_templates`, `workflow_template_steps`.
 - Operasional: `clients`, `jobs`, `job_steps`, `job_task_statuses`, `tasks`, `job_updates`, `job_activity_logs`.
 - SOP: `sops`, `sop_files`, `sop_price_items`.
-- Total inti: **17 tabel baru**.
+- Total inti: **16 tabel baru**.
 - Existing tetap dipakai: `profiles`, `admin_access_requests`; tidak membuat sistem role atau tabel akun baru.
+- `services_categories`, `services_items`, dan `services_item_details` tetap menjadi katalog landing/client page existing. Ketiganya tidak berelasi dengan `internal_services`, Job, atau SOP admin.
 - Opsional, belum masuk MVP: `job_contributors`, notification, task template, lampiran Job/Task.
 
 ### 2. Definisi domain dan keputusan yang sudah disepakati
@@ -46,13 +47,13 @@ Sumber review:
 - Semua tabel baru mempunyai `id uuid PK DEFAULT gen_random_uuid()`.
 - `NN` berarti `NOT NULL`; `NULL` berarti opsional. Tipe `text` tetap mempunyai validasi panjang yang ditetapkan saat migration.
 - Semua tabel baru kecuali log append-only mempunyai `created_at timestamptz NN DEFAULT now()` dan `updated_at timestamptz NN DEFAULT now()`.
-- Tabel Master Data yang dapat diisi migration (`priorities`, kedua tabel status, kategori/service, dan workflow template/step) mempunyai `created_by uuid NULL FK profiles.id` dan `updated_by uuid NULL FK profiles.id`; NULL hanya untuk data bawaan migration/system tanpa session pengguna. Tabel operasional dan SOP mewajibkan kedua kolom tersebut (`NN`). Semua mutation aplikasi mengisinya dari `auth.uid()`, bukan parameter frontend. Tidak ada `created_source` dan tidak ada profile sistem palsu.
+- Tabel Master Data baru yang dapat diisi migration (`priorities`, kedua tabel status, `internal_services`, dan workflow template/step) mempunyai `created_by uuid NULL FK profiles.id` dan `updated_by uuid NULL FK profiles.id`; NULL hanya untuk data bawaan migration/system tanpa session pengguna. Tabel operasional dan SOP mewajibkan kedua kolom tersebut (`NN`). Semua mutation aplikasi mengisinya dari `auth.uid()`, bukan parameter frontend. Tidak ada `created_source` dan tidak ada profile sistem palsu.
 - Seluruh kolom audit tersebut termasuk rancangan kolom walaupun tidak diulang dalam setiap tabel berikut.
 - Waktu audit UTC (`timestamptz`); tanggal bisnis `date`. Zona bisnis deadline harus dipilih eksplisit, usulan `Asia/Makassar`, bukan mengikuti timezone browser.
 - Kolom `version integer NN DEFAULT 1` pada entitas mutable penting digunakan untuk optimistic concurrency; RPC menerima `expected_version` dan menolak perubahan berdasarkan data lama.
 - Master Data tidak dihapus ketika sudah direferensikan. `is_active=false` menghentikan penggunaan baru tetapi tidak menyembunyikan histori referensi.
 - Job dan Client menggunakan archive, bukan delete fisik rutin. Task menggunakan soft delete. Remark dapat dihapus fisik oleh PIC/admin setelah snapshot penghapusannya dicatat ke activity log.
-- FK ke user, Client, kategori, service, status, template memakai `ON DELETE RESTRICT` pada rancangan baru, kecuali dijelaskan berbeda. UUID stabil; gunakan `NO ACTION` untuk update ID.
+- FK ke user, Client, Internal Service, status, dan template memakai `ON DELETE RESTRICT` pada rancangan baru, kecuali dijelaskan berbeda. UUID stabil; gunakan `NO ACTION` untuk update ID.
 - Pengguna existing tidak dihapus fisik. `is_active=false` berarti dinonaktifkan sementara dan tetap dapat ditampilkan pada User Management; `deleted_at IS NOT NULL` berarti soft-deleted dan tidak muncul pada daftar aktif maupun pilihan assignee. Akses aplikasi mensyaratkan `is_active=true AND deleted_at IS NULL`.
 - Default status berbasis lookup `code` dilakukan RPC/trigger, bukan UUID hardcoded atau default SQL subquery.
 
@@ -101,18 +102,11 @@ Kelima status sistem tersedia pada kedua tabel, tetapi penggunaannya berbeda:
 - Job baru hanya memasang tiga status Task default: `NOT_STARTED`, `IN_PROGRESS`, dan `COMPLETED`. `ON_HOLD`, `OBSTACLE`, atau status global tambahan dapat dipasang kemudian oleh PIC/admin.
 - `code` status sistem permanen. Status sistem tidak dapat dihapus atau dinonaktifkan. Status tambahan dapat dinonaktifkan agar tidak dipakai pada konfigurasi baru, tetapi histori tetap terbaca.
 
-#### 4.4 `internal_service_categories`
+#### 4.4 `services_categories` existing — khusus landing/client page
 
-| Kolom tambahan | Tipe / aturan |
-| --- | --- |
-| `code` | text NN UNIQUE, permanen |
-| `name` | text NN |
-| `description` | text NULL |
-| `color` | text NULL |
-| `sort_order` | integer NN DEFAULT 0 |
-| `is_active` | boolean NN DEFAULT true |
+Menu **Service Categories** pada Master Data mengelola tabel existing `public.services_categories`. Tabel ini mengatur kategori konten layanan yang ditampilkan pada landing/client page dan tetap berelasi dengan `services_items` serta `services_item_details` existing.
 
-Kandidat berdasarkan nilai aktual Excel: SET UP PMA, VISA, ITAS, REVISION PT PMA, REAL ESTATE, EXECUTIVE SUMMARY, SET UP PT PMDN, OTHER. Daftar Setup juga mempunyai nilai yang belum dipakai pada pekerjaan aktual. Normalisasi/seed final memerlukan review; tidak otomatis mengganti kategori Excel dengan kategori dummy UI.
+`services_categories` tidak menjadi parent, lookup, atau filter untuk `internal_services`. Data di dalamnya juga tidak pernah disalin otomatis ke Job/SOP admin. Detail kolom existing dicatat pada bagian 18.4.
 
 #### 4.5 `workflow_templates`
 
@@ -147,17 +141,17 @@ Seed awal:
 
 | Kolom tambahan | Tipe / aturan |
 | --- | --- |
-| `category_id` | uuid NN FK internal_service_categories.id |
 | `code` | text NN UNIQUE |
 | `name` | text NN |
 | `summary` | text NULL |
 | `workflow_template_id` | uuid NULL FK workflow_templates.id |
-| `sort_order` | integer NN DEFAULT 0 |
 | `is_active` | boolean NN DEFAULT true |
 
-Contoh: Investor KITAS Renewal merupakan Service; ITAS merupakan kategori. Assignment Workflow dilakukan terpisah setelah template dibuat. Service boleh tersimpan tanpa Workflow selama konfigurasi Master Data berlangsung, tetapi tidak dapat dipilih untuk membuat Job sebelum mempunyai template aktif.
+`internal_services` adalah katalog operasional khusus admin dan menjadi nilai **Internal Service** pada Job, filter, tabel, serta grafik dashboard admin. Ia bukan `services_items` dan tidak mempunyai hubungan ke `services_categories` milik landing/client page.
 
-Mengubah kategori atau assignment Workflow Service hanya berlaku untuk Job baru. Job lama mempertahankan referensi dan snapshot Workflow yang dipakai saat dibuat. Service dan kategori baru harus aktif; reference histori tetap dapat dibaca ketika master inactive.
+Contoh: Investor KITAS Renewal, New PMA Registration, dan Legal Due Diligence. Assignment Workflow dilakukan terpisah setelah template dibuat. Service boleh tersimpan tanpa Workflow selama konfigurasi Master Data berlangsung, tetapi tidak dapat dipilih untuk membuat Job sebelum mempunyai template aktif.
+
+Mengubah assignment Workflow Service hanya berlaku untuk Job baru. Job lama mempertahankan referensi dan snapshot Workflow yang dipakai saat dibuat. Internal Service baru harus aktif; referensi histori tetap dapat dibaca ketika master inactive.
 
 ### 5. Tabel operasional
 
@@ -186,7 +180,6 @@ Nama, email, dan telepon tidak UNIQUE karena orang/perusahaan dapat mempunyai na
 | `title` | text NN |
 | `description` | text NULL |
 | `pic_id` | uuid NN FK profiles.id |
-| `category_id` | uuid NN FK internal_service_categories.id |
 | `internal_service_id` | uuid NN FK internal_services.id |
 | `workflow_template_id` | uuid NN FK workflow_templates.id |
 | `priority_id` | uuid NN FK priorities.id |
@@ -206,10 +199,10 @@ Aturan:
 - `start_date` dan `estimated_end_date` boleh diisi setelah Job dibuat. Bila keduanya terisi, `estimated_end_date >= start_date`.
 - Assignment PIC baru wajib profile dengan role existing yang valid, `is_active=true`, dan `deleted_at IS NULL`. Penonaktifan/soft delete user tidak menghapus histori/PIC; Job aktifnya perlu di-reassign admin.
 - Staff yang membuat Job menjadi PIC otomatis dan tidak dapat memilih PIC lain. Admin/super admin dapat memilih PIC ketika membuat Job. Hanya admin/super admin yang dapat mengganti `pic_id` setelahnya.
-- PIC boleh mengubah title, description, Client, Service/category, priority, tanggal, dan status Job miliknya. Admin/super admin dapat mengelola semua Job.
-- `category_id`, `internal_service_id`, dan `workflow_template_id` merupakan referensi master. Saat Job dibuat, kategori dan Workflow diambil dari Service aktif yang dipilih; Job tidak meminta pengguna memilih Workflow.
+- PIC boleh mengubah title, description, Client, Internal Service, priority, tanggal, dan status Job miliknya. Admin/super admin dapat mengelola semua Job.
+- `internal_service_id` dan `workflow_template_id` merupakan referensi master. Saat Job dibuat, Workflow diambil dari Internal Service aktif yang dipilih; Job tidak meminta pengguna memilih Workflow.
 - Mengganti assignment Workflow pada Master Data Service hanya memengaruhi Job baru. Job lama mempertahankan `workflow_template_id` dan snapshot `job_steps` lama.
-- Mengganti Service pada Job me-restart Workflow: current step lama ditandai replaced untuk histori, kategori/template diperbarui, dan snapshot step baru dibuat seluruhnya belum selesai dalam satu transaksi. Status Job tetap. Job completed harus di-reopen sebelum datanya dapat diubah.
+- Mengganti Internal Service pada Job me-restart Workflow: current step lama ditandai replaced untuk histori, template diperbarui, dan snapshot step baru dibuat seluruhnya belum selesai dalam satu transaksi. Status Job tetap. Job completed harus di-reopen sebelum datanya dapat diubah.
 - `progress_percentage`, `current_step_name`, `estimated_duration_days`, `deadline_state`, `overdue_days`, jumlah task, contributor, dan latest update **tidak disimpan** di jobs.
 - Tidak ada kolom deadline terpisah. `estimated_end_date` adalah batas estimasi/deadline, sedangkan `start_date` dipakai bersama tanggal tersebut untuk menghitung estimasi durasi.
 - `status_id`, started_at, completed_at, audit, dan version dilindungi; mutation memakai RPC, bukan write langsung.
@@ -376,7 +369,6 @@ profiles (existing UUID Auth, active approval)
   |-- tasks.assignee_id
   `-- audit / performed_by / completion actors
 
-internal_service_categories 1 -- N internal_services
 internal_services N -- 0..1 workflow_templates (assignment untuk Job baru)
 workflow_templates 1 -- N workflow_template_steps
 internal_services 1 -- 0..1 sops
@@ -384,16 +376,19 @@ sops 1 -- N sop_files
 sops 1 -- N sop_price_items
 
 clients 1 -- N jobs (wajib)
-jobs N -- 1 category / service / workflow template
+jobs N -- 1 internal service / workflow template
 jobs 1 -- N job_steps (snapshot)
 jobs 1 -- N job_task_statuses N -- 1 task_statuses
 jobs 1 -- N tasks
 tasks N -- 1 job_task_statuses
 jobs 1 -- N job_updates
 jobs 1 -- N job_activity_logs
+
+services_categories (existing, landing/client page) 1 -- N services_items
+services_items 1 -- N services_item_details
 ```
 
-Service/category/template yang inactive tetap terlihat jika direferensikan Job lama. Workflow tanpa step tidak dapat di-assign untuk membuat Job. Template lama dinonaktifkan setelah Service dipindahkan ke template pengganti; snapshot Job lama tidak ikut berubah.
+Internal Service/template yang inactive tetap terlihat jika direferensikan Job lama. Workflow tanpa step tidak dapat di-assign untuk membuat Job. Template lama dinonaktifkan setelah Internal Service dipindahkan ke template pengganti; snapshot Job lama tidak ikut berubah. Rangkaian `services_categories`/`services_items` di atas berdiri sendiri sebagai konten website dan tidak terhubung ke rangkaian Job.
 
 ### 8. Aturan status dan transaksi
 
@@ -533,7 +528,7 @@ PK/UNIQUE membuat index terkait; jangan membuat ulang index identik. FK lain dip
 | jobs | `(client_id, created_at DESC, id)` untuk Group Client/detail |
 | jobs | `(pic_id, status_id, estimated_end_date, id)` untuk beban PIC |
 | jobs | `(status_id, estimated_end_date, id)` WHERE archived_at IS NULL |
-| jobs | `(category_id, created_at DESC, id)` jika filter kategori terbukti membutuhkan |
+| jobs | `(internal_service_id, created_at DESC, id)` jika filter Internal Service terbukti membutuhkan |
 | job_task_statuses | UNIQUE `(job_id, task_status_id)` dan UNIQUE `(job_id, column_order)` |
 | tasks | `(assignee_id, job_id)` WHERE deleted_at IS NULL untuk My Tasks |
 | tasks | `(job_id, job_task_status_id, position, id)` WHERE deleted_at IS NULL untuk board |
@@ -554,7 +549,7 @@ Query pencarian lintas Job title/Client memerlukan desain server projection/sear
 
 ### 15. Verifikasi yang diperlukan sebelum migration dianggap siap
 
-- Schema review: semua 17 tabel, FK composite, nullable audit untuk seed, soft-delete profile/Task, hard-delete Remark dengan log snapshot, privileges, constraint/trigger lintas baris, dan kontrak RPC.
+- Schema review: semua 16 tabel baru, FK composite, nullable audit untuk seed, soft-delete profile/Task, hard-delete Remark dengan log snapshot, privileges, constraint/trigger lintas baris, dan kontrak RPC.
 - pgTAP: role active/inactive/soft-deleted/no profile, seluruh staff read Job/log, direct write denied, master immutable code, Workflow immutable setelah dipakai, Job default, urutan complete/revert step, final-step lock saat hold/obstacle, hanya final step menutup Job, restart Workflow saat ganti Service tanpa mengubah status, reopen PIC/admin dengan alasan, konfigurasi kolom Task, self-assignment staff, unassigned Task PIC/admin, reassign, drag/drop position, soft-delete Task, hard-delete Remark terlog, child Job mismatch, race/version stale, dan status Task independen.
 - Storage HTTP lokal: private access denied anon/pending, unauthorized path upload, file type/size, flow replacement/race, delete failure retry, signed URL scope, ZIP duplicate filenames.
 - FE: My Tasks/PIC, Group Client, dashboard Job vs Task, form lokal Task sebelum Save, dynamic status columns, loading/error/empty states, PDF dan Price List mutations.
@@ -666,7 +661,8 @@ Perubahan V2 yang diusulkan: ubah FK `reviewed_by` menjadi ON DELETE RESTRICT/NO
 - `sort_order bigint NULL DEFAULT 0`, `is_published boolean NULL` tanpa default pada baseline.
 - `created_at`, `updated_at timestamptz NULL DEFAULT now()`.
 - Konten/kategori website publik. Public SELECT published; trigger updated_at.
-- Tidak dipakai sebagai kategori operasional V2 dan tidak diubah dalam rancangan ini.
+- Dikelola oleh menu **Service Categories** pada Master Data untuk kebutuhan landing/client page.
+- Tidak dipakai sebagai kategori operasional V2, tidak menjadi parent `internal_services`, dan tidak direferensikan Job/SOP admin.
 
 #### 18.5 `services_items`
 
@@ -782,7 +778,7 @@ Storage existing:
 
 ### 21. Dampak V2 terhadap existing dan batas rollout
 
-- Perubahan inti: menambah 17 tabel + functions/policies/index/view/bucket private. Kolom `display_name`, `avatar_url`, dan `deleted_at` pada profiles serta hardening FK lifecycle perlu migration tersendiri/terintegrasi yang diaudit.
+- Perubahan inti: menambah 16 tabel + functions/policies/index/view/bucket private. Kolom `display_name`, `avatar_url`, dan `deleted_at` pada profiles serta hardening FK lifecycle perlu migration tersendiri/terintegrasi yang diaudit.
 - Tidak rename/drop tabel CMS, tidak mengubah role enum, tidak menghapus existing super admin, tidak mengubah OAuth Production.
 - Auth.users hanya identitas; profiles approval tetap gate akses. User tanpa profile, inactive, atau soft-deleted tidak boleh membaca domain tracking maupun Storage internal.
 - Profil approved existing bootstrap super admin tetap digunakan. Jika belum ada, operator tepercaya melakukan provisioning satu akun memakai workflow bootstrap yang sudah didokumentasikan; tidak membuat endpoint self-promotion.

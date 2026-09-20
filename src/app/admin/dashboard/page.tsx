@@ -4,7 +4,7 @@ import { DashboardFilters } from '@/components/admin-dashboard/dashboard-filters
 import { DashboardPicLoadCard } from '@/components/admin-dashboard/dashboard-pic-load-card';
 import { DashboardStatCards } from '@/components/admin-dashboard/dashboard-stat-cards';
 import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
-import { attentionTasks, categorySummary, dashboardMetrics, picTaskLoads } from '@/data/admin-dashboard/dashboard-dummy-data';
+import { attentionTasks, dashboardMetrics, internalServiceSummary, picTaskLoads } from '@/data/admin-dashboard/dashboard-dummy-data';
 
 export default function AdminDashboardPage() {
   return (
@@ -17,7 +17,7 @@ export default function AdminDashboardPage() {
 
         <section className="grid gap-5 xl:grid-cols-2">
           <DashboardPicLoadCard taskLoads={picTaskLoads} />
-          <DashboardCategoryCard categories={categorySummary} />
+          <DashboardCategoryCard internalServices={internalServiceSummary} />
         </section>
 
         <DashboardAttentionTable tasks={attentionTasks} />

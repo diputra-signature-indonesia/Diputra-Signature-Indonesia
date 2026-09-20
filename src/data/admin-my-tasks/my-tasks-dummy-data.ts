@@ -23,7 +23,7 @@ export type MyTaskJob = {
 
 export const myTaskFilterOptions = {
   deadlines: ['Any Time', 'Due Today', 'Next 7 Days', 'Overdue'],
-  categories: ['All Categories', 'Visa', 'Legal Document', 'Company Est.', 'Property'],
+  internalServices: ['All Internal Services', 'Investor KITAS', 'Legal Due Diligence', 'PMA Establishment', 'Property Due Diligence'],
   statuses: ['Active Job', 'In Progress', 'On Hold', 'Obstacle', 'Not Started', 'Completed'],
   sortBy: ['Most Urgent', 'Newest', 'Client Name'],
 };

@@ -83,7 +83,7 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
             <tr>
               <th className="w-[30%] px-4 py-4 pl-11">Job Details</th>
               <th className="px-3 py-4">PIC</th>
-              <th className="px-3 py-4">Category</th>
+              <th className="px-3 py-4">Internal Service</th>
               <th className="w-[15%] px-3 py-4">Progress</th>
               <th className="px-3 py-4">Deadline</th>
               <th className="px-3 py-4">Status</th>
@@ -138,7 +138,7 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                         <span className="font-medium">{job.pic}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-4">{job.category}</td>
+                    <td className="px-3 py-4">{job.internalService}</td>
                     <td className="px-3 py-4">
                       <p className="mb-1.5 text-[10px]">{job.stage} {job.progress}%</p>
                       <div className="h-1.5 w-full max-w-28 overflow-hidden rounded-full bg-[#E1E3E6]">

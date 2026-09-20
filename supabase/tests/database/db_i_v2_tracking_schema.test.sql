@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(61);
+select extensions.plan(68);
 
 insert into auth.users(id,aud,role,email,created_at,updated_at)
 values
@@ -16,25 +16,36 @@ values
   ('91000000-0000-4000-8000-000000000002','v2-pic@example.test','V2 PIC','staff',true),
   ('91000000-0000-4000-8000-000000000003','v2-staff@example.test','V2 Staff','staff',true);
 
-insert into public.internal_service_categories(id,code,name,is_active)
-values('92000000-0000-4000-8000-000000000001','V2_TEST','V2 Test',true);
-
-insert into public.internal_services(id,category_id,workflow_template_id,code,name,is_active)
+insert into public.internal_services(id,workflow_template_id,code,name,is_active)
 values
-  ('92000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','24000000-0000-4000-8000-000000000001','V2_GENERAL','V2 General',true),
-  ('92000000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000001','24000000-0000-4000-8000-000000000002','V2_VISA','V2 Visa',true);
+  ('92000000-0000-4000-8000-000000000002','24000000-0000-4000-8000-000000000001','V2_GENERAL','V2 General',true),
+  ('92000000-0000-4000-8000-000000000003','24000000-0000-4000-8000-000000000002','V2_VISA','V2 Visa',true);
 
 insert into public.clients(id,client_type,name,created_by,updated_by)
 values('92000000-0000-4000-8000-000000000004','COMPANY','V2 Client','91000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001');
+
+insert into public.services_categories(id,slug,title,type,is_published)
+values('92000000-0000-4000-8000-000000000005','v2-unpublished-public-category','V2 Unpublished Public Category','primary',false);
 
 select extensions.is((select count(*)::integer from public.priorities where is_system),3,'three system priorities are seeded');
 select extensions.is((select count(*)::integer from public.job_statuses where is_system),5,'five Job statuses are seeded');
 select extensions.is((select count(*)::integer from public.task_statuses where is_system),5,'five Task statuses are seeded independently');
 select extensions.is((select count(*)::integer from public.workflow_templates where code in('GENERAL','VISA')),2,'two initial workflows are seeded');
+select extensions.has_table('public','services_categories','landing/client Service Categories remain on the existing public content table');
+select extensions.hasnt_table('public','internal_service_categories','no internal category bridge table exists');
+select extensions.hasnt_column('public','internal_services','category_id','Internal Services are independent from landing/client categories');
+select extensions.hasnt_column('public','jobs','category_id','Jobs use Internal Service directly instead of a separate category');
+select extensions.hasnt_column('public','internal_services','sort_order','Internal Services do not use manual display order');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000002',true);
+
+select extensions.is(
+  (select count(*)::integer from public.services_categories where id='92000000-0000-4000-8000-000000000005'),
+  0,
+  'ordinary staff cannot read unpublished landing/client Service Categories'
+);
 
 select set_config(
   'test.v2_job_id',
@@ -170,8 +181,13 @@ select extensions.is((select count(*)::integer from public.job_steps where job_i
 select extensions.is((select s.code from public.jobs j join public.job_statuses s on s.id=j.status_id where j.id=current_setting('test.v2_job_id')::uuid),'IN_PROGRESS','workflow restart preserves Job status');
 
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
+select extensions.is(
+  (select count(*)::integer from public.services_categories where id='92000000-0000-4000-8000-000000000005'),
+  1,
+  'active admin can read unpublished landing/client Service Categories in Master Data'
+);
 select extensions.lives_ok(
-  $$ select public.save_internal_service('92000000-0000-4000-8000-000000000003',1,'92000000-0000-4000-8000-000000000001','IGNORED','V2 Visa',null,'24000000-0000-4000-8000-000000000001',0,true) $$,
+  $$ select public.save_internal_service('92000000-0000-4000-8000-000000000003',1,'IGNORED','V2 Visa',null,'24000000-0000-4000-8000-000000000001',true) $$,
   'admin can reassign the Service workflow for future Jobs'
 );
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000002',true);

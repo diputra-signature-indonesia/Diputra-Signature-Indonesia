@@ -16,7 +16,7 @@ export type PicTaskLoad = {
   delayed: number;
 };
 
-export type TaskCategorySummary = {
+export type TaskInternalServiceSummary = {
   label: string;
   value: number;
   color: string;
@@ -27,7 +27,7 @@ export type AttentionTask = {
   client: string;
   task: string;
   pic: string;
-  category: string;
+  internalService: string;
   priority: 'High' | 'Medium';
   status: 'On Hold' | 'On Progress';
   progress: number;
@@ -52,11 +52,11 @@ export const picTaskLoads: PicTaskLoad[] = [
   { name: 'Dewa', notStarted: 3, inProgress: 2, delayed: 0 },
 ];
 
-export const categorySummary: TaskCategorySummary[] = [
-  { label: 'Visa', value: 12, color: '#7B0000' },
-  { label: 'Legal Document', value: 7, color: '#F2C900' },
-  { label: 'Company Est.', value: 5, color: '#9CA3AF' },
-  { label: 'Property', value: 6, color: '#E5E7EB' },
+export const internalServiceSummary: TaskInternalServiceSummary[] = [
+  { label: 'Investor KITAS', value: 12, color: '#7B0000' },
+  { label: 'Legal Due Diligence', value: 7, color: '#F2C900' },
+  { label: 'PMA Establishment', value: 5, color: '#9CA3AF' },
+  { label: 'Property Due Diligence', value: 6, color: '#E5E7EB' },
 ];
 
 export const attentionTasks: AttentionTask[] = [
@@ -65,7 +65,7 @@ export const attentionTasks: AttentionTask[] = [
     client: 'PT. SUNJI BAKTI INC',
     task: 'Registrasi NPWP',
     pic: 'Putra',
-    category: 'Visa',
+    internalService: 'Tax Registration',
     priority: 'High',
     status: 'On Hold',
     progress: 45,
@@ -76,7 +76,7 @@ export const attentionTasks: AttentionTask[] = [
     client: 'PT Bali Sejahtera',
     task: 'Drafting Akta Jual Beli',
     pic: 'Rhea',
-    category: 'Legal Document',
+    internalService: 'Sale and Purchase Deed',
     priority: 'Medium',
     status: 'On Progress',
     progress: 80,
@@ -87,7 +87,7 @@ export const attentionTasks: AttentionTask[] = [
     client: 'Maria Gonzalez',
     task: 'Pendaftaran PMA Baru',
     pic: 'Dewa',
-    category: 'Company Est.',
+    internalService: 'PMA Establishment',
     priority: 'High',
     status: 'On Hold',
     progress: 20,
@@ -99,5 +99,5 @@ export const dashboardFilterOptions = {
   pics: ['All Assignees', 'Putra', 'Rhea', 'Ayu', 'Dewa'],
   clients: ['All Clients', 'PT. SUNJI BAKTI INC', 'PT Bali Sejahtera', 'Maria Gonzalez'],
   statuses: ['All Statuses', 'Not Started', 'On Progress', 'On Hold', 'Completed'],
-  categories: ['All Categories', 'Visa', 'Legal Document', 'Company Est.', 'Property'],
+  internalServices: ['All Internal Services', 'Tax Registration', 'Investor KITAS', 'Sale and Purchase Deed', 'Legal Due Diligence', 'PMA Establishment', 'Property Due Diligence'],
 };

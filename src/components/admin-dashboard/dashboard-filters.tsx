@@ -9,7 +9,7 @@ type DashboardFilterState = {
   pic: string;
   client: string;
   status: string;
-  category: string;
+  internalService: string;
   dateFrom: string;
   dateTo: string;
 };
@@ -18,7 +18,7 @@ const initialFilters: DashboardFilterState = {
   pic: dashboardFilterOptions.pics[0],
   client: dashboardFilterOptions.clients[0],
   status: dashboardFilterOptions.statuses[0],
-  category: dashboardFilterOptions.categories[0],
+  internalService: dashboardFilterOptions.internalServices[0],
   dateFrom: '',
   dateTo: '',
 };
@@ -35,7 +35,7 @@ export function DashboardFilters() {
       <AdminSelectField label="PIC" value={filters.pic} options={dashboardFilterOptions.pics} onChange={(value) => updateFilter('pic', value)} />
       <AdminSelectField label="Client" value={filters.client} options={dashboardFilterOptions.clients} onChange={(value) => updateFilter('client', value)} />
       <AdminSelectField label="Status" value={filters.status} options={dashboardFilterOptions.statuses} onChange={(value) => updateFilter('status', value)} />
-      <AdminSelectField label="Category" value={filters.category} options={dashboardFilterOptions.categories} onChange={(value) => updateFilter('category', value)} />
+      <AdminSelectField label="Internal Service" value={filters.internalService} options={dashboardFilterOptions.internalServices} onChange={(value) => updateFilter('internalService', value)} />
 
       <fieldset className="min-w-0 md:col-span-2 xl:col-span-1">
         <legend className="mb-1 text-[11px] font-semibold text-[#202020]">Date Range</legend>

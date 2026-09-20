@@ -30,7 +30,7 @@ export function AllJobsFilters({ onApply }: { onApply: (filters: AllJobsFilterSt
         />
       </label>
       <AdminSelectField label="PIC" value={filters.pic} options={allJobsFilterOptions.pics} onChange={(value) => updateFilter('pic', value)} />
-      <AdminSelectField label="Category" value={filters.category} options={allJobsFilterOptions.categories} onChange={(value) => updateFilter('category', value)} />
+      <AdminSelectField label="Internal Service" value={filters.internalService} options={allJobsFilterOptions.internalServices} onChange={(value) => updateFilter('internalService', value)} />
       <AdminSelectField label="Status" value={filters.status} options={allJobsFilterOptions.statuses} onChange={(value) => updateFilter('status', value)} />
 
       <fieldset className="min-w-0 md:col-span-2 xl:col-span-2">

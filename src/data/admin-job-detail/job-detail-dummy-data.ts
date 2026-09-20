@@ -34,7 +34,7 @@ export const jobDetail = {
   title: 'Registrasi NPWP',
   client: 'PT Sunji Bakti Inc',
   pic: 'Dalem',
-  category: 'Setup PMA',
+  internalService: 'Tax Registration',
   priority: 'High',
   startDate: '01 Sep 2026',
   estimatedEndDate: '15 Sep 2026',

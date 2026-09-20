@@ -7,7 +7,7 @@ import { useState } from 'react';
 type MyTasksFilterState = {
   query: string;
   deadline: string;
-  category: string;
+  internalService: string;
   status: string;
   sortBy: string;
 };
@@ -15,7 +15,7 @@ type MyTasksFilterState = {
 const initialFilters: MyTasksFilterState = {
   query: '',
   deadline: myTaskFilterOptions.deadlines[0],
-  category: myTaskFilterOptions.categories[0],
+  internalService: myTaskFilterOptions.internalServices[0],
   status: myTaskFilterOptions.statuses[0],
   sortBy: myTaskFilterOptions.sortBy[0],
 };
@@ -40,7 +40,7 @@ export function MyTasksFilters() {
         />
       </label>
       <AdminSelectField label="Deadline" value={filters.deadline} options={myTaskFilterOptions.deadlines} onChange={(value) => updateFilter('deadline', value)} />
-      <AdminSelectField label="Category" value={filters.category} options={myTaskFilterOptions.categories} onChange={(value) => updateFilter('category', value)} />
+      <AdminSelectField label="Internal Service" value={filters.internalService} options={myTaskFilterOptions.internalServices} onChange={(value) => updateFilter('internalService', value)} />
       <AdminSelectField label="Status" value={filters.status} options={myTaskFilterOptions.statuses} onChange={(value) => updateFilter('status', value)} />
       <AdminSelectField label="Sort By" value={filters.sortBy} options={myTaskFilterOptions.sortBy} onChange={(value) => updateFilter('sortBy', value)} />
     </AdminFilterPanel>

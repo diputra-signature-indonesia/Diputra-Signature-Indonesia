@@ -49,7 +49,7 @@ export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
             <tr>
               <th className="px-6 py-4 pl-16">Klien &amp; Task</th>
               <th className="px-4 py-4">PIC</th>
-              <th className="px-4 py-4">Kategori</th>
+              <th className="px-4 py-4">Internal Service</th>
               <th className="px-4 py-4">Prioritas</th>
               <th className="px-4 py-4">Status</th>
               <th className="px-4 py-4">Progress</th>
@@ -65,7 +65,7 @@ export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
                   <p className="mt-0.5 text-xs text-[#858585]">{task.task}</p>
                 </td>
                 <td className="px-4 py-5">{task.pic}</td>
-                <td className="px-4 py-5">{task.category}</td>
+                <td className="px-4 py-5">{task.internalService}</td>
                 <td className="px-4 py-5"><PriorityBadge priority={task.priority} /></td>
                 <td className="px-4 py-5"><StatusBadge status={task.status} /></td>
                 <td className="px-4 py-5">

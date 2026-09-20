@@ -222,76 +222,14 @@ export type Database = {
         }
         Relationships: []
       }
-      internal_service_categories: {
-        Row: {
-          code: string
-          color: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          sort_order: number
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }
-        Insert: {
-          code: string
-          color?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          sort_order?: number
-          updated_at?: string
-          updated_by?: string | null
-          version?: number
-        }
-        Update: {
-          code?: string
-          color?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          sort_order?: number
-          updated_at?: string
-          updated_by?: string | null
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "internal_service_categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "internal_service_categories_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       internal_services: {
         Row: {
-          category_id: string
           code: string
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
           name: string
-          sort_order: number
           summary: string | null
           updated_at: string
           updated_by: string | null
@@ -299,14 +237,12 @@ export type Database = {
           workflow_template_id: string | null
         }
         Insert: {
-          category_id: string
           code: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name: string
-          sort_order?: number
           summary?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -314,14 +250,12 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Update: {
-          category_id?: string
           code?: string
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           name?: string
-          sort_order?: number
           summary?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -329,13 +263,6 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "internal_services_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "internal_service_categories"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "internal_services_created_by_fkey"
             columns: ["created_by"]
@@ -762,7 +689,6 @@ export type Database = {
         Row: {
           archived_at: string | null
           archived_by: string | null
-          category_id: string
           client_id: string
           completed_at: string | null
           created_at: string
@@ -786,7 +712,6 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           archived_by?: string | null
-          category_id: string
           client_id: string
           completed_at?: string | null
           created_at?: string
@@ -810,7 +735,6 @@ export type Database = {
         Update: {
           archived_at?: string | null
           archived_by?: string | null
-          category_id?: string
           client_id?: string
           completed_at?: string | null
           created_at?: string
@@ -837,13 +761,6 @@ export type Database = {
             columns: ["archived_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "internal_service_categories"
             referencedColumns: ["id"]
           },
           {
@@ -1840,7 +1757,6 @@ export type Database = {
         Row: {
           archived_at: string | null
           archived_by: string | null
-          category_id: string | null
           client_id: string | null
           completed_at: string | null
           created_at: string | null
@@ -1871,13 +1787,6 @@ export type Database = {
             columns: ["archived_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "internal_service_categories"
             referencedColumns: ["id"]
           },
           {
@@ -2122,28 +2031,13 @@ export type Database = {
       }
       save_internal_service: {
         Args: {
-          p_category_id: string
           p_code: string
           p_expected_version: number
           p_id: string
           p_is_active?: boolean
           p_name: string
-          p_sort_order?: number
           p_summary?: string
           p_workflow_template_id?: string
-        }
-        Returns: string
-      }
-      save_internal_service_category: {
-        Args: {
-          p_code: string
-          p_color?: string
-          p_description?: string
-          p_expected_version: number
-          p_id: string
-          p_is_active?: boolean
-          p_name: string
-          p_sort_order?: number
         }
         Returns: string
       }

@@ -11,7 +11,7 @@ function matchesFilter(job: AllJob, filters: AllJobsFilterState) {
 
   if (query && !searchableValue.includes(query)) return false;
   if (filters.pic !== 'All Assignees' && job.pic !== filters.pic) return false;
-  if (filters.category !== 'All Categories' && job.category !== filters.category) return false;
+  if (filters.internalService !== 'All Internal Services' && job.internalService !== filters.internalService) return false;
   if (filters.status !== 'All Statuses' && job.status !== filters.status) return false;
   if (filters.priority !== 'All Priorities' && job.priority !== filters.priority) return false;
   if (filters.dateFrom && job.deadlineIso < filters.dateFrom) return false;

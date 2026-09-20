@@ -1,4 +1,4 @@
-import type { MasterDataCategory, MasterDataCell } from '@/data/admin-master-data/master-data-dummy-data';
+import type { MasterDataCategory, MasterDataCell, MasterDataRow } from '@/data/admin-master-data/master-data-dummy-data';
 import { Archive, ArrowUpDown, ListTree, LockKeyhole, Pencil, Workflow } from 'lucide-react';
 
 const badgeStyles: Record<Extract<MasterDataCell, { type: 'badge' }>['tone'], string> = {
@@ -30,7 +30,7 @@ function DataCell({ cell }: { cell: MasterDataCell }) {
         {cell.items.map((step, index) => (
           <span key={step} className="inline-flex items-center gap-1.5 text-[10px] font-medium text-[#4F5968]">
             <span className="rounded-md border border-[#E0E3E7] bg-[#F7F8FA] px-2 py-1">{step}</span>
-            {index < cell.items.length - 1 ? <span aria-hidden="true" className="text-[#B0B7C2]">›</span> : null}
+            {index < cell.items.length - 1 ? <span aria-hidden="true" className="text-[#B0B7C2]">&rsaquo;</span> : null}
           </span>
         ))}
       </div>
@@ -45,9 +45,12 @@ function DataCell({ cell }: { cell: MasterDataCell }) {
   );
 }
 
-export function MasterDataTable({ category }: { category: MasterDataCategory }) {
-  const isSystemStatuses = category.id === 'job-statuses' || category.id === 'task-statuses';
+type MasterDataTableProps = {
+  category: MasterDataCategory;
+  onEdit?: (row: MasterDataRow) => void;
+};
 
+export function MasterDataTable({ category, onEdit }: MasterDataTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#DEE2E7] bg-white">
       <div className="overflow-x-auto">
@@ -85,10 +88,17 @@ export function MasterDataTable({ category }: { category: MasterDataCategory }) 
                         <Workflow aria-hidden="true" className="size-4" strokeWidth={1.7} />
                       </button>
                     ) : null}
-                    <button type="button" aria-label={`Edit ${row.cells[0].type === 'text' ? row.cells[0].value : 'item'}`} title="Edit" className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/30">
+                    <button
+                      type="button"
+                      onClick={() => onEdit?.(row)}
+                      disabled={!onEdit}
+                      aria-label={`Edit ${row.cells[0].type === 'text' ? row.cells[0].value : 'item'}`}
+                      title={onEdit ? 'Edit' : 'Form will be added in a later phase'}
+                      className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
+                    >
                       <Pencil aria-hidden="true" className="size-4" strokeWidth={1.7} />
                     </button>
-                    {isSystemStatuses ? (
+                    {row.isSystem ? (
                       <span className="flex size-8 items-center justify-center text-[#B2BAC5]" title="System status cannot be archived">
                         <LockKeyhole aria-hidden="true" className="size-4" strokeWidth={1.7} />
                       </span>

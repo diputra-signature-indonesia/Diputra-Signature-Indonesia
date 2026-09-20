@@ -29,10 +29,8 @@ insert into public.profiles(id,email,role,is_active)
 values
   ('93000000-0000-4000-8000-000000000001','v2-storage-admin@example.test','admin',true),
   ('93000000-0000-4000-8000-000000000002','v2-storage-staff@example.test','staff',true);
-insert into public.internal_service_categories(id,code,name)
-values('93100000-0000-4000-8000-000000000001','V2_STORAGE','V2 Storage');
-insert into public.internal_services(id,category_id,workflow_template_id,code,name)
-values('93100000-0000-4000-8000-000000000002','93100000-0000-4000-8000-000000000001','24000000-0000-4000-8000-000000000001','V2_STORAGE_SERVICE','V2 Storage Service');
+insert into public.internal_services(id,workflow_template_id,code,name)
+values('93100000-0000-4000-8000-000000000002','24000000-0000-4000-8000-000000000001','V2_STORAGE_SERVICE','V2 Storage Service');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
