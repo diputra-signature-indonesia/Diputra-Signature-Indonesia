@@ -16,6 +16,7 @@ export type MasterDataCell =
 
 export type MasterDataRow = {
   id: string;
+  code?: string;
   isSystem?: boolean;
   cells: MasterDataCell[];
 };
@@ -217,6 +218,7 @@ export const masterDataCategories: MasterDataCategory[] = [
     rows: [
       {
         id: 'workflow-general',
+        code: 'GENERAL',
         cells: [
           { type: 'text', value: 'General Workflow', secondary: 'Standard company and legal service process' },
           { type: 'steps', items: ['Analysis', 'Drafting', 'Revision', 'Finalization', 'Issued'] },
@@ -226,6 +228,7 @@ export const masterDataCategories: MasterDataCategory[] = [
       },
       {
         id: 'workflow-visa',
+        code: 'VISA',
         cells: [
           { type: 'text', value: 'Visa Workflow', secondary: 'Short workflow for visa and stay permits' },
           { type: 'steps', items: ['Analysis', 'Apply', 'Issue'] },

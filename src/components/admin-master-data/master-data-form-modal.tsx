@@ -1,10 +1,11 @@
 'use client';
 
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import { masterDataCategories, type MasterDataCategoryId, type MasterDataRow } from '@/data/admin-master-data/master-data-dummy-data';
+import { type MasterDataCategoryId, type MasterDataRow } from '@/data/admin-master-data/master-data-dummy-data';
 import { useId, useState, type FormEvent } from 'react';
+import { WorkflowStepsEditor, type WorkflowStepFormValue } from './workflow-steps-editor';
 
-export type MasterDataFormCategoryId = Extract<MasterDataCategoryId, 'priorities' | 'internal-services' | 'task-statuses' | 'job-statuses'>;
+export type MasterDataFormCategoryId = Extract<MasterDataCategoryId, 'priorities' | 'internal-services' | 'task-statuses' | 'job-statuses' | 'workflow-templates'>;
 
 export type MasterDataFormValues = {
   code: string;
@@ -14,6 +15,7 @@ export type MasterDataFormValues = {
   isActive: boolean;
   summary: string;
   workflow: string;
+  steps: WorkflowStepFormValue[];
 };
 
 type MasterDataFormModalProps = {
@@ -21,6 +23,7 @@ type MasterDataFormModalProps = {
   mode: 'add' | 'edit';
   categoryId: MasterDataFormCategoryId;
   row?: MasterDataRow;
+  workflowTemplates?: MasterDataRow[];
   onClose: () => void;
   onSave: (values: MasterDataFormValues) => void;
 };
@@ -33,6 +36,7 @@ const categoryLabels: Record<MasterDataFormCategoryId, string> = {
   'internal-services': 'Internal Service',
   'task-statuses': 'Task Status',
   'job-statuses': 'Job Status',
+  'workflow-templates': 'Workflow Template',
 };
 
 function textValue(row: MasterDataRow | undefined, index: number) {
@@ -51,6 +55,24 @@ function colorValue(row: MasterDataRow | undefined, index: number) {
 }
 
 function initialValues(categoryId: MasterDataFormCategoryId, row?: MasterDataRow): MasterDataFormValues {
+  if (categoryId === 'workflow-templates') {
+    const stepCell = row?.cells[1];
+    const steps = stepCell?.type === 'steps'
+      ? stepCell.items.map((name, index) => ({ id: `existing-step-${index}`, name }))
+      : [{ id: 'initial-step', name: '' }];
+
+    return {
+      code: row?.code ?? '',
+      name: textValue(row, 0),
+      color: '#8C1010',
+      sortOrder: 0,
+      isActive: textValue(row, 3) !== 'Inactive',
+      summary: secondaryValue(row, 0),
+      workflow: '',
+      steps,
+    };
+  }
+
   if (categoryId === 'internal-services') {
     const workflow = textValue(row, 2);
     return {
@@ -61,6 +83,7 @@ function initialValues(categoryId: MasterDataFormCategoryId, row?: MasterDataRow
       isActive: textValue(row, 3) !== 'Inactive',
       summary: secondaryValue(row, 0),
       workflow: workflow === 'Not assigned' ? '' : workflow,
+      steps: [],
     };
   }
 
@@ -72,6 +95,7 @@ function initialValues(categoryId: MasterDataFormCategoryId, row?: MasterDataRow
     isActive: textValue(row, 4) !== 'Inactive',
     summary: '',
     workflow: '',
+    steps: [],
   };
 }
 
@@ -79,12 +103,13 @@ function RequiredMark() {
   return <span className="text-[#C32929]">*</span>;
 }
 
-export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSave }: MasterDataFormModalProps) {
+export function MasterDataFormModal({ open, mode, categoryId, row, workflowTemplates = [], onClose, onSave }: MasterDataFormModalProps) {
   const formId = useId();
   const [values, setValues] = useState(() => initialValues(categoryId, row));
   const label = categoryLabels[categoryId];
   const isSystemRecord = Boolean(row?.isSystem);
   const isInternalService = categoryId === 'internal-services';
+  const isWorkflowTemplate = categoryId === 'workflow-templates';
 
   const updateValue = <Key extends keyof MasterDataFormValues>(key: Key, value: MasterDataFormValues[Key]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -96,10 +121,44 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSave({ ...values, code: values.code.trim(), name: values.name.trim(), summary: values.summary.trim() });
+    const steps = values.steps.map((step) => ({ ...step, name: step.name.trim() }));
+    if (isWorkflowTemplate && (steps.length === 0 || steps.some((step) => !step.name))) return;
+
+    onSave({ ...values, code: values.code.trim(), name: values.name.trim(), summary: values.summary.trim(), steps });
   };
 
-  const workflowTemplates = masterDataCategories.find((category) => category.id === 'workflow-templates')?.rows ?? [];
+  const addStep = () => {
+    setValues((current) => ({
+      ...current,
+      steps: [...current.steps, { id: `step-${Date.now()}-${current.steps.length}`, name: '' }],
+    }));
+  };
+
+  const updateStep = (stepId: string, name: string) => {
+    setValues((current) => ({
+      ...current,
+      steps: current.steps.map((step) => (step.id === stepId ? { ...step, name } : step)),
+    }));
+  };
+
+  const moveStep = (stepId: string, targetStepId: string) => {
+    setValues((current) => {
+      const sourceIndex = current.steps.findIndex((step) => step.id === stepId);
+      const targetIndex = current.steps.findIndex((step) => step.id === targetStepId);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
+
+      const steps = [...current.steps];
+      const [movedStep] = steps.splice(sourceIndex, 1);
+      steps.splice(targetIndex, 0, movedStep);
+      return { ...current, steps };
+    });
+  };
+
+  const removeStep = (stepId: string) => {
+    setValues((current) => current.steps.length === 1
+      ? current
+      : { ...current, steps: current.steps.filter((step) => step.id !== stepId) });
+  };
 
   return (
     <AdminModal
@@ -107,7 +166,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
       onClose={onClose}
       title={`${mode === 'add' ? 'Add' : 'Edit'} ${label}`}
       description={`${mode === 'add' ? 'Create a new' : 'Update the selected'} ${label.toLowerCase()} record.`}
-      size="md"
+      size={isWorkflowTemplate ? 'lg' : 'md'}
       footer={
         <>
           <button type="button" onClick={onClose} className="h-9 rounded-lg px-4 text-xs font-semibold text-[#4F5968] transition hover:bg-[#ECEFF2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/25">
@@ -141,7 +200,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
 
         <div>
           <label htmlFor={`${formId}-name`} className="mb-1.5 block text-xs font-semibold text-[#303846]">
-            {isInternalService ? 'Service Name' : 'Name'} <RequiredMark />
+            {isInternalService ? 'Service Name' : isWorkflowTemplate ? 'Template Name' : 'Name'} <RequiredMark />
           </label>
           <input
             id={`${formId}-name`}
@@ -150,7 +209,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
             maxLength={160}
             value={values.name}
             onChange={(event) => updateValue('name', event.target.value)}
-            placeholder={isInternalService ? 'Enter service name' : `Enter ${label.toLowerCase()} name`}
+            placeholder={isInternalService ? 'Enter service name' : isWorkflowTemplate ? 'Enter workflow template name' : `Enter ${label.toLowerCase()} name`}
             className={fieldClassName}
           />
         </div>
@@ -179,6 +238,30 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
               />
             </div>
           </>
+        ) : isWorkflowTemplate ? (
+          <>
+            <div>
+              <label htmlFor={`${formId}-summary`} className="mb-1.5 block text-xs font-semibold text-[#303846]">Description</label>
+              <textarea
+                id={`${formId}-summary`}
+                rows={3}
+                maxLength={500}
+                value={values.summary}
+                onChange={(event) => updateValue('summary', event.target.value)}
+                placeholder="Describe when this workflow should be used"
+                className="w-full resize-none rounded-lg border border-[#D6DAE0] bg-white px-3 py-2.5 text-sm leading-5 text-[#303846] outline-none transition placeholder:text-[#A0A8B4] focus:border-[#8C1010] focus:ring-2 focus:ring-[#8C1010]/10"
+              />
+            </div>
+
+            <WorkflowStepsEditor
+              formId={formId}
+              steps={values.steps}
+              onAdd={addStep}
+              onChange={updateStep}
+              onMove={moveStep}
+              onRemove={removeStep}
+            />
+          </>
         ) : (
           <div>
             <label htmlFor={`${formId}-color-text`} className="mb-1.5 block text-xs font-semibold text-[#303846]">
@@ -205,7 +288,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, onClose, onSa
           </div>
         )}
 
-        {!isInternalService ? (
+        {!isInternalService && !isWorkflowTemplate ? (
           <div>
             <label htmlFor={`${formId}-sort-order`} className="mb-1.5 block text-xs font-semibold text-[#303846]">Sort Order</label>
             <input

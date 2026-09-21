@@ -52,7 +52,7 @@ export function AdminModal({ open, onClose, title, description, children, footer
           </button>
         </header>
 
-        {children ? <div className="max-h-[65vh] overflow-y-auto px-5 py-4">{children}</div> : null}
+        {children ? <div data-admin-modal-scroll className="max-h-[65vh] overflow-y-auto px-5 py-4">{children}</div> : null}
         {footer ? <footer className="flex justify-end gap-3 border-t border-[#E7E9ED] bg-[#FAFAFB] px-5 py-4">{footer}</footer> : null}
       </section>
     </div>

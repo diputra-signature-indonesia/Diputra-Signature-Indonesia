@@ -79,7 +79,7 @@ export function MasterDataTable({ category, onEdit }: MasterDataTableProps) {
                 <td className="px-4 py-4 align-middle">
                   <div className="flex items-center justify-end gap-1">
                     {category.id === 'workflow-templates' ? (
-                      <button type="button" aria-label={`Manage steps for ${row.cells[0].type === 'text' ? row.cells[0].value : 'workflow'}`} title="Manage workflow steps" className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/30">
+                      <button type="button" onClick={() => onEdit?.(row)} disabled={!onEdit} aria-label={`Manage steps for ${row.cells[0].type === 'text' ? row.cells[0].value : 'workflow'}`} title="Manage workflow steps" className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 disabled:cursor-not-allowed disabled:opacity-35">
                         <ListTree aria-hidden="true" className="size-4" strokeWidth={1.7} />
                       </button>
                     ) : null}
@@ -103,7 +103,13 @@ export function MasterDataTable({ category, onEdit }: MasterDataTableProps) {
                         <LockKeyhole aria-hidden="true" className="size-4" strokeWidth={1.7} />
                       </span>
                     ) : (
-                      <button type="button" aria-label={`Archive ${row.cells[0].type === 'text' ? row.cells[0].value : 'item'}`} title="Move to trash" className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FFF0F0] hover:text-[#C32929] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C32929]/25">
+                      <button
+                        type="button"
+                        disabled={category.id === 'service-categories'}
+                        aria-label={`Archive ${row.cells[0].type === 'text' ? row.cells[0].value : 'item'}`}
+                        title={category.id === 'service-categories' ? 'Action will be added in a later phase' : 'Move to trash'}
+                        className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FFF0F0] hover:text-[#C32929] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C32929]/25 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
+                      >
                         <Archive aria-hidden="true" className="size-4" strokeWidth={1.7} />
                       </button>
                     )}

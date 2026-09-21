@@ -23,11 +23,11 @@ type FormModalState = {
 };
 
 function isFormCategory(categoryId: MasterDataCategoryId): categoryId is MasterDataFormCategoryId {
-  return ['priorities', 'internal-services', 'task-statuses', 'job-statuses'].includes(categoryId);
+  return ['priorities', 'internal-services', 'task-statuses', 'job-statuses', 'workflow-templates'].includes(categoryId);
 }
 
 function canAddCategory(categoryId: MasterDataCategoryId) {
-  return categoryId === 'priorities' || categoryId === 'internal-services' || categoryId === 'task-statuses';
+  return categoryId === 'priorities' || categoryId === 'internal-services' || categoryId === 'task-statuses' || categoryId === 'workflow-templates';
 }
 
 function availabilityCell(isActive: boolean) {
@@ -36,14 +36,25 @@ function availabilityCell(isActive: boolean) {
     : ({ type: 'badge', value: 'Inactive', tone: 'gray' } as const);
 }
 
-function buildRow(categoryId: MasterDataFormCategoryId, values: MasterDataFormValues, currentRow?: MasterDataRow): MasterDataRow {
+function buildRow(categoryId: MasterDataFormCategoryId, values: MasterDataFormValues, workflowTemplates: MasterDataRow[], currentRow?: MasterDataRow): MasterDataRow {
   const id = currentRow?.id ?? `${categoryId}-${Date.now()}`;
   const isSystem = currentRow?.isSystem ?? false;
 
+  if (categoryId === 'workflow-templates') {
+    return {
+      id,
+      code: values.code,
+      cells: [
+        { type: 'text', value: values.name, secondary: values.summary || undefined },
+        { type: 'steps', items: values.steps.map((step) => step.name) },
+        currentRow?.cells[2] ?? { type: 'text', value: '0 services' },
+        availabilityCell(values.isActive),
+      ],
+    };
+  }
+
   if (categoryId === 'internal-services') {
-    const workflow = masterDataCategories
-      .find((category) => category.id === 'workflow-templates')
-      ?.rows.find((row) => row.cells[0].type === 'text' && row.cells[0].value === values.workflow);
+    const workflow = workflowTemplates.find((row) => row.cells[0].type === 'text' && row.cells[0].value === values.workflow);
     const workflowSteps = workflow?.cells[1];
     const stepCount = workflowSteps?.type === 'steps' ? workflowSteps.items.length : 0;
 
@@ -98,6 +109,7 @@ export function MasterDataWorkspace() {
   const [categories, setCategories] = useState<MasterDataCategory[]>(() => masterDataCategories);
   const [modal, setModal] = useState<FormModalState | null>(null);
   const selectedCategory = categories.find((category) => category.id === selectedId) ?? categories[0];
+  const workflowTemplates = categories.find((category) => category.id === 'workflow-templates')?.rows ?? [];
 
   const selectCategory = (categoryId: MasterDataCategoryId) => {
     setSelectedId(categoryId);
@@ -115,7 +127,7 @@ export function MasterDataWorkspace() {
 
   const saveForm = (values: MasterDataFormValues) => {
     if (!modal) return;
-    const nextRow = buildRow(modal.categoryId, values, modal.row);
+    const nextRow = buildRow(modal.categoryId, values, workflowTemplates, modal.row);
 
     setCategories((current) =>
       current.map((category) => {
@@ -176,6 +188,7 @@ export function MasterDataWorkspace() {
           mode={modal.mode}
           categoryId={modal.categoryId}
           row={modal.row}
+          workflowTemplates={workflowTemplates}
           onClose={() => setModal(null)}
           onSave={saveForm}
         />
