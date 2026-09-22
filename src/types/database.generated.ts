@@ -1916,6 +1916,20 @@ export type Database = {
         }
         Returns: string
       }
+      create_job_with_client: {
+        Args: {
+          p_client_name: string
+          p_client_type: string
+          p_description?: string
+          p_estimated_end_date?: string
+          p_internal_service_id: string
+          p_pic_id?: string
+          p_priority_id: string
+          p_start_date?: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_task: {
         Args: {
           p_assignee_id?: string
@@ -1963,6 +1977,13 @@ export type Database = {
       is_admin_role: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_staff_role: { Args: never; Returns: boolean }
+      list_active_clients_for_job: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       list_assignable_profiles: {
         Args: never
         Returns: {
