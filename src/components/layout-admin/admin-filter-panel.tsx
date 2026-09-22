@@ -52,7 +52,7 @@ export function AdminFilterPanel({ children, gridClassName, onReset, onSubmit }:
 type AdminSelectFieldProps = {
   label: string;
   value: string;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
   onChange: (value: string) => void;
 };
 
@@ -66,9 +66,9 @@ export function AdminSelectField({ label, value, options, onChange }: AdminSelec
           onChange={(event) => onChange(event.target.value)}
           className="h-9 w-full appearance-none rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 pr-9 text-xs text-[#747D8C] outline-none transition focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10"
         >
-          {options.map((option) => (
-            <option key={option}>{option}</option>
-          ))}
+          {options.map((option) => typeof option === 'string'
+            ? <option key={option} value={option}>{option}</option>
+            : <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <ChevronDown aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-[#98A1B0]" />
       </span>

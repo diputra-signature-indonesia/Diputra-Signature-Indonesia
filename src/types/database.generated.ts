@@ -2021,6 +2021,15 @@ export type Database = {
         }
         Returns: number
       }
+      place_task_on_board: {
+        Args: {
+          p_before_task_id?: string
+          p_expected_version: number
+          p_job_task_status_id: string
+          p_task_id: string
+        }
+        Returns: number
+      }
       prepare_sop_file_upload: {
         Args: {
           p_file_type: string
