@@ -9,7 +9,7 @@ import { AllJobsTableLoading } from './all-jobs-table-loading';
 
 const PAGE_SIZE = 10;
 
-const statusStyles: Record<AllJobStatus, string> = {
+const statusStyles: Record<string, string> = {
   'In Progress': 'border-[#E4B400] bg-[#FFF9E8] text-[#6C5600]',
   'On Hold': 'border-[#194DB8] bg-[#EAF1FF] text-[#073A98]',
   'Not Started': 'border-[#8A94A3] bg-[#F6F7F8] text-[#667080]',
@@ -17,24 +17,24 @@ const statusStyles: Record<AllJobStatus, string> = {
   Completed: 'border-[#1CA35B] bg-[#EDFBF3] text-[#14864B]',
 };
 
-const priorityStyles: Record<AllJobPriority, string> = {
+const priorityStyles: Record<string, string> = {
   High: 'bg-[#FFDADA] text-[#C32929]',
   Medium: 'bg-[#FFF1C9] text-[#8A7100]',
   Low: 'bg-[#E7F6EC] text-[#23834D]',
 };
 
-function StatusBadge({ status }: { status: AllJobStatus }) {
+function StatusBadge({ status, color }: { status: AllJobStatus; color?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-semibold uppercase ${statusStyles[status]}`}>
+    <span style={color ? { color, borderColor: color, backgroundColor: `${color}15` } : undefined} className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : statusStyles[status] ?? 'border-gray-300 bg-gray-50 text-gray-700'}`}>
       <span className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
   );
 }
 
-function PriorityBadge({ priority }: { priority: AllJobPriority }) {
+function PriorityBadge({ priority, color }: { priority: AllJobPriority; color?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold uppercase ${priorityStyles[priority]}`}>
+    <span style={color ? { color, backgroundColor: `${color}20` } : undefined} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : priorityStyles[priority] ?? 'bg-gray-100 text-gray-700'}`}>
       <span className="size-1.5 rounded-full bg-current" />
       {priority}
     </span>
@@ -46,6 +46,15 @@ type AllJobsTableProps = {
   groupBy: string;
   isLoading: boolean;
 };
+
+function groupValue(job: AllJob, groupBy: string) {
+  if (groupBy === 'Client') return job.client;
+  if (groupBy === 'PIC') return job.pic;
+  if (groupBy === 'Internal Service') return job.internalService;
+  if (groupBy === 'Status') return job.status;
+  if (groupBy === 'Priority') return job.priority;
+  return '';
+}
 
 export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,14 +104,14 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
             {visibleJobs.map((job, index) => {
               const expanded = expandedJobId === job.id;
               const detailsId = `details-${job.id}`;
-              const showClientHeading = groupBy === 'Client' && (index === 0 || visibleJobs[index - 1]?.client !== job.client);
+              const showGroupHeading = groupBy !== 'None' && (index === 0 || groupValue(visibleJobs[index - 1], groupBy) !== groupValue(job, groupBy));
 
               return (
                 <Fragment key={job.id}>
-                  {showClientHeading ? (
+                  {showGroupHeading ? (
                     <tr className="border-t border-[#D9DCE1] bg-[#EEEEEF]">
                       <th colSpan={8} scope="rowgroup" className="px-10 py-3 text-left text-xs font-semibold uppercase tracking-[0.03em] text-[#A94141]">
-                        {job.client}
+                        {groupValue(job, groupBy)}
                       </th>
                     </tr>
                   ) : null}
@@ -147,10 +156,10 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                     </td>
                     <td className="whitespace-nowrap px-3 py-4">
                       <p>{job.deadline}</p>
-                      <p className={`mt-1 text-[10px] ${job.deadlineNote === 'Completed' ? 'text-emerald-600' : 'text-red-500'}`}>({job.deadlineNote})</p>
+                      <p className={`mt-1 text-[10px] ${job.deadlineNote === 'Completed' ? 'text-emerald-600' : job.deadlineNote.startsWith('Overdue') ? 'text-red-500' : 'text-[#68717E]'}`}>({job.deadlineNote})</p>
                     </td>
-                    <td className="px-3 py-4"><StatusBadge status={job.status} /></td>
-                    <td className="px-3 py-4"><PriorityBadge priority={job.priority} /></td>
+                    <td className="px-3 py-4"><StatusBadge status={job.status} color={job.statusColor} /></td>
+                    <td className="px-3 py-4"><PriorityBadge priority={job.priority} color={job.priorityColor} /></td>
                     <td className="px-3 py-4 text-center">
                       <button type="button" aria-label={`Actions for ${job.title}`} className="rounded-md p-1.5 text-[#8C716D] transition hover:bg-gray-100 hover:text-[#202938]">
                         <EllipsisVertical aria-hidden="true" className="size-4" />
@@ -175,7 +184,7 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                             <p className="mt-1 text-[#333333]">{job.estimatedDuration}</p>
                           </div>
                           <div className="border-gray-200 lg:border-l lg:pl-4">
-                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Latest Update · by {job.updatedBy} · {job.updatedAgo}</p>
+                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Latest Update{job.updatedBy ? ` · by ${job.updatedBy}` : ''}{job.updatedAgo ? ` · ${job.updatedAgo}` : ''}</p>
                             <p className="mt-1 text-[#333333]">{job.latestUpdate}</p>
                           </div>
                         </div>
