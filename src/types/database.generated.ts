@@ -2041,6 +2041,18 @@ export type Database = {
         }
         Returns: string
       }
+      save_job_status: {
+        Args: {
+          p_code: string
+          p_color: string
+          p_expected_version: number
+          p_id: string
+          p_is_active?: boolean
+          p_name: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
       save_priority: {
         Args: {
           p_code: string
@@ -2081,9 +2093,30 @@ export type Database = {
         }
         Returns: string
       }
+      save_workflow_template: {
+        Args: {
+          p_code: string
+          p_description: string
+          p_expected_version: number
+          p_id: string
+          p_is_active?: boolean
+          p_name: string
+          p_steps: Json
+        }
+        Returns: string
+      }
       set_blog_post_published: {
         Args: { p_is_published: boolean; p_post_id: string }
         Returns: undefined
+      }
+      set_master_data_active: {
+        Args: {
+          p_entity: string
+          p_expected_version: number
+          p_id: string
+          p_is_active: boolean
+        }
+        Returns: number
       }
       set_profile_active: {
         Args: { p_is_active: boolean; p_profile_id: string }

@@ -28,13 +28,13 @@ export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
     redirect('/login');
   }
 
-  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active, deleted_at').eq('id', user.id).maybeSingle();
 
   if (profileError) {
     throw new Error(`Unable to verify admin access: ${profileError.message}`);
   }
 
-  if (!profile?.is_active || !isUserRole(profile.role)) {
+  if (!profile?.is_active || profile.deleted_at !== null || !isUserRole(profile.role)) {
     redirect('/auth/access-denied');
   }
 

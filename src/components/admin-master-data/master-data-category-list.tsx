@@ -1,4 +1,4 @@
-import type { MasterDataCategory, MasterDataIconName } from '@/data/admin-master-data/master-data-dummy-data';
+import type { MasterDataCategory, MasterDataIconName } from '@/data/admin-master-data/master-data';
 import { BriefcaseBusiness, Flag, ListChecks, Shapes, Workflow, WorkflowIcon } from 'lucide-react';
 
 const categoryIcons: Record<MasterDataIconName, React.ElementType> = {
@@ -20,7 +20,7 @@ export function MasterDataCategoryList({ categories, selectedId, onSelect }: Mas
   return (
     <aside className="border-b border-[#DEE2E7] bg-[#FBFCFD] lg:border-r lg:border-b-0">
       <div className="px-4 pt-5 pb-3 lg:px-5 lg:pt-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9AA4B4]">Select Data</p>
+        <p className="text-[11px] font-semibold tracking-[0.14em] text-[#9AA4B4] uppercase">Select Data</p>
         <p className="mt-1 text-xs leading-5 text-[#707988]">Choose a category to manage.</p>
       </div>
 
@@ -35,7 +35,7 @@ export function MasterDataCategoryList({ categories, selectedId, onSelect }: Mas
               type="button"
               onClick={() => onSelect(category.id)}
               aria-current={active ? 'page' : undefined}
-              className={`group flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 lg:w-full lg:min-w-0 ${
+              className={`group flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-left transition focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 focus-visible:outline-none lg:w-full lg:min-w-0 ${
                 active ? 'bg-[#FDEBEB] text-[#8C1010]' : 'text-[#394150] hover:bg-white hover:text-[#8C1010]'
               }`}
             >
