@@ -5,23 +5,29 @@ import { cn } from '@/lib/cn';
 import { CircleHelp, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAdminLayout } from './admin-layout-provider';
 
 export function AdminNav({ AdminNavItem }: { AdminNavItem: AdminNavLink[] }) {
   const { isNavCollapsed, isMobileNavOpen, setIsMobileNavOpen } = useAdminLayout();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const pathname = usePathname();
-  const router = useRouter();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    setLogoutError(null);
 
     try {
-      await fetch('/logout', { method: 'POST' });
-      router.push('/login');
-      router.refresh();
+      const response = await fetch('/logout', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      window.location.replace('/login');
+    } catch {
+      setLogoutError('Logout gagal. Silakan coba lagi.');
     } finally {
       setIsLoggingOut(false);
     }
@@ -113,6 +119,7 @@ export function AdminNav({ AdminNavItem }: { AdminNavItem: AdminNavLink[] }) {
             <LogOut aria-hidden="true" className="size-[18px] shrink-0" strokeWidth={1.7} />
             <span className={isNavCollapsed ? 'lg:hidden' : undefined}>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
           </button>
+          {logoutError && <p role="alert" className="px-3 text-xs text-red-600">{logoutError}</p>}
         </div>
       </div>
     </aside>

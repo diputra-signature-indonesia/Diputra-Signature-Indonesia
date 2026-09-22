@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
   });
 
   function redirectWithRefreshedCookies(path: string) {
-    const redirectResponse = NextResponse.redirect(new URL(path, request.url));
+    const redirectResponse = NextResponse.redirect(new URL(path, process.env.NEXT_PUBLIC_SITE_URL || request.url));
     response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
     return redirectResponse;
   }
