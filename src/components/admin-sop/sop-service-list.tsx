@@ -1,7 +1,7 @@
 'use client';
 
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import type { SopService } from '@/data/admin-sop/sop-dummy-data';
+import type { SopService } from '@/types/admin-sop';
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -26,15 +26,22 @@ function ServiceItem({ service, active, onSelect }: { service: SopService; activ
 export function SopServiceList({ services, selectedId, onSelect }: SopServiceListProps) {
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [modalQuery, setModalQuery] = useState('');
   const visibleServices = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     if (!normalizedQuery) return services;
     return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
   }, [query, services]);
+  const modalServices = useMemo(() => {
+    const normalizedQuery = modalQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return services;
+    return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
+  }, [modalQuery, services]);
 
   const selectService = (serviceId: string) => {
     onSelect(serviceId);
     setShowAll(false);
+    setModalQuery('');
   };
 
   return (
@@ -63,16 +70,22 @@ export function SopServiceList({ services, selectedId, onSelect }: SopServiceLis
           {visibleServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
         </div>
 
-        <button type="button" onClick={() => setShowAll(true)} className="flex h-12 w-full items-center justify-center text-xs font-semibold tracking-[0.04em] text-[#760A0A] transition hover:bg-[#FFF9F8]">
+        <button type="button" onClick={() => { setModalQuery(''); setShowAll(true); }} className="flex h-12 w-full items-center justify-center text-xs font-semibold tracking-[0.04em] text-[#760A0A] transition hover:bg-[#FFF9F8]">
           View All Services
         </button>
       </aside>
 
-      <AdminModal open={showAll} onClose={() => setShowAll(false)} title="All Internal Services" description="Select a service to view and manage its SOP." size="lg">
-        <div className="overflow-hidden rounded-lg border border-[#E4E7EB]">
-          {services.map((service) => (
+      <AdminModal open={showAll} onClose={() => { setShowAll(false); setModalQuery(''); }} title="All Internal Services" description="Select a service to view and manage its SOP." size="lg">
+        <label className="mb-4 flex h-10 items-center gap-2 rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 focus-within:border-[#A61919] focus-within:ring-2 focus-within:ring-[#A61919]/10">
+          <Search aria-hidden="true" className="size-4 shrink-0 text-[#8A94A3]" />
+          <span className="sr-only">Search all internal services</span>
+          <input type="search" autoFocus value={modalQuery} onChange={(event) => setModalQuery(event.target.value)} placeholder="Search service name or description..." className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]" />
+        </label>
+        <div className="max-h-[480px] overflow-y-auto rounded-lg border border-[#E4E7EB]">
+          {modalServices.map((service) => (
             <ServiceItem key={service.id} service={service} active={service.id === selectedId} onSelect={() => selectService(service.id)} />
           ))}
+          {modalServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
         </div>
       </AdminModal>
     </>

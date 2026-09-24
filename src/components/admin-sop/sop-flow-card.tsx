@@ -1,48 +1,39 @@
 'use client';
 
-import { createDemoPdf } from '@/lib/admin-demo-pdf';
-import { Eye, FileText, ImageIcon, Pencil, UploadCloud } from 'lucide-react';
+import { uploadSopFile } from '@/components/admin-sop/sop-file-client';
+import type { SopService } from '@/types/admin-sop';
+import { ExternalLink, Eye, FileText, LoaderCircle, Pencil, UploadCloud } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { SopPanelHeader } from './sop-panel-header';
-
-type FlowAsset = {
-  name: string;
-  type: string;
-  blob: Blob;
-  displaySize?: string;
-  url?: string;
-};
 
 function formatSize(size: number) {
   if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(size / 1024))} KB`;
 }
 
-export function SopFlowCard({ serviceId }: { serviceId: string }) {
-  const [assets, setAssets] = useState<Record<string, FlowAsset>>(() => ({
-    'investor-kitas-renewal': {
-      name: 'Investor-KITAS-Renewal-Flow.pdf',
-      type: 'application/pdf',
-      blob: createDemoPdf('Investor KITAS Renewal Flow', ['1. Document verification', '2. Immigration submission', '3. Approval and issuance']),
-      displaySize: '4.2 MB',
-    },
-  }));
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const asset = assets[serviceId] ?? null;
+export function SopFlowCard({ service, canManage }: { service: SopService; canManage: boolean }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const asset = service.sop?.flow ?? null;
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-  const selectFile = (file?: File) => {
-    if (!file) return;
-    if (file.type !== 'application/pdf' && !file.type.startsWith('image/')) return;
-    if (asset?.url) URL.revokeObjectURL(asset.url);
-    setAssets((current) => ({ ...current, [serviceId]: { name: file.name, type: file.type, blob: file, url: URL.createObjectURL(file) } }));
-  };
-
-  const openViewer = () => {
-    if (!asset) return;
-    const url = asset.url ?? URL.createObjectURL(asset.blob);
-    window.open(url, '_blank', 'noopener,noreferrer');
-    if (!asset.url) window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  };
+  async function selectFile(file?: File) {
+    if (!file || !canManage || pending) return;
+    setPending(true);
+    setMessage('');
+    setError('');
+    const result = await uploadSopFile({ serviceId: service.id, description: service.sop?.description ?? null, fileType: 'FLOW', file, sortOrder: 0 });
+    setPending(false);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setMessage(asset ? 'Flow SOP berhasil diganti.' : result.message);
+    router.refresh();
+  }
 
   return (
     <section className="rounded-xl border border-[#C8CDD5] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
@@ -50,57 +41,34 @@ export function SopFlowCard({ serviceId }: { serviceId: string }) {
         icon={Eye}
         title="Flow"
         divider
-        action={
-          asset ? (
-            <div className="flex items-center gap-2">
-              <span className="rounded bg-[#E9EBEE] px-2 py-1 text-[10px] font-bold text-[#4B5059]">
-                {asset.type === 'application/pdf' ? 'PDF' : 'IMAGE'} · {asset.displaySize ?? formatSize(asset.blob.size)}
-              </span>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-8 items-center gap-2 rounded border border-[#D6A6A2] px-3 text-[11px] font-semibold text-[#8C1010] transition hover:bg-[#FFF7F6]">
-                Edit <Pencil aria-hidden="true" className="size-3.5" />
-              </button>
-            </div>
-          ) : null
-        }
+        action={asset ? <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="rounded bg-[#E9EBEE] px-2 py-1 text-[10px] font-bold text-[#4B5059]">{asset.mimeType === 'application/pdf' ? 'PDF' : 'IMAGE'} · {formatSize(asset.sizeBytes)}</span>
+          {asset.signedUrl ? <a href={asset.signedUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-2 rounded border border-[#9EACBF] px-3 text-[11px] font-semibold text-[#536075] transition hover:bg-gray-50 hover:text-[#8C1010]">
+            View <ExternalLink aria-hidden="true" className="size-3.5" />
+          </a> : null}
+          {canManage ? <button type="button" disabled={pending} onClick={() => inputRef.current?.click()} className="inline-flex h-8 items-center gap-2 rounded border border-[#D6A6A2] px-3 text-[11px] font-semibold text-[#8C1010] transition hover:bg-[#FFF7F6] disabled:cursor-not-allowed disabled:opacity-50">
+            {pending ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : <Pencil aria-hidden="true" className="size-3.5" />}{pending ? 'Uploading...' : 'Edit'}
+          </button> : null}
+        </div> : null}
       />
 
-      <input ref={fileInputRef} type="file" accept="application/pdf,image/*" onChange={(event) => selectFile(event.target.files?.[0])} className="sr-only" />
+      {canManage ? <input ref={inputRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" onChange={(event) => { void selectFile(event.target.files?.[0]); event.target.value = ''; }} className="sr-only" /> : null}
 
-      {asset ? (
-        <button type="button" onClick={openViewer} className="group relative mt-5 block h-[420px] w-full overflow-hidden rounded-lg border border-[#C8CDD5] bg-[#F2F4F7] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C1010]/25">
-          {asset.type === 'application/pdf' && asset.url ? (
-            <iframe title="SOP flow PDF preview" src={`${asset.url}#toolbar=0&navpanes=0&view=FitH`} className="pointer-events-none h-full w-full opacity-35" />
-          ) : asset.type === 'application/pdf' ? (
-            <span className="absolute inset-8 flex flex-col bg-white px-12 py-10 text-[#273347] opacity-35 shadow-md">
-              <span className="text-center text-lg font-semibold">Investor KITAS Renewal Flow</span>
-              <span className="mt-10 border-l-4 border-[#8C1010] pl-4 text-sm">1. Document verification</span>
-              <span className="mt-8 border-l-4 border-[#C48F18] pl-4 text-sm">2. Immigration submission</span>
-              <span className="mt-8 border-l-4 border-[#248454] pl-4 text-sm">3. Approval and issuance</span>
-            </span>
-          ) : (
+      {asset ? asset.signedUrl ? (
+        <div className="mt-5 h-[560px] w-full overflow-hidden rounded-lg border border-[#C8CDD5] bg-[#F2F4F7]">
+          {asset.mimeType === 'application/pdf' ? <iframe title={`Preview ${asset.originalFilename}`} src={`${asset.signedUrl}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`} className="h-full w-full bg-white" /> :
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={asset.url} alt="SOP flow preview" className="h-full w-full object-contain opacity-40" />
-          )}
-          <span className="absolute inset-0 flex flex-col items-center justify-center bg-white/15 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-white text-[#022448] shadow-lg">
-              {asset.type === 'application/pdf' ? <FileText aria-hidden="true" className="size-5" /> : <ImageIcon aria-hidden="true" className="size-5" />}
-            </span>
-            <span className="mt-3 text-sm font-medium text-[#022448]">Klik untuk Memperbesar</span>
-            <span className="mt-1 text-[11px] text-[#4D5663]">File akan dibuka pada tab baru.</span>
-          </span>
+            <img src={asset.signedUrl} alt={`Preview ${asset.title}`} className="h-full w-full object-contain" />}
+        </div>
+      ) : <div className="mt-5 flex min-h-[260px] flex-col items-center justify-center rounded-lg border border-dashed border-[#C8CDD5] bg-[#F7F8FA] px-6 text-center"><FileText aria-hidden="true" className="size-9 text-[#8C1010]" /><p className="mt-3 text-sm font-semibold text-[#2C3441]">Preview file tidak tersedia</p><p className="mt-1 text-xs text-[#7B8491]">Muat ulang halaman untuk membuat tautan file baru.</p></div>
+      : canManage ? (
+        <button type="button" disabled={pending} onClick={() => inputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void selectFile(event.dataTransfer.files[0]); }} className="mt-5 flex min-h-[320px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-[#B8C0CB] bg-[#F7F8FA] px-6 text-center transition hover:border-[#8C1010] hover:bg-[#FFF9F8] disabled:cursor-wait disabled:opacity-60">
+          {pending ? <LoaderCircle aria-hidden="true" className="size-9 animate-spin text-[#8C1010]" /> : <UploadCloud aria-hidden="true" className="size-9 text-[#8C1010]" strokeWidth={1.6} />}<span className="mt-3 text-sm font-semibold text-[#2C3441]">{pending ? 'Mengunggah flow...' : 'Upload PDF atau gambar flow'}</span><span className="mt-1 text-xs text-[#7B8491]">PDF, JPG, PNG, atau WebP. Maksimal 10 MiB.</span>
         </button>
-      ) : (
-        <label
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0]); }}
-          className="mt-5 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[#B8C0CB] bg-[#F7F8FA] px-6 text-center transition hover:border-[#8C1010] hover:bg-[#FFF9F8]"
-        >
-          <UploadCloud aria-hidden="true" className="size-9 text-[#8C1010]" strokeWidth={1.6} />
-          <span className="mt-3 text-sm font-semibold text-[#2C3441]">Upload PDF atau gambar flow</span>
-          <span className="mt-1 text-xs text-[#7B8491]">Klik atau tarik file ke area ini.</span>
-          <input type="file" accept="application/pdf,image/*" onChange={(event) => selectFile(event.target.files?.[0])} className="sr-only" />
-        </label>
-      )}
+      ) : <div className="mt-5 rounded-lg border border-dashed border-[#C8CDD5] px-5 py-12 text-center text-sm text-[#7B8491]">Belum ada flow untuk SOP ini.</div>}
+
+      {error ? <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</p> : null}
+      {message ? <p role="status" className="mt-3 rounded-lg bg-green-50 p-3 text-xs text-green-800">{message}</p> : null}
     </section>
   );
 }
