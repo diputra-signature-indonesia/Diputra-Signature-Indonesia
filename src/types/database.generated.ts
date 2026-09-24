@@ -59,62 +59,169 @@ export type Database = {
           },
         ]
       }
+      blog_post_revisions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          post_id: string
+          snapshot: Json
+          source_version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          post_id: string
+          snapshot: Json
+          source_version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          post_id?: string
+          snapshot?: Json
+          source_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_revisions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_post_revisions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           author_name: string | null
+          category: string
+          content_format: string
+          content_format_version: number
           content_md: string | null
           cover_alt: string | null
           created_at: string | null
+          created_by: string | null
           excerpt: string | null
           featured_image: string | null
           id: string
+          is_featured: boolean
           og_image: string | null
           published_at: string | null
+          published_by: string | null
           reading_time_min: number | null
+          rejection_reason: string | null
           seo_description: string | null
           seo_title: string | null
           slug: string
           status: Database["public"]["Enums"]["blog_status"] | null
+          tags: string[]
           title: string | null
           updated_at: string | null
+          updated_by: string | null
+          version: number
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           author_name?: string | null
+          category?: string
+          content_format?: string
+          content_format_version?: number
           content_md?: string | null
           cover_alt?: string | null
           created_at?: string | null
+          created_by?: string | null
           excerpt?: string | null
           featured_image?: string | null
           id?: string
+          is_featured?: boolean
           og_image?: string | null
           published_at?: string | null
+          published_by?: string | null
           reading_time_min?: number | null
+          rejection_reason?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug: string
           status?: Database["public"]["Enums"]["blog_status"] | null
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           author_name?: string | null
+          category?: string
+          content_format?: string
+          content_format_version?: number
           content_md?: string | null
           cover_alt?: string | null
           created_at?: string | null
+          created_by?: string | null
           excerpt?: string | null
           featured_image?: string | null
           id?: string
+          is_featured?: boolean
           og_image?: string | null
           published_at?: string | null
+          published_by?: string | null
           reading_time_min?: number | null
+          rejection_reason?: string | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["blog_status"] | null
+          tags?: string[]
           title?: string | null
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_posts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -957,69 +1064,189 @@ export type Database = {
       }
       review_requests: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           client_email: string | null
+          client_id: string | null
           client_name: string | null
           created_at: string
+          created_by: string | null
           expires_at: string | null
           id: string
+          job_id: string | null
           revoked_at: string | null
+          revoked_by: string | null
           token_hash: string
           used_at: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           client_email?: string | null
+          client_id?: string | null
           client_name?: string | null
           created_at?: string
+          created_by?: string | null
           expires_at?: string | null
           id?: string
+          job_id?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
           token_hash: string
           used_at?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           client_email?: string | null
+          client_id?: string | null
           client_name?: string | null
           created_at?: string
+          created_by?: string | null
           expires_at?: string | null
           id?: string
+          job_id?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
           token_hash?: string
           used_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "review_requests_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_requests_job_client_fkey"
+            columns: ["job_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "review_requests_job_client_fkey"
+            columns: ["job_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "review_requests_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
+          client_id: string | null
           created_at: string
           email: string | null
           id: string
           is_featured: boolean | null
           is_published: boolean | null
+          job_id: string | null
           message: string
+          moderated_at: string | null
+          moderated_by: string | null
           name: string
           review_request_id: string | null
+          status: Database["public"]["Enums"]["review_moderation_status"]
+          updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          client_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
           is_featured?: boolean | null
           is_published?: boolean | null
+          job_id?: string | null
           message: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           name: string
           review_request_id?: string | null
+          status?: Database["public"]["Enums"]["review_moderation_status"]
+          updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          client_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
           is_featured?: boolean | null
           is_published?: boolean | null
+          job_id?: string | null
           message?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
           name?: string
           review_request_id?: string | null
+          status?: Database["public"]["Enums"]["review_moderation_status"]
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reviews_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_job_client_fkey"
+            columns: ["job_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "reviews_job_client_fkey"
+            columns: ["job_id", "client_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id", "client_id"]
+          },
+          {
+            foreignKeyName: "reviews_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reviews_review_request_id_fkey"
             columns: ["review_request_id"]
@@ -1853,6 +2080,10 @@ export type Database = {
         Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
         Returns: undefined
       }
+      archive_blog_post: {
+        Args: { p_expected_version: number; p_post_id: string }
+        Returns: number
+      }
       archive_client: {
         Args: { p_client_id: string; p_expected_version: number }
         Returns: number
@@ -1860,6 +2091,11 @@ export type Database = {
       archive_job: {
         Args: { p_expected_version: number; p_job_id: string }
         Returns: number
+      }
+      archive_review: { Args: { p_review_id: string }; Returns: undefined }
+      archive_review_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
       }
       change_job_status: {
         Args: {
@@ -1881,6 +2117,21 @@ export type Database = {
       configure_job_task_statuses: {
         Args: { p_job_id: string; p_statuses: Json }
         Returns: undefined
+      }
+      create_blog_post: {
+        Args: {
+          p_category?: string
+          p_content_html: string
+          p_cover_alt?: string
+          p_excerpt: string
+          p_featured_image?: string
+          p_reading_time_min: number
+          p_seo_description?: string
+          p_seo_title?: string
+          p_tags?: string[]
+          p_title: string
+        }
+        Returns: string
       }
       create_client: {
         Args: {
@@ -1929,6 +2180,19 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      create_review_request: {
+        Args: {
+          p_client_email?: string
+          p_client_id?: string
+          p_client_name?: string
+          p_expires_in_days?: number
+          p_job_id?: string
+        }
+        Returns: {
+          request_id: string
+          token: string
+        }[]
       }
       create_task: {
         Args: {
@@ -2008,9 +2272,36 @@ export type Database = {
           task_id: string
         }[]
       }
+      list_pending_admin_access_requests: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          requested_at: string
+          user_id: string
+        }[]
+      }
       mark_sop_file_deleted: {
         Args: { p_expected_version: number; p_file_id: string }
         Returns: string
+      }
+      moderate_blog_post: {
+        Args: {
+          p_expected_version: number
+          p_post_id: string
+          p_rejection_reason?: string
+          p_status: Database["public"]["Enums"]["blog_status"]
+        }
+        Returns: number
+      }
+      moderate_review: {
+        Args: {
+          p_is_featured?: boolean
+          p_review_id: string
+          p_status: Database["public"]["Enums"]["review_moderation_status"]
+        }
+        Returns: undefined
       }
       move_task: {
         Args: {
@@ -2054,9 +2345,25 @@ export type Database = {
         Args: { p_expected_version: number; p_job_id: string; p_reason: string }
         Returns: number
       }
+      restore_blog_post: {
+        Args: { p_expected_version: number; p_post_id: string }
+        Returns: number
+      }
+      restore_blog_post_revision: {
+        Args: {
+          p_expected_version: number
+          p_post_id: string
+          p_revision_id: number
+        }
+        Returns: number
+      }
       restore_profile: { Args: { p_profile_id: string }; Returns: undefined }
       revert_last_job_step: {
         Args: { p_expected_version: number; p_job_step_id: string }
+        Returns: undefined
+      }
+      revoke_review_request: {
+        Args: { p_request_id: string }
         Returns: undefined
       }
       save_internal_service: {
@@ -2135,6 +2442,14 @@ export type Database = {
         }
         Returns: string
       }
+      set_blog_post_featured: {
+        Args: {
+          p_expected_version: number
+          p_is_featured: boolean
+          p_post_id: string
+        }
+        Returns: number
+      }
       set_blog_post_published: {
         Args: { p_is_published: boolean; p_post_id: string }
         Returns: undefined
@@ -2152,6 +2467,13 @@ export type Database = {
         Args: { p_is_active: boolean; p_profile_id: string }
         Returns: undefined
       }
+      set_profile_role: {
+        Args: {
+          p_profile_id: string
+          p_role: Database["public"]["Enums"]["role"]
+        }
+        Returns: undefined
+      }
       set_workflow_active: {
         Args: {
           p_expected_version: number
@@ -2164,6 +2486,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
+      submit_blog_post_for_review: {
+        Args: { p_expected_version: number; p_post_id: string }
+        Returns: number
+      }
       submit_review: {
         Args: {
           p_email: string
@@ -2174,6 +2500,23 @@ export type Database = {
         Returns: string
       }
       sync_own_profile_identity: { Args: never; Returns: undefined }
+      update_blog_post: {
+        Args: {
+          p_category?: string
+          p_content_html: string
+          p_cover_alt?: string
+          p_excerpt: string
+          p_expected_version: number
+          p_featured_image?: string
+          p_post_id: string
+          p_reading_time_min: number
+          p_seo_description?: string
+          p_seo_title?: string
+          p_tags?: string[]
+          p_title: string
+        }
+        Returns: number
+      }
       update_client: {
         Args: {
           p_address?: string
@@ -2242,6 +2585,11 @@ export type Database = {
       categories_type: "primary" | "secondary"
       contact_status: "new" | "in_progress" | "replied" | "closed" | "spam"
       cta_type: "contact" | "detail"
+      review_moderation_status:
+        | "PENDING"
+        | "PUBLISHED"
+        | "REJECTED"
+        | "ARCHIVED"
       role: "super_admin" | "admin" | "staff"
     }
     CompositeTypes: {
@@ -2375,6 +2723,12 @@ export const Constants = {
       categories_type: ["primary", "secondary"],
       contact_status: ["new", "in_progress", "replied", "closed", "spam"],
       cta_type: ["contact", "detail"],
+      review_moderation_status: [
+        "PENDING",
+        "PUBLISHED",
+        "REJECTED",
+        "ARCHIVED",
+      ],
       role: ["super_admin", "admin", "staff"],
     },
   },

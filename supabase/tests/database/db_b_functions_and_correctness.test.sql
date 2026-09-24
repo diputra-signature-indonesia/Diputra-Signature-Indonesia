@@ -16,10 +16,10 @@ values
   ('00000000-0000-4000-8000-000000000202', 'db-b-staff@example.test', 'staff', true),
   ('00000000-0000-4000-8000-000000000203', 'db-b-inactive@example.test', 'admin', false);
 
-insert into public.blog_posts (id, slug, title, status, updated_at)
+insert into public.blog_posts (id, slug, title, excerpt, content_md, reading_time_min, status, updated_at, featured_image, cover_alt, seo_title, seo_description)
 values
-  ('10000000-0000-4000-8000-000000000201', 'db-b-publish-rpc', 'DB-B publish RPC', 'pending', '2020-01-01 00:00:00+00'),
-  ('10000000-0000-4000-8000-000000000202', 'db-b-timestamp', 'DB-B timestamp', 'draft', '2020-01-01 00:00:00+00');
+  ('10000000-0000-4000-8000-000000000201', 'db-b-publish-rpc', 'DB-B publish RPC', 'A complete compatibility test excerpt.', '<p>A complete compatibility test article body.</p>', 1, 'pending', '2020-01-01 00:00:00+00', 'https://example.test/blog-cover.jpg', 'Compatibility article cover', 'DB-B publish RPC', 'A complete compatibility test excerpt.'),
+  ('10000000-0000-4000-8000-000000000202', 'db-b-timestamp', 'DB-B timestamp', 'A complete timestamp test excerpt.', '<p>A complete timestamp test article body.</p>', 1, 'draft', '2020-01-01 00:00:00+00', null, null, null, null);
 
 insert into public.review_requests (id, token_hash, client_name, expires_at, used_at, revoked_at)
 values

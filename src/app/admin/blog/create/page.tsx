@@ -1,14 +1,7 @@
-import CreateBlogForm from '@/components/layout-admin/blog-form';
-import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
+import { BlogEditorForm } from '@/components/admin-blog/blog-editor-form';
+import { requireActiveAdmin } from '@/lib/auth/admin-access';
 
 export default async function AdminCreateBlogPage() {
-  const author = await getCurrentAuthorFromTeamMember();
-
-  const authorName = author?.full_name || 'Administrator';
-
-  return (
-    <section className="font-raleway flex h-full w-full flex-col px-4 py-6">
-      <CreateBlogForm mode="create" authorName={authorName} />
-    </section>
-  );
+  const actor = await requireActiveAdmin();
+  return <BlogEditorForm mode="create" authorName={actor.displayName || actor.email?.split('@')[0] || 'Diputra Team'} />;
 }

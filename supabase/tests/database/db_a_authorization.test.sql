@@ -37,18 +37,18 @@ select extensions.throws_ok(
   'new profiles require an explicit role'
 );
 
-insert into public.blog_posts (id, slug, title, status)
+insert into public.blog_posts (id, slug, title, excerpt, content_md, reading_time_min, status, created_by, updated_by, featured_image, cover_alt, seo_title, seo_description)
 values
-  ('10000000-0000-4000-8000-000000000101', 'db-a-test-draft', 'DB-A draft', 'draft'),
-  ('10000000-0000-4000-8000-000000000102', 'db-a-test-published', 'DB-A published', 'published');
+  ('10000000-0000-4000-8000-000000000101', 'db-a-test-draft', 'DB-A draft', 'A complete draft excerpt.', '<p>A complete draft article body for authorization tests.</p>', 1, 'draft', '00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000000101', null, null, null, null),
+  ('10000000-0000-4000-8000-000000000102', 'db-a-test-published', 'DB-A published', 'A complete public excerpt.', '<p>A complete public article body for authorization tests.</p>', 1, 'published', null, null, 'https://example.test/public-cover.jpg', 'Public article cover', 'DB-A published', 'A complete public excerpt.');
 
 insert into public.review_requests (id, token_hash, client_name, created_at)
 values ('20000000-0000-4000-8000-000000000101', 'db-a-test-token', 'DB-A client', now());
 
-insert into public.reviews (id, name, message, is_published, created_at)
+insert into public.reviews (id, name, message, status, is_published, created_at)
 values
-  ('30000000-0000-4000-8000-000000000101', 'DB-A hidden', 'Hidden review', false, now()),
-  ('30000000-0000-4000-8000-000000000102', 'DB-A public', 'Public review', true, now());
+  ('30000000-0000-4000-8000-000000000101', 'DB-A hidden', 'Hidden review', 'PENDING', false, now()),
+  ('30000000-0000-4000-8000-000000000102', 'DB-A public', 'Public review', 'PUBLISHED', true, now());
 
 insert into public.contact_messages (id, name, email, phone, message, status)
 values (
@@ -90,15 +90,14 @@ select extensions.results_eq(
 
 select extensions.lives_ok(
   $$
-    insert into public.blog_posts (id, slug, title, status)
-    values ('10000000-0000-4000-8000-000000000103', 'db-a-test-staff-draft', 'Staff draft', 'draft')
+    select public.create_blog_post('Staff Created Article','A complete staff article excerpt.','<p>A complete staff article body for authorization tests.</p>',1,null,null,'News','{}'::text[],null,null)
   $$,
-  'staff can insert a draft blog post'
+  'staff can create a draft blog post through RPC'
 );
 
 select extensions.lives_ok(
-  $$ update public.blog_posts set title = 'Staff edited draft' where slug = 'db-a-test-draft' $$,
-  'staff can update a draft blog post'
+  $$ select public.update_blog_post('10000000-0000-4000-8000-000000000101',1,'Staff edited draft','A complete edited article excerpt.','<p>A complete edited article body for authorization tests.</p>',1,null,null,'News','{}'::text[],null,null) $$,
+  'staff can update their draft blog post through RPC'
 );
 
 select extensions.throws_ok(
@@ -108,15 +107,11 @@ select extensions.throws_ok(
   'staff cannot publish a draft blog post'
 );
 
-select extensions.results_eq(
-  $$
-    with removed as (
-      delete from public.blog_posts where slug = 'db-a-test-draft' returning 1
-    )
-    select count(*)::bigint from removed
-  $$,
-  array[0::bigint],
-  'staff cannot delete blog posts'
+select extensions.throws_ok(
+  $$ delete from public.blog_posts where slug = 'db-a-test-draft' $$,
+  '42501',
+  null,
+  'staff cannot delete blog posts directly'
 );
 
 select extensions.results_eq(
@@ -125,9 +120,15 @@ select extensions.results_eq(
   'staff can read review requests'
 );
 
-select extensions.lives_ok(
-  $$ update public.review_requests set revoked_at = now() where token_hash = 'db-a-test-token' $$,
-  'staff can update review requests'
+select extensions.results_eq(
+  $$
+    with changed as (
+      update public.review_requests set revoked_at = now() where token_hash = 'db-a-test-token' returning 1
+    )
+    select count(*)::bigint from changed
+  $$,
+  array[0::bigint],
+  'staff cannot update review request columns directly'
 );
 
 select extensions.results_eq(
@@ -147,9 +148,15 @@ select extensions.results_eq(
   'staff can read public and internal reviews'
 );
 
-select extensions.lives_ok(
-  $$ update public.reviews set is_published = true where id = '30000000-0000-4000-8000-000000000101' $$,
-  'staff can moderate reviews'
+select extensions.results_eq(
+  $$
+    with changed as (
+      update public.reviews set is_published = true where id = '30000000-0000-4000-8000-000000000101' returning 1
+    )
+    select count(*)::bigint from changed
+  $$,
+  array[0::bigint],
+  'staff cannot update review columns directly'
 );
 
 select extensions.results_eq(
@@ -219,22 +226,21 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000103
 select extensions.ok(public.is_admin_role(), 'active admin has admin capability');
 select extensions.lives_ok(
   $$
-    insert into public.blog_posts (id, slug, title, status)
-    values ('10000000-0000-4000-8000-000000000104', 'db-a-test-admin-published', 'Admin published', 'published')
+    select public.create_blog_post('Admin Created Article','A complete admin article excerpt.','<p>A complete admin article body for authorization tests.</p>',1,null,null,'News','{}'::text[],null,null)
   $$,
-  'admin can insert a published blog post'
+  'admin can create a blog post through RPC'
 );
 select extensions.lives_ok(
-  $$ delete from public.blog_posts where slug = 'db-a-test-staff-draft' $$,
-  'admin can delete blog posts'
+  $$ select public.archive_blog_post((select id from public.blog_posts where slug='staff-created-article'),1) $$,
+  'admin can archive blog posts through RPC'
 );
 select extensions.lives_ok(
-  $$ delete from public.reviews where id = '30000000-0000-4000-8000-000000000101' $$,
-  'admin can delete reviews'
+  $$ select public.archive_review('30000000-0000-4000-8000-000000000101') $$,
+  'admin can archive reviews through RPC'
 );
 select extensions.lives_ok(
-  $$ delete from public.review_requests where token_hash = 'db-a-test-token' $$,
-  'admin can delete review requests'
+  $$ select public.archive_review_request('20000000-0000-4000-8000-000000000101') $$,
+  'admin can archive review requests through RPC'
 );
 select extensions.lives_ok(
   $$ delete from public.contact_messages where id = '40000000-0000-4000-8000-000000000101' $$,
