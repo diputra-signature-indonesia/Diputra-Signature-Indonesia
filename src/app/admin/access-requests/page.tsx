@@ -1,27 +1,21 @@
-import { AdminAccessRequestsClient } from '@/components/layout-admin/admin-access-requests-client';
+import { UserManagementWorkspace } from '@/components/admin-user-management/user-management-workspace';
+import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
 import { requireActiveSuperAdmin } from '@/lib/auth/admin-access';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getUserManagementData } from '@/lib/supabase/queries/user-management';
 
 export default async function AdminAccessRequestsPage() {
-  await requireActiveSuperAdmin();
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('admin_access_requests')
-    .select('user_id, email, full_name, avatar_url, requested_at')
-    .eq('status', 'pending')
-    .order('requested_at', { ascending: true });
-
-  if (error) {
-    throw new Error(`Unable to load access requests: ${error.message}`);
-  }
+  const context = await requireActiveSuperAdmin();
+  const data = await getUserManagementData();
 
   return (
-    <div className="h-full px-4 py-6">
-      <div className="brand-h1-mb rounded-2xl border border-gray-200 px-5 py-4 shadow-sm">
-        <h1 className="brand-h2 font-bold">Admin Access Requests</h1>
-        <p className="mt-1 text-sm text-gray-500">Pilih role lalu setujui atau tolak permintaan akses dashboard.</p>
-      </div>
-      <AdminAccessRequestsClient requests={data ?? []} />
+    <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
+      <AdminPageHeader title="User Management" description="Manage user roles, dashboard access, and new join requests." />
+      <UserManagementWorkspace
+        currentUserId={context.userId}
+        profiles={data.profiles}
+        initialRequests={data.initialRequests}
+        initialPendingRequestCount={data.pendingRequestCount}
+      />
     </div>
   );
 }
