@@ -40,12 +40,13 @@ export async function getAllJobs(): Promise<AllJob[]> {
   const rows: Array<{
     id: string | null; title: string | null; client_id: string | null; pic_id: string | null;
     internal_service_id: string | null; priority_id: string | null; status_id: string | null;
+    created_at: string | null;
     start_date: string | null; estimated_end_date: string | null; estimated_duration_days: number | null;
     current_step_name: string | null; progress_percentage: number | null;
   }> = [];
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const { data, error } = await supabase.from('job_overview')
-      .select('id,title,client_id,pic_id,internal_service_id,priority_id,status_id,start_date,estimated_end_date,estimated_duration_days,current_step_name,progress_percentage')
+      .select('id,title,client_id,pic_id,internal_service_id,priority_id,status_id,created_at,start_date,estimated_end_date,estimated_duration_days,current_step_name,progress_percentage')
       .is('archived_at', null).order('created_at', { ascending: false }).order('id')
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw new Error(`Unable to load Jobs: ${error.message}`);
@@ -94,6 +95,7 @@ export async function getAllJobs(): Promise<AllJob[]> {
       deadline: formatDate(row.estimated_end_date), deadlineIso: row.estimated_end_date ?? '',
       deadlineNote: deadlineNote(row.estimated_end_date, completed, today),
       status: statusNames.get(row.status_id ?? '') ?? 'Unknown',
+      statusCode: statusCodes.get(row.status_id ?? '') ?? 'UNKNOWN',
       statusColor: statusColors.get(row.status_id ?? ''),
       priority: priorityNames.get(row.priority_id ?? '') ?? 'Unknown',
       priorityColor: priorityColors.get(row.priority_id ?? ''),
@@ -102,6 +104,7 @@ export async function getAllJobs(): Promise<AllJob[]> {
       latestUpdate: update?.message ?? 'Belum ada remark.',
       updatedBy: update ? (profileNames.get(update.created_by) ?? 'Pengguna tidak tersedia') : '',
       updatedAgo: update ? formatDate(update.progress_date) : '',
+      periodDateIso: row.start_date ?? row.created_at?.slice(0, 10) ?? today,
     };
   });
 }

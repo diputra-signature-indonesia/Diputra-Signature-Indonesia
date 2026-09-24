@@ -14,15 +14,21 @@ type FilterState = { query: string; assignee: string; status: string; priority: 
 type TaskForm = { title: string; description: string; assigneeId: string; priorityId: string; dueDate: string };
 const emptyFilters: FilterState = { query: '', assignee: '', status: '', priority: '', from: '', to: '' };
 const fieldClass = 'h-10 w-full rounded-lg border border-[#D6DAE0] bg-white px-3 text-sm text-[#303846] outline-none focus:border-[#8C1010]';
+const emptyTaskForm: TaskForm = { title: '', description: '', assigneeId: '', priorityId: '', dueDate: '' };
 
-export function LiveTaskAssignmentContent({ data }: { data: LiveTaskAssignment }) {
+function formFromTask(task: Task): TaskForm {
+  return { title: task.title, description: task.description ?? '', assigneeId: task.assignee_id ?? '', priorityId: task.priority_id ?? '', dueDate: task.due_date ?? '' };
+}
+
+export function LiveTaskAssignmentContent({ data, initialTaskId }: { data: LiveTaskAssignment; initialTaskId?: string }) {
   const router = useRouter();
+  const initialTask = data.tasks.find((task) => task.id === initialTaskId) ?? null;
   const [draftFilters, setDraftFilters] = useState<FilterState>(emptyFilters);
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [draft, setDraft] = useState<{ statusId: string; title: string } | null>(null);
-  const [editing, setEditing] = useState<Task | null>(null);
-  const [form, setForm] = useState<TaskForm>({ title: '', description: '', assigneeId: '', priorityId: '', dueDate: '' });
-  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Task | null>(initialTask);
+  const [form, setForm] = useState<TaskForm>(initialTask ? formFromTask(initialTask) : emptyTaskForm);
+  const [formOpen, setFormOpen] = useState(Boolean(initialTask));
   const [deleting, setDeleting] = useState<Task | null>(null);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [columnIds, setColumnIds] = useState<string[]>([]);
@@ -42,7 +48,7 @@ export function LiveTaskAssignmentContent({ data }: { data: LiveTaskAssignment }
 
   function openTask(task: Task) {
     setEditing(task);
-    setForm({ title: task.title, description: task.description ?? '', assigneeId: task.assignee_id ?? '', priorityId: task.priority_id ?? '', dueDate: task.due_date ?? '' });
+    setForm(formFromTask(task));
     setError(''); setFormOpen(true);
   }
 

@@ -17,15 +17,15 @@ import { Suspense } from 'react';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-async function TaskAssignmentSection({ jobId }: { jobId: string }) {
+async function TaskAssignmentSection({ jobId, taskId }: { jobId: string; taskId?: string }) {
   const taskAssignment = await getTaskAssignment(jobId);
   if (!taskAssignment) notFound();
-  return <LiveTaskAssignmentContent data={taskAssignment} />;
+  return <LiveTaskAssignmentContent key={taskId ?? 'board'} data={taskAssignment} initialTaskId={taskId} />;
 }
 
-export default async function AdminJobDetailPage({ params, searchParams }: { params: Promise<{ jobId: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function AdminJobDetailPage({ params, searchParams }: { params: Promise<{ jobId: string }>; searchParams: Promise<{ tab?: string; task?: string }> }) {
   const { jobId } = await params;
-  const { tab } = await searchParams;
+  const { tab, task } = await searchParams;
   const activeTab: JobDetailTab = tab === 'assignment' || tab === 'logging' ? tab : 'detail';
 
   if (UUID_PATTERN.test(jobId)) {
@@ -39,7 +39,7 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
         <AdminPageHeader title={detail.job.title} description={<><span>{detail.summary.client} · {detail.summary.internalService}</span><span className="ml-3 text-[#8A94A3]">Last updated {lastUpdated}</span></>} action={editOptions ? <EditJobButton detail={detail} options={editOptions} /> : null} />
         <JobDetailTabs jobId={jobId} activeTab={activeTab} />
         {activeTab === 'detail' ? <LiveJobDetailContent detail={detail} /> : null}
-        {activeTab === 'assignment' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Task Assignment"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><TaskAssignmentSection jobId={jobId} /></Suspense> : null}
+        {activeTab === 'assignment' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Task Assignment"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><TaskAssignmentSection jobId={jobId} taskId={task && UUID_PATTERN.test(task) ? task : undefined} /></Suspense> : null}
         {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
       </div>
     );

@@ -17,6 +17,7 @@ export type AllJob = {
   deadlineIso: string;
   deadlineNote: string;
   status: AllJobStatus;
+  statusCode: string;
   statusColor?: string;
   priority: AllJobPriority;
   priorityColor?: string;
@@ -26,6 +27,7 @@ export type AllJob = {
   latestUpdate: string;
   updatedBy: string;
   updatedAgo: string;
+  periodDateIso: string;
 };
 
 export type AllJobsFilterState = {
@@ -45,11 +47,15 @@ export const allJobsFilterOptions = {
   groupBy: ['None', 'Client', 'PIC', 'Internal Service', 'Status', 'Priority'],
 };
 
+export const ALL_JOB_STATUS_FILTER = 'ALL';
+export const UNFINISHED_JOB_STATUS_FILTER = 'UNFINISHED';
+export const COMPLETED_JOB_STATUS_FILTER = 'COMPLETED_ONLY';
+
 export const initialAllJobsFilters: AllJobsFilterState = {
   query: '',
   pic: 'All Assignees',
   internalService: 'All Internal Services',
-  status: 'All Statuses',
+  status: UNFINISHED_JOB_STATUS_FILTER,
   dateFrom: '',
   dateTo: '',
   priority: 'All Priorities',
@@ -57,7 +63,12 @@ export const initialAllJobsFilters: AllJobsFilterState = {
   groupBy: allJobsFilterOptions.groupBy[0],
 };
 
-const jobTemplates: Omit<AllJob, 'id'>[] = [
+export const emptyAllJobsFilters: AllJobsFilterState = {
+  ...initialAllJobsFilters,
+  status: ALL_JOB_STATUS_FILTER,
+};
+
+const jobTemplates: Omit<AllJob, 'id' | 'statusCode' | 'periodDateIso'>[] = [
   {
     isDummy: true, title: 'Registrasi NPWP', client: 'PT. Sunji Bakti Inc', pic: 'Dalem', picInitials: 'DA', internalService: 'Tax Registration', stage: 'Revision', progress: 40,
     deadline: '15 Sep 2026', deadlineIso: '2026-09-15', deadlineNote: 'Overdue 2 Days', status: 'On Hold', priority: 'High', startDate: '01 Sep 2026',
@@ -89,4 +100,6 @@ export const allJobsDummy: AllJob[] = jobTemplates.map((template, index) => ({
   ...template,
   id: `job-${index + 1}`,
   title: `${template.title} (dummy)`,
+  statusCode: template.status.toUpperCase().replaceAll(' ', '_'),
+  periodDateIso: '2026-09-01',
 }));

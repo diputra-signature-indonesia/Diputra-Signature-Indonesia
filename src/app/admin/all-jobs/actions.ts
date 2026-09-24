@@ -70,5 +70,6 @@ export async function createJobAction(input: CreateJobInput): Promise<CreateJobR
   }
 
   revalidatePath('/admin/all-jobs');
+  revalidatePath('/admin/my-tasks');
   return { ok: true, jobId: data };
 }

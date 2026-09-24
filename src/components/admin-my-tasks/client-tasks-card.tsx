@@ -1,28 +1,31 @@
-import type { MyTaskJob, MyTaskStatus } from '@/data/admin-my-tasks/my-tasks-dummy-data';
+import type { MyTaskJob } from '@/types/admin-my-tasks';
 import { ChevronRight, EllipsisVertical } from 'lucide-react';
 import Link from 'next/link';
 import { MyTaskStatusBadge } from './my-task-status-badge';
 
-export type TaskStatusFilter = 'All' | MyTaskStatus;
-
-const statusOrder: MyTaskStatus[] = ['In Progress', 'On Hold', 'Obstacle', 'Not Started', 'Completed'];
+export type TaskStatusFilter = 'All' | string;
 
 type ClientTasksCardProps = {
   job: MyTaskJob;
+  searchQuery: string;
   activeStatus: TaskStatusFilter;
   onStatusChange: (status: TaskStatusFilter) => void;
 };
 
-export function ClientTasksCard({ job, activeStatus, onStatusChange }: ClientTasksCardProps) {
-  const visibleTasks = activeStatus === 'All' ? job.tasks : job.tasks.filter((task) => task.status === activeStatus);
-  const statusCounts = Object.fromEntries(statusOrder.map((status) => [status, job.tasks.filter((task) => task.status === status).length])) as Record<MyTaskStatus, number>;
+export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange }: ClientTasksCardProps) {
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const queryMatchesJob = `${job.title} ${job.client} ${job.internalService}`.toLocaleLowerCase().includes(normalizedQuery);
+  const searchedTasks = !normalizedQuery || queryMatchesJob
+    ? job.tasks
+    : job.tasks.filter((task) => task.detail.toLocaleLowerCase().includes(normalizedQuery));
+  const visibleTasks = activeStatus === 'All' ? searchedTasks : searchedTasks.filter((task) => task.statusId === activeStatus);
 
   return (
     <section className="min-w-0 rounded-xl border border-[#DEE2E7] bg-white p-5 shadow-[0_2px_4px_rgba(15,23,42,0.05)]">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/admin/all-jobs?job=${job.id}`} className="group inline-flex min-w-0 items-center gap-2 text-[#A94141] hover:text-[#8C1010]">
+            <Link href={`/admin/all-jobs/${job.id}`} className="group inline-flex min-w-0 items-center gap-2 text-[#A94141] hover:text-[#8C1010]">
               <h2 className="truncate text-xl font-semibold">Tasks - {job.client}</h2>
               <ChevronRight aria-hidden="true" className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5" />
             </Link>
@@ -39,17 +42,17 @@ export function ClientTasksCard({ job, activeStatus, onStatusChange }: ClientTas
           onClick={() => onStatusChange('All')}
           className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeStatus === 'All' ? 'border-[#2F2020] bg-[#2F2020] text-white' : 'border-[#E7BBB4] bg-[#FFF9F8] text-[#725650] hover:bg-[#FFF2F0]'}`}
         >
-          All ({job.tasks.length})
+          All ({searchedTasks.length})
         </button>
-        {statusOrder.map((status) => (
+        {job.statuses.map((status) => (
           <button
-            key={status}
+            key={status.id}
             type="button"
-            aria-pressed={activeStatus === status}
-            onClick={() => onStatusChange(status)}
-            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeStatus === status ? 'border-[#2F2020] bg-[#2F2020] text-white' : 'border-[#E7BBB4] bg-[#FFF9F8] text-[#725650] hover:bg-[#FFF2F0]'}`}
+            aria-pressed={activeStatus === status.id}
+            onClick={() => onStatusChange(status.id)}
+            className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeStatus === status.id ? 'border-[#2F2020] bg-[#2F2020] text-white' : 'border-[#E7BBB4] bg-[#FFF9F8] text-[#725650] hover:bg-[#FFF2F0]'}`}
           >
-            {status} ({statusCounts[status]})
+            {status.name} ({searchedTasks.filter((task) => task.statusId === status.id).length})
           </button>
         ))}
       </div>
@@ -73,11 +76,11 @@ export function ClientTasksCard({ job, activeStatus, onStatusChange }: ClientTas
                     <p>{task.deadline}</p>
                     <p className={`mt-1 text-[10px] ${task.deadlineNote === 'Completed' ? 'text-emerald-600' : 'text-red-500'}`}>({task.deadlineNote})</p>
                   </td>
-                  <td className="px-4 py-5"><MyTaskStatusBadge status={task.status} /></td>
+                  <td className="px-4 py-5"><MyTaskStatusBadge status={task.status} code={task.statusCode} /></td>
                   <td className="px-3 py-5 text-center">
-                    <button type="button" aria-label={`Actions for ${task.detail}`} className="rounded-md p-1.5 text-[#8C716D] transition hover:bg-gray-100 hover:text-[#202938]">
+                    <Link href={`/admin/all-jobs/${job.id}?tab=assignment&task=${task.id}`} aria-label={`Open ${task.detail} in Task Assignment`} className="inline-flex rounded-md p-1.5 text-[#8C716D] transition hover:bg-gray-100 hover:text-[#202938]">
                       <EllipsisVertical aria-hidden="true" className="size-4" />
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}

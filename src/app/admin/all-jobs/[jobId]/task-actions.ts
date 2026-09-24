@@ -20,6 +20,7 @@ function mapError(error: { code?: string; message: string }): TaskActionResult {
 function refresh(jobId: string) {
   revalidatePath(`/admin/all-jobs/${jobId}`);
   revalidatePath('/admin/all-jobs');
+  revalidatePath('/admin/my-tasks');
 }
 
 type TaskInput = {

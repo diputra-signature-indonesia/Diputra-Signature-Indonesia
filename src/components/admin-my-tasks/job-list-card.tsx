@@ -1,4 +1,4 @@
-import type { MyTaskJob } from '@/data/admin-my-tasks/my-tasks-dummy-data';
+import type { MyTaskJob } from '@/types/admin-my-tasks';
 import { Clock3, Search, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { MyTaskStatusBadge } from './my-task-status-badge';
@@ -15,13 +15,13 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
   const openTotal = jobs.reduce((sum, job) => sum + job.openCount, 0);
   const completedTotal = jobs.reduce((sum, job) => sum + job.completedCount, 0);
   const normalizedQuery = query.trim().toLowerCase();
-  const visibleJobs = normalizedQuery ? jobs.filter((job) => `${job.client} ${job.title} ${job.id}`.toLowerCase().includes(normalizedQuery)) : jobs;
+  const visibleJobs = normalizedQuery ? jobs.filter((job) => `${job.client} ${job.title} ${job.internalService}`.toLowerCase().includes(normalizedQuery)) : jobs;
 
   return (
     <aside className="flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl border border-[#DEE2E7] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.05)] xl:max-h-[735px]">
       <div className="px-4 pt-5 pb-4">
         <h2 className="text-xl font-semibold text-[#2A2020]">Job List</h2>
-        <p className="mt-1 text-xs text-[#756664]">Select a job to view its assigned tasks.</p>
+        <p className="mt-1 text-xs text-[#756664]">Select a job to view its tasks.</p>
 
         <label className="relative mt-3 block">
           <span className="sr-only">Search job list</span>
@@ -30,13 +30,13 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
             type="search"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Job title, client name, or reference..."
+            placeholder="Job title, client name, or service..."
             className="h-9 w-full rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] pr-3 pl-9 text-xs text-[#303846] outline-none transition placeholder:text-[#747D8C] focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10"
           />
         </label>
 
         <div className="mt-2 rounded-lg border border-[#DEE2E7] px-3 py-2.5">
-          <p className="text-xs font-semibold text-[#725650]">All Assigned Tasks</p>
+          <p className="text-xs font-semibold text-[#725650]">My Task Overview</p>
           <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[#756664]">{openTotal} open · {completedTotal} completed</p>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
               <p className="truncate text-sm font-semibold text-[#2A2020]">{job.client}</p>
               <p className="mt-0.5 truncate text-xs text-[#756664]">{job.title}</p>
               <div className="mt-3 flex items-center justify-between gap-2">
-                <MyTaskStatusBadge status={job.status} />
+                <MyTaskStatusBadge status={job.status} code={job.statusCode} />
                 <span className={`flex items-center gap-1 whitespace-nowrap text-[11px] ${job.dueTone === 'urgent' ? 'font-medium text-red-600' : job.dueTone === 'warning' ? 'font-medium text-amber-700' : 'text-[#2A2020]'}`}>
                   <DueIcon aria-hidden="true" className="size-3" />
                   {job.dueLabel}

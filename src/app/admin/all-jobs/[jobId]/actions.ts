@@ -24,6 +24,7 @@ function rpcError(error: { code?: string; message: string }): JobDetailActionRes
 function refreshJob(jobId: string) {
   revalidatePath(`/admin/all-jobs/${jobId}`);
   revalidatePath('/admin/all-jobs');
+  revalidatePath('/admin/my-tasks');
 }
 
 export async function changeJobStepAction(input: { jobId: string; stepId: string; version: number; action: 'complete' | 'revert' }): Promise<JobDetailActionResult> {

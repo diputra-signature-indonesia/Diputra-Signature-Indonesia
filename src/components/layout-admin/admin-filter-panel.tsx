@@ -54,9 +54,10 @@ type AdminSelectFieldProps = {
   value: string;
   options: Array<string | { value: string; label: string }>;
   onChange: (value: string) => void;
+  active?: boolean;
 };
 
-export function AdminSelectField({ label, value, options, onChange }: AdminSelectFieldProps) {
+export function AdminSelectField({ label, value, options, onChange, active = false }: AdminSelectFieldProps) {
   return (
     <label className="block min-w-0">
       <span className="mb-1 block text-[11px] font-semibold text-[#202020]">{label}</span>
@@ -64,7 +65,7 @@ export function AdminSelectField({ label, value, options, onChange }: AdminSelec
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-full appearance-none rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 pr-9 text-xs text-[#747D8C] outline-none transition focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10"
+          className={`h-9 w-full appearance-none rounded-lg border px-3 pr-9 text-xs outline-none transition focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10 ${active ? 'border-[#E4C756] bg-[#FFFBEA] text-[#5E5120]' : 'border-[#DEE2E7] bg-[#F5F6F8] text-[#747D8C]'}`}
         >
           {options.map((option) => typeof option === 'string'
             ? <option key={option} value={option}>{option}</option>

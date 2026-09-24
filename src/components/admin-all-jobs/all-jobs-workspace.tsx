@@ -1,6 +1,14 @@
 'use client';
 
-import { allJobsDummy, initialAllJobsFilters, type AllJob, type AllJobsFilterState } from '@/data/admin-all-jobs/all-jobs-dummy-data';
+import {
+  ALL_JOB_STATUS_FILTER,
+  COMPLETED_JOB_STATUS_FILTER,
+  UNFINISHED_JOB_STATUS_FILTER,
+  allJobsDummy,
+  initialAllJobsFilters,
+  type AllJob,
+  type AllJobsFilterState,
+} from '@/data/admin-all-jobs/all-jobs-dummy-data';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AllJobsFilters } from './all-jobs-filters';
 import { AllJobsTable } from './all-jobs-table';
@@ -28,12 +36,15 @@ function dummyDeadlineNote(job: AllJob, today: string) {
 
 function matchesFilter(job: AllJob, filters: AllJobsFilterState) {
   const query = filters.query.trim().toLowerCase();
-  const searchableValue = `${job.title} ${job.client} ${job.id}`.toLowerCase();
+  const searchableValue = `${job.title} ${job.client} ${job.pic} ${job.internalService} ${job.status} ${job.priority}`.toLowerCase();
 
   if (query && !searchableValue.includes(query)) return false;
   if (filters.pic !== 'All Assignees' && job.pic !== filters.pic) return false;
   if (filters.internalService !== 'All Internal Services' && job.internalService !== filters.internalService) return false;
-  if (filters.status !== 'All Statuses' && job.status !== filters.status) return false;
+  if (filters.status === UNFINISHED_JOB_STATUS_FILTER && job.statusCode === 'COMPLETED') return false;
+  if (filters.status === COMPLETED_JOB_STATUS_FILTER && job.statusCode !== 'COMPLETED') return false;
+  if (filters.status.startsWith('STATUS:') && job.statusCode !== filters.status.slice('STATUS:'.length)) return false;
+  if (![ALL_JOB_STATUS_FILTER, UNFINISHED_JOB_STATUS_FILTER, COMPLETED_JOB_STATUS_FILTER].includes(filters.status) && !filters.status.startsWith('STATUS:') && job.status !== filters.status) return false;
   if (filters.priority !== 'All Priorities' && job.priority !== filters.priority) return false;
   if (filters.dateFrom && (!job.deadlineIso || job.deadlineIso < filters.dateFrom)) return false;
   if (filters.dateTo && (!job.deadlineIso || job.deadlineIso > filters.dateTo)) return false;
@@ -46,6 +57,21 @@ function matchesFilter(job: AllJob, filters: AllJobsFilterState) {
   }
 
   return true;
+}
+
+function compareUnfinishedJobs(left: AllJob, right: AllJob) {
+  const monthStart = `${todayInMakassar().slice(0, 7)}-01`;
+  const leftCarryOver = left.periodDateIso < monthStart;
+  const rightCarryOver = right.periodDateIso < monthStart;
+  if (leftCarryOver !== rightCarryOver) return leftCarryOver ? -1 : 1;
+
+  const periodOrder = left.periodDateIso.localeCompare(right.periodDateIso);
+  if (periodOrder !== 0) return periodOrder;
+
+  if (left.deadlineIso && right.deadlineIso) return left.deadlineIso.localeCompare(right.deadlineIso);
+  if (left.deadlineIso) return -1;
+  if (right.deadlineIso) return 1;
+  return left.title.localeCompare(right.title);
 }
 
 function groupValue(job: AllJob, groupBy: string) {
@@ -69,10 +95,14 @@ export function AllJobsWorkspace({ realJobs, showDemoJobs }: { realJobs: AllJob[
     const filtered = jobs.filter((job) => matchesFilter(job, appliedFilters));
 
     if (appliedFilters.groupBy !== 'None') {
-      return [...filtered].sort((left, right) => groupValue(left, appliedFilters.groupBy).localeCompare(groupValue(right, appliedFilters.groupBy)));
+      return [...filtered].sort((left, right) => {
+        const groupOrder = groupValue(left, appliedFilters.groupBy).localeCompare(groupValue(right, appliedFilters.groupBy));
+        if (groupOrder !== 0) return groupOrder;
+        return appliedFilters.status === UNFINISHED_JOB_STATUS_FILTER ? compareUnfinishedJobs(left, right) : 0;
+      });
     }
 
-    return filtered;
+    return appliedFilters.status === UNFINISHED_JOB_STATUS_FILTER ? [...filtered].sort(compareUnfinishedJobs) : filtered;
   }, [appliedFilters, jobs]);
 
   useEffect(() => {
