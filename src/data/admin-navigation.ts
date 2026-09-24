@@ -44,13 +44,13 @@ export const ADMIN_NAV_ITEM: AdminNavLink[] = [
   },
   {
     label: 'Blogpost',
-    href: ADMIN_ROUTE,
+    href: `${ADMIN_ROUTE}/blog`,
     slug: 'blog',
     icon: SquarePen,
-    activePaths: [ADMIN_ROUTE, `${ADMIN_ROUTE}/blog`],
+    activePaths: [`${ADMIN_ROUTE}/blog`],
   },
   {
-    label: 'Review',
+    label: 'Client Reviews',
     href: `${ADMIN_ROUTE}/reviews`,
     slug: 'reviews',
     icon: FileCheck2,

@@ -17,7 +17,14 @@ export async function getVisibleStories(limit = 6): Promise<StoryExperience[]> {
   cacheTag(PUBLIC_CACHE_TAGS.reviews);
 
   const supabase = createSupabasePublicServerClient();
-  const { data, error } = await supabase.from('reviews').select('id, name, message, created_at').eq('is_published', true).order('created_at', { ascending: false }).limit(limit);
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id, name, message, created_at')
+    .eq('status', 'PUBLISHED')
+    .is('archived_at', null)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error) throw error;
   return data ?? [];

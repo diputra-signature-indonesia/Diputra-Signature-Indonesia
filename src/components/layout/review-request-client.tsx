@@ -17,8 +17,7 @@ export default function ReviewRequestClient({ token, status }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  // contoh: link google review (nanti ganti punya DSI)
-  const googleReviewUrl = 'https://search.google.com/local/writereview?placeid=YOUR_PLACE_ID';
+  const googleReviewUrl = process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL;
 
   if (done) {
     return (
@@ -28,9 +27,11 @@ export default function ReviewRequestClient({ token, status }: Props) {
           <ReviewResult review={message} />
         </p>
 
-        <a href={googleReviewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-medium text-black">
-          Leave a Google Review
-        </a>
+        {googleReviewUrl ? (
+          <a href={googleReviewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-medium text-black">
+            Leave a Google Review
+          </a>
+        ) : null}
       </div>
     );
   }

@@ -1,39 +1,32 @@
-import { AdminReviewTableClient } from '@/components/ui/AdminReviewTableClient';
-import { AdminReviewUrlTableClient } from '@/components/ui/AdminReviewUrlTableClient';
-import { BrandButton } from '@/components/ui/button';
-import { getAdminClientStories, getAdminGeneratedReview } from '@/lib/supabase/queries';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { ReviewManagementWorkspace } from '@/components/admin-reviews/review-management-workspace';
+import { getReviewManagementData } from '@/lib/supabase/queries/reviews';
+import type { ReviewManagementFilters } from '@/types/admin-review';
 
-export default async function AdminReviewPage() {
-  const supabase = await createSupabaseServerClient();
+type SearchParams = Record<string, string | string[] | undefined>;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect('/admin/login'); // atau '/login'
-  }
+function value(params: SearchParams, key: string) {
+  const item = params[key];
+  return Array.isArray(item) ? item[0] : item;
+}
 
-  const { data: profile, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+function parseFilters(params: SearchParams): ReviewManagementFilters {
+  const reviewStatus = value(params, 'status');
+  const featured = value(params, 'featured');
+  const requestState = value(params, 'state');
+  const page = Number.parseInt(value(params, 'page') ?? '1', 10);
+  return {
+    tab: value(params, 'tab') === 'links' ? 'links' : 'reviews',
+    query: (value(params, 'q') ?? '').slice(0, 160),
+    reviewStatus: ['PENDING', 'PUBLISHED', 'REJECTED'].includes(reviewStatus ?? '') ? (reviewStatus as ReviewManagementFilters['reviewStatus']) : 'ALL',
+    featured: ['FEATURED', 'REGULAR'].includes(featured ?? '') ? (featured as ReviewManagementFilters['featured']) : 'ALL',
+    requestState: ['ACTIVE', 'USED', 'EXPIRED', 'REVOKED'].includes(requestState ?? '') ? (requestState as ReviewManagementFilters['requestState']) : 'ALL',
+    page: Number.isFinite(page) && page > 0 ? page : 1,
+  };
+}
 
-  const role = profile?.role ?? null;
-
-  const reviewData = await getAdminClientStories();
-  const reviewUrlData = await getAdminGeneratedReview();
-  return (
-    <div className="h-full px-4 py-6">
-      <div className="brand-h1-mb flex items-center justify-between rounded-2xl border border-gray-200 px-5 py-4 shadow-sm">
-        <h1 className="brand-h2 font-bold">Review List</h1>
-        <BrandButton asChild variant="red" className="w-full justify-center max-sm:px-0 sm:w-fit">
-          <Link href="/admin/reviews/create">Generate URL</Link>
-        </BrandButton>
-      </div>
-      <div className="flex flex-col gap-7 pb-28">
-        <AdminReviewUrlTableClient role={role} data={reviewUrlData} />
-        <AdminReviewTableClient role={role} data={reviewData} />
-      </div>
-    </div>
-  );
+export default async function AdminReviewPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  const data = await getReviewManagementData(filters);
+  return <ReviewManagementWorkspace data={data} filters={filters} initialGenerateOpen={value(params, 'generate') === '1'} />;
 }

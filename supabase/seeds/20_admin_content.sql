@@ -181,6 +181,7 @@ insert into public.reviews (
   name,
   email,
   message,
+  status,
   is_published,
   is_featured,
   created_at
@@ -192,6 +193,7 @@ values
     'Local Featured Reviewer',
     'featured-reviewer@example.test',
     'This featured review is safe local fixture data.',
+    'PUBLISHED',
     true,
     true,
     now() - interval '1 day'
@@ -202,6 +204,7 @@ values
     'Local Published Reviewer',
     'published-reviewer@example.test',
     'This published review verifies the public carousel.',
+    'PUBLISHED',
     true,
     false,
     now() - interval '2 days'
@@ -212,6 +215,7 @@ values
     'Local Hidden Reviewer',
     'hidden-reviewer@example.test',
     'This unpublished review must remain hidden from public queries.',
+    'PENDING',
     false,
     false,
     now()
@@ -221,6 +225,7 @@ on conflict (id) do update set
   name = excluded.name,
   email = excluded.email,
   message = excluded.message,
+  status = excluded.status,
   is_published = excluded.is_published,
   is_featured = excluded.is_featured,
   created_at = excluded.created_at;
