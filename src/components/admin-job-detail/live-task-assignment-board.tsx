@@ -104,7 +104,7 @@ export function LiveTaskAssignmentBoard({ data, tasks, draft, pending, onDraftCh
   }
 
   return <>
-    <section ref={boardRef} aria-label="Task assignment board" className="grid items-start gap-5 overflow-x-auto px-4 pt-4 pb-20 sm:px-5 lg:px-6" style={{ gridTemplateColumns: `repeat(${data.columns.length}, 375px)` }}>
+    <section ref={boardRef} aria-label="Task assignment board" className="grid items-start gap-5 overflow-x-auto px-4 pt-4 pb-5 sm:px-5 lg:px-6" style={{ gridTemplateColumns: `repeat(${data.columns.length}, 375px)` }}>
       {data.columns.map((column) => {
         const columnTasks = tasks.filter((task) => task.job_task_status_id === column.id);
         const showDraft = draft?.statusId === column.id;

@@ -1,10 +1,11 @@
 import Link from 'next/link';
 
-export type JobDetailTab = 'detail' | 'assignment' | 'logging';
+export type JobDetailTab = 'detail' | 'assignment' | 'documents' | 'logging';
 
 const tabs: { id: JobDetailTab; label: string }[] = [
   { id: 'detail', label: 'Jobs Detail' },
   { id: 'assignment', label: 'Task Assignment' },
+  { id: 'documents', label: 'Documents' },
   { id: 'logging', label: 'Jobs Logging' },
 ];
 

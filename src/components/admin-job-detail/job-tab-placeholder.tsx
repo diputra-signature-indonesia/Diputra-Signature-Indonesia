@@ -1,17 +1,13 @@
 import type { JobDetailTab } from './job-detail-tabs';
 
-const content: Record<Exclude<JobDetailTab, 'detail'>, { title: string; description: string }> = {
-  assignment: {
-    title: 'Task Assignment',
-    description: 'Pengelolaan assignment untuk job ini akan tersedia pada tahap berikutnya.',
-  },
+const content: Record<Extract<JobDetailTab, 'logging'>, { title: string; description: string }> = {
   logging: {
     title: 'Jobs Logging',
     description: 'Riwayat aktivitas lengkap untuk job ini akan tersedia pada tahap berikutnya.',
   },
 };
 
-export function JobTabPlaceholder({ tab }: { tab: Exclude<JobDetailTab, 'detail'> }) {
+export function JobTabPlaceholder({ tab }: { tab: Extract<JobDetailTab, 'logging'> }) {
   const item = content[tab];
 
   return (

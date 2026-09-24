@@ -478,6 +478,204 @@ export type Database = {
           },
         ]
       }
+      job_documents: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          file_name: string
+          file_size_bytes: number | null
+          google_file_id: string
+          google_resource_key: string | null
+          id: string
+          job_drive_folder_id: string
+          job_id: string
+          last_synced_at: string | null
+          mime_type: string | null
+          source: string
+          sync_status: string
+          updated_at: string
+          updated_by: string
+          uploaded_at: string
+          uploaded_by: string
+          version: number
+          web_view_url: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_size_bytes?: number | null
+          google_file_id: string
+          google_resource_key?: string | null
+          id?: string
+          job_drive_folder_id: string
+          job_id: string
+          last_synced_at?: string | null
+          mime_type?: string | null
+          source?: string
+          sync_status?: string
+          updated_at?: string
+          updated_by: string
+          uploaded_at?: string
+          uploaded_by: string
+          version?: number
+          web_view_url: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          google_file_id?: string
+          google_resource_key?: string | null
+          id?: string
+          job_drive_folder_id?: string
+          job_id?: string
+          last_synced_at?: string | null
+          mime_type?: string | null
+          source?: string
+          sync_status?: string
+          updated_at?: string
+          updated_by?: string
+          uploaded_at?: string
+          uploaded_by?: string
+          version?: number
+          web_view_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_documents_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_documents_folder_fkey"
+            columns: ["job_id", "job_drive_folder_id"]
+            isOneToOne: false
+            referencedRelation: "job_drive_folders"
+            referencedColumns: ["job_id", "id"]
+          },
+          {
+            foreignKeyName: "job_documents_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_documents_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_drive_folders: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          connection_status: string
+          created_at: string
+          created_by: string
+          folder_name: string
+          google_drive_id: string
+          google_folder_id: string
+          id: string
+          job_id: string
+          last_synced_at: string | null
+          updated_at: string
+          updated_by: string
+          version: number
+          web_view_url: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          connection_status?: string
+          created_at?: string
+          created_by: string
+          folder_name: string
+          google_drive_id: string
+          google_folder_id: string
+          id?: string
+          job_id: string
+          last_synced_at?: string | null
+          updated_at?: string
+          updated_by: string
+          version?: number
+          web_view_url: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          connection_status?: string
+          created_at?: string
+          created_by?: string
+          folder_name?: string
+          google_drive_id?: string
+          google_folder_id?: string
+          id?: string
+          job_id?: string
+          last_synced_at?: string | null
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          web_view_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_drive_folders_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_drive_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_drive_folders_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_drive_folders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_statuses: {
         Row: {
           code: string

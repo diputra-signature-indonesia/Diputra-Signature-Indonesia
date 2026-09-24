@@ -1,4 +1,5 @@
 import { JobDetailContent } from '@/components/admin-job-detail/job-detail-content';
+import { JobDocumentsPanel, type DemoJobDocument } from '@/components/admin-job-detail/job-documents-panel';
 import { EditJobButton } from '@/components/admin-job-detail/edit-job-button';
 import { LiveJobDetailContent } from '@/components/admin-job-detail/live-job-detail-content';
 import { LiveTaskAssignmentContent } from '@/components/admin-job-detail/live-task-assignment-content';
@@ -10,6 +11,7 @@ import { allJobsDummy } from '@/data/admin-all-jobs/all-jobs-dummy-data';
 import { jobDetail } from '@/data/admin-job-detail/job-detail-dummy-data';
 import { getAddJobOptions } from '@/lib/supabase/queries/add-job';
 import { getJobDetail } from '@/lib/supabase/queries/job-detail';
+import { getJobDocuments } from '@/lib/supabase/queries/job-documents';
 import { getTaskAssignment } from '@/lib/supabase/queries/task-assignment';
 import { LoaderCircle, Pencil } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -23,10 +25,20 @@ async function TaskAssignmentSection({ jobId, taskId }: { jobId: string; taskId?
   return <LiveTaskAssignmentContent key={taskId ?? 'board'} data={taskAssignment} initialTaskId={taskId} />;
 }
 
+async function JobDocumentsSection({ jobId, canManage }: { jobId: string; canManage: boolean }) {
+  const data = await getJobDocuments(jobId);
+  return <JobDocumentsPanel data={data} canManage={canManage} />;
+}
+
+const demoDocuments: DemoJobDocument[] = [
+  { id: 'document-demo-1', file_name: 'Company Registration (dummy).pdf', mime_type: 'application/pdf', file_size_bytes: 2457600, web_view_url: null, uploaded_at: '2026-09-20T08:00:00+08:00', sync_status: 'READY' },
+  { id: 'document-demo-2', file_name: 'Client Supporting Document (dummy).pdf', mime_type: 'application/pdf', file_size_bytes: 1179648, web_view_url: null, uploaded_at: '2026-09-18T10:30:00+08:00', sync_status: 'READY' },
+];
+
 export default async function AdminJobDetailPage({ params, searchParams }: { params: Promise<{ jobId: string }>; searchParams: Promise<{ tab?: string; task?: string }> }) {
   const { jobId } = await params;
   const { tab, task } = await searchParams;
-  const activeTab: JobDetailTab = tab === 'assignment' || tab === 'logging' ? tab : 'detail';
+  const activeTab: JobDetailTab = tab === 'assignment' || tab === 'documents' || tab === 'logging' ? tab : 'detail';
 
   if (UUID_PATTERN.test(jobId)) {
     const detail = await getJobDetail(jobId);
@@ -40,6 +52,7 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
         <JobDetailTabs jobId={jobId} activeTab={activeTab} />
         {activeTab === 'detail' ? <LiveJobDetailContent detail={detail} /> : null}
         {activeTab === 'assignment' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Task Assignment"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><TaskAssignmentSection jobId={jobId} taskId={task && UUID_PATTERN.test(task) ? task : undefined} /></Suspense> : null}
+        {activeTab === 'documents' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Job Documents"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><JobDocumentsSection jobId={jobId} canManage={detail.canManage} /></Suspense> : null}
         {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
       </div>
     );
@@ -68,6 +81,7 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
       <p className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 sm:mx-5 lg:mx-6">Halaman ini menggunakan data contoh; isi detail belum disambungkan dengan baris dummy yang dipilih.</p>
       {activeTab === 'detail' ? <JobDetailContent /> : null}
       {activeTab === 'assignment' ? <TaskAssignmentContent /> : null}
+      {activeTab === 'documents' ? <JobDocumentsPanel canManage={false} demoDocuments={demoDocuments} /> : null}
       {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
     </div>
   );
