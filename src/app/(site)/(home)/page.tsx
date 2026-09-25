@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 
 import { AboutSection } from '@/components/layout/home-about-section';
 import { HeroSection } from '@/components/layout/home-hero-section';
-import { HomeFloatingContact } from '@/components/layout/home-floating-contact';
 import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
 import { ReviewSection } from '@/components/layout/section-review';
@@ -57,7 +56,6 @@ export default async function HomePage() {
       <div className="w-full pt-13 pb-30 drop-shadow-lg">
         <ContactSection />
       </div>
-      <HomeFloatingContact />
     </MotionProvider>
   );
 }

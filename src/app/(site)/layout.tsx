@@ -1,4 +1,5 @@
 import { SiteFooter, SiteFooterFallback } from '@/components/layout/site-footer';
+import { HomeFloatingContact } from '@/components/layout/home-floating-contact';
 import { SiteNavbar, SiteNavbarFallback } from '@/components/layout/site-navbar';
 import RootClient from '@/components/root-client';
 import { CONTACT_LINK, NAV_ITEMS } from '@/data/navigation';
@@ -30,6 +31,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <SiteNavbar navItems={NAV_ITEMS} contactLink={CONTACT_LINK} />
         </Suspense>
         <main className="overflow-x-hidden">{children}</main>
+        <HomeFloatingContact />
         <Suspense fallback={<SiteFooterFallback navItems={NAV_ITEMS} contactLink={CONTACT_LINK} currentYear={currentYear} />}>
           <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} currentYear={currentYear} />
         </Suspense>
