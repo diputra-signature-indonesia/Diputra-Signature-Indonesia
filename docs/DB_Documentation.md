@@ -322,7 +322,11 @@ Hanya database/RPC memasukkan log. Actor berasal dari `auth.uid()` dan tidak dit
 
 Satu Service mempunyai maksimal satu SOP. SOP merupakan CRUD langsung tanpa status DRAFT/IN_REVIEW/READY, submit, publish, atau lifecycle bisnis lain. Riwayat perubahan penting tetap masuk audit; version dokumen historis terpisah belum MVP.
 
-#### 6.2 `sop_files`
+#### 6.2 `sop_drive_folders`
+
+Satu SOP mempunyai maksimal satu folder pada Google Shared Drive. Tabel menyimpan `sop_id`, `google_drive_id`, `google_folder_id`, `folder_name`, `web_view_url`, `connection_status`, `last_synced_at`, audit actor, timestamp, dan version. Binary file dan ACL tetap menjadi milik Google Drive.
+
+#### 6.3 `sop_files`
 
 | Kolom tambahan | Tipe / aturan |
 | --- | --- |
@@ -330,24 +334,27 @@ Satu Service mempunyai maksimal satu SOP. SOP merupakan CRUD langsung tanpa stat
 | `file_type` | text NN CHECK FLOW / REQUIREMENT |
 | `title` | text NN |
 | `original_filename` | text NN |
-| `bucket_id` | text NN DEFAULT sop-documents, CHECK nilai bucket yang diizinkan |
-| `storage_path` | text NN |
+| `sop_drive_folder_id` | uuid NULL composite FK dengan `sop_id`; wajib untuk file Google Drive |
+| `storage_provider` | text NN CHECK SUPABASE / GOOGLE_DRIVE; SUPABASE hanya penanda row legacy yang sudah dinonaktifkan |
+| `google_file_id` | text NULL UNIQUE; wajib untuk file Google Drive |
+| `google_resource_key` | text NULL |
+| `web_view_url` | text NULL; URL Google Drive lengkap |
 | `mime_type` | text NN |
 | `size_bytes` | bigint NN CHECK > 0 |
 | `sort_order` | integer NN DEFAULT 0 |
-| `upload_status` | text NN DEFAULT PENDING CHECK PENDING / READY / FAILED |
+| `upload_status` | text NN CHECK PENDING / READY / FAILED; file Drive baru disimpan sebagai READY setelah verifikasi API |
 | `uploaded_at` | timestamptz NULL |
 | `deleted_at` | timestamptz NULL |
 | `deleted_by` | uuid NULL FK profiles.id |
 | `version` | integer NN DEFAULT 1 |
 
-UNIQUE `(bucket_id, storage_path)`. Partial UNIQUE `(sop_id) WHERE file_type='FLOW' AND upload_status='READY' AND deleted_at IS NULL`: hanya satu flow current. Requirement boleh banyak. File pengganti berstatus teknis PENDING boleh ada bersamaan dengan flow READY lama sampai finalize berhasil.
+Partial UNIQUE `(sop_id) WHERE file_type='FLOW' AND upload_status='READY' AND deleted_at IS NULL`: hanya satu flow current. Requirement boleh banyak. Row legacy Supabase Storage dipertahankan hanya untuk provenance dan dinonaktifkan; upload baru selalu memakai Google Drive.
 
-FLOW menerima application/pdf atau image/jpeg,image/png,image/webp. REQUIREMENT hanya application/pdf. Batas maksimal **10 MiB per file**, diterapkan juga pada bucket. Metadata ukuran/MIME diverifikasi dari object Storage pada finalize, bukan dipercaya dari frontend. `upload_status` adalah state teknis proses upload, bukan status SOP.
+FLOW menerima application/pdf atau image/jpeg,image/png,image/webp. REQUIREMENT hanya application/pdf. Batas maksimal **10 MiB per file**. Setelah browser menyelesaikan resumable upload, server membaca ulang metadata melalui Drive API dan memverifikasi Shared Drive, parent folder, nama, MIME, serta ukuran sebelum menyimpan row.
 
-Path usulan `sops/<sop_uuid>/<file_uuid>.<ext>`, nama file asli bukan path otorisasi. Jangan menyimpan signed URL di tabel.
+Setiap SOP menggunakan folder terpisah di bawah `GOOGLE_DRIVE_SOP_ROOT_FOLDER_ID`. Identitas file adalah `google_file_id`; URL browser hanya metadata tampilan dan tidak dipakai sebagai identitas.
 
-#### 6.3 `sop_price_items`
+#### 6.4 `sop_price_items`
 
 | Kolom tambahan | Tipe / aturan |
 | --- | --- |
@@ -498,26 +505,26 @@ Nama berikut rancangan, belum function existing. Semua write memakai auth.uid() 
 | `create_task`, `update_task`, `move_task`, `delete_task` | Create/update/drag-drop/soft-delete sesuai admin/PIC/assignee; tanpa draft |
 | `create_job_update`, `update_job_update`, `delete_job_update` | CRUD Remark PIC/admin; delete mencatat snapshot sebelum hard delete |
 | `save_sop`, `save_sop_price_items` | Edit SOP, price rows dengan transaksi/version |
-| `prepare_sop_file_upload`, `finalize_sop_file_upload`, `mark_sop_file_deleted` | Metadata reservasi, object validation, replacement flow, lifecycle delete |
+| `save_sop_drive_folder`, `save_sop_drive_file_metadata`, `archive_sop_file` | Mapping folder Drive, metadata file yang telah diverifikasi, replacement Flow, dan soft-delete metadata |
 | `list_assignable_profiles` | Directory projection minimal untuk picker |
 | `get_dashboard_summary`, `list_jobs`, `list_job_activity` | Read-only, filter allowlist, pagination dan RLS |
 | `set_profile_active`, `soft_delete_profile`, `restore_profile` | Super admin saja; restore mengosongkan deleted_at tetapi mempertahankan is_active=false |
 
 RPC tidak menerima user_id untuk menjadikan seseorang admin; akses approval tetap memakai function existing super admin.
 
-### 12. Storage dan Download All
+### 12. Google Drive SOP dan Download All
 
-- Bucket baru `sop-documents` private; jangan memakai bucket public `images` untuk dokumen internal.
-- Private object diakses melalui authenticated download atau signed URL singkat yang dibuat sesudah RLS/permission check. Signed URL adalah bearer capability hingga expiry; jangan dicache bersama/public, disimpan dalam DB, atau ditulis log.
-- Prepare upload mereservasi file_uuid/path PENDING. Storage INSERT policy hanya menerima reservasi milik operator active/admin yang sah; path SOP harus cocok.
-- Upload `upsert=false`. Finalize memeriksa object melalui Storage API server dengan session user/metadata yang terotorisasi lalu transaksi database menandai READY. Object existence/size/type tidak boleh sekadar parameter frontend.
-- Flow replacement: upload baru dulu; setelah valid, lock SOP dan ganti flow READY lama menjadi deleted, aktifkan baru. Jika finalize gagal, flow lama tetap bisa dibaca.
-- Penghapusan: mark deleted dulu untuk menutup akses baru, hapus object lewat Storage API, retry bila gagal. Tidak menghapus row storage.objects lewat SQL. Policy cleanup memperbolehkan admin menghapus object yang telah ditandai deleted atau orphan reservasi yang sah.
-- Transaksi PostgreSQL tidak bisa membuat upload/delete Storage HTTP atomik; gunakan lifecycle/retry/cleanup. Jika diperlukan, tambahkan cleanup worker pada fase implementasi, bukan klaim rollback DB dapat mengembalikan object.
-- Download All mengambil requirement READY/non-deleted yang terotorisasi lalu membangun satu ZIP. Deduplicate entry filename agar PDF dengan nama sama tidak menimpa hasil ekstraksi. Untuk ukuran besar, gunakan streaming server dengan cookie user, bukan service-role endpoint publik.
+- Binary Flow dan Requirement disimpan di Google Shared Drive; PostgreSQL hanya menyimpan folder mapping, metadata, audit, dan soft-delete state.
+- Browser mengunggah langsung melalui resumable session URL sementara. Credential/OIDC token tidak pernah dikirim ke browser.
+- Server memverifikasi hasil upload melalui Drive API sebelum RPC mencatat metadata READY.
+- Flow replacement mengaktifkan file baru secara atomik di database, kemudian memindahkan file Drive lama ke Trash sebagai kompensasi eksternal.
+- Penghapusan memindahkan file ke Google Drive Trash terlebih dahulu, lalu soft-archive metadata melalui RPC dengan optimistic locking.
+- File ditampilkan melalui route server terautentikasi; tombol View dapat membuka canonical Drive URL.
+- Download All mengambil requirement aktif melalui route terautentikasi lalu membangun ZIP.
+- Bucket lama `sop-documents` tidak lagi memiliki policy aplikasi. Row legacy dinonaktifkan; cleanup binary lama dilakukan eksplisit melalui Storage API/dashboard, bukan direct SQL migration.
 - Edit/Add card adalah state UI; tidak perlu kolom is_editing database. Row Price List yang belum lengkap tetap lokal dan baru disimpan setelah valid.
 
-Referensi: [Private Storage buckets](https://supabase.com/docs/guides/storage/buckets/fundamentals), [Storage access control](https://supabase.com/docs/guides/storage/security/access-control).
+Autentikasi Drive menggunakan Vercel OIDC dan Workload Identity Federation tanpa service-account JSON key.
 
 ### 13. Kandidat index — verifikasi dengan query plan sebelum final
 
@@ -551,7 +558,7 @@ Query pencarian lintas Job title/Client memerlukan desain server projection/sear
 
 - Schema review: semua 16 tabel baru, FK composite, nullable audit untuk seed, soft-delete profile/Task, hard-delete Remark dengan log snapshot, privileges, constraint/trigger lintas baris, dan kontrak RPC.
 - pgTAP: role active/inactive/soft-deleted/no profile, seluruh staff read Job/log, direct write denied, master immutable code, Workflow immutable setelah dipakai, Job default, urutan complete/revert step, final-step lock saat hold/obstacle, hanya final step menutup Job, restart Workflow saat ganti Service tanpa mengubah status, reopen PIC/admin dengan alasan, konfigurasi kolom Task, self-assignment staff, unassigned Task PIC/admin, reassign, drag/drop position, soft-delete Task, hard-delete Remark terlog, child Job mismatch, race/version stale, dan status Task independen.
-- Storage HTTP lokal: private access denied anon/pending, unauthorized path upload, file type/size, flow replacement/race, delete failure retry, signed URL scope, ZIP duplicate filenames.
+- SOP Drive: direct table mutation denied, admin-only metadata RPC, file type/size, satu Flow aktif, replacement, archive/version stale, anon denied, dan tidak ada lagi SOP Storage policy.
 - FE: My Tasks/PIC, Group Client, dashboard Job vs Task, form lokal Task sebelum Save, dynamic status columns, loading/error/empty states, PDF dan Price List mutations.
 - Type generation/typecheck/lint/test lokal; schema lint/diff lokal setelah migration dibuat.
 - Tidak reset data lokal penting tanpa memeriksa seed/backups. Tidak menjalankan db push/reset linked/remote migration dalam fase rancangan ini.

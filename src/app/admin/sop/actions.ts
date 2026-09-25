@@ -1,6 +1,16 @@
 'use server';
 
 import { requireActiveAdmin } from '@/lib/auth/admin-access';
+import { getGoogleDriveConfig } from '@/lib/google-drive/auth';
+import {
+  createResumableUpload,
+  createSopFolder,
+  findSopFolder,
+  getDriveFile,
+  GoogleDriveApiError,
+  googleFolderUrl,
+  trashDriveFile,
+} from '@/lib/google-drive/client';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database.generated';
 import { revalidatePath } from 'next/cache';
@@ -18,6 +28,20 @@ function failure(error: { code?: string; message: string }, fallback: string): {
   if (error.code === 'P0002') return { ok: false, message: 'Data SOP tidak ditemukan. Muat ulang halaman lalu coba kembali.' };
   if (error.code === '23503') return { ok: false, message: 'Internal Service atau data SOP tidak tersedia.' };
   if (error.code === '22023') return { ok: false, message: error.message || fallback };
+  return { ok: false, message: fallback };
+}
+
+function driveFailure(error: unknown, fallback: string): { ok: false; message: string } {
+  if (error instanceof GoogleDriveApiError) {
+    if (error.status === 403) return { ok: false, message: 'Google Drive menolak operasi ini. Periksa akses service account pada Shared Drive.' };
+    if (error.status === 404) return { ok: false, message: 'Folder atau file SOP tidak ditemukan di Google Drive.' };
+  }
+  if (error instanceof Error && error.message.includes('is not configured')) {
+    return { ok: false, message: 'Konfigurasi Google Drive SOP belum tersedia pada environment ini.' };
+  }
+  if (error instanceof Error && error.message.includes('Vercel OIDC token is unavailable')) {
+    return { ok: false, message: 'Google Drive melalui OIDC hanya tersedia pada deployment Vercel yang telah diotorisasi.' };
+  }
   return { ok: false, message: fallback };
 }
 
@@ -73,10 +97,56 @@ export async function saveSopPriceItemsAction(input: { serviceId: string; descri
   return { ok: true, message: 'Price List berhasil disimpan.', data: { version: result.data } };
 }
 
+function sopFolderName(serviceName: string, sopId: string) {
+  const clean = serviceName.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
+  return `${clean || 'SOP'} (${sopId.slice(0, 8)})`.slice(0, 240);
+}
+
+async function ensureSopDriveFolder(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  sopId: string,
+  serviceName: string,
+) {
+  const current = await supabase.from('sop_drive_folders')
+    .select('id,sop_id,google_drive_id,google_folder_id,folder_name,web_view_url,connection_status')
+    .eq('sop_id', sopId)
+    .maybeSingle();
+  if (current.error) return { ok: false as const, result: failure(current.error, 'Mapping folder SOP gagal dibaca.') };
+  if (current.data?.connection_status === 'READY') return { ok: true as const, folder: current.data };
+
+  try {
+    const config = getGoogleDriveConfig();
+    const driveFolder = await findSopFolder(sopId) ?? await createSopFolder(sopId, sopFolderName(serviceName, sopId));
+    const webViewUrl = driveFolder.webViewLink ?? googleFolderUrl(driveFolder.id);
+    const saved = await supabase.rpc('save_sop_drive_folder', {
+      p_sop_id: sopId,
+      p_google_drive_id: config.sharedDriveId,
+      p_google_folder_id: driveFolder.id,
+      p_folder_name: driveFolder.name,
+      p_web_view_url: webViewUrl,
+    });
+    if (saved.error) return { ok: false as const, result: failure(saved.error, 'Folder SOP berhasil dibuat di Drive, tetapi mapping database gagal disimpan.') };
+    return {
+      ok: true as const,
+      folder: {
+        id: saved.data,
+        sop_id: sopId,
+        google_drive_id: config.sharedDriveId,
+        google_folder_id: driveFolder.id,
+        folder_name: driveFolder.name,
+        web_view_url: webViewUrl,
+        connection_status: 'READY',
+      },
+    };
+  } catch (error) {
+    return { ok: false as const, result: driveFailure(error, 'Folder SOP gagal disiapkan di Google Drive.') };
+  }
+}
+
 export async function prepareSopFileUploadAction(input: {
   serviceId: string; description: string | null; fileType: 'FLOW' | 'REQUIREMENT'; title: string;
   originalFilename: string; mimeType: string; sizeBytes: number; sortOrder: number;
-}): Promise<ActionResult<{ sopId: string; fileId: string; bucketId: string; storagePath: string; version: number }>> {
+}): Promise<ActionResult<{ sopId: string; folderId: string; uploadUrl: string }>> {
   const supabase = await managerClient();
   if (!supabase) return { ok: false, message: 'Hanya admin atau super admin yang dapat mengunggah file SOP.' };
   const title = input.title.trim();
@@ -86,65 +156,90 @@ export async function prepareSopFileUploadAction(input: {
   }
   const ensured = await findOrCreateSop(input.serviceId, input.description);
   if (ensured.error || !ensured.sop) return failure(ensured.error ?? { message: 'SOP tidak tersedia.' }, 'SOP gagal disiapkan untuk upload.');
-  const reservation = await supabase.rpc('prepare_sop_file_upload', {
-    p_sop_id: ensured.sop.id,
-    p_file_type: input.fileType,
-    p_title: title,
-    p_original_filename: input.originalFilename.trim(),
-    p_mime_type: input.mimeType,
-    p_size_bytes: input.sizeBytes,
-    p_sort_order: input.sortOrder,
-  });
-  if (reservation.error) return failure(reservation.error, 'Reservasi upload file SOP gagal dibuat.');
-  const row = reservation.data?.[0];
-  if (!row) return { ok: false, message: 'Reservasi upload tidak mengembalikan lokasi file.' };
-  return { ok: true, message: 'Lokasi upload berhasil disiapkan.', data: { sopId: ensured.sop.id, fileId: row.file_id, bucketId: row.bucket_id, storagePath: row.storage_path, version: 1 } };
+  const service = await supabase.from('internal_services').select('name').eq('id', input.serviceId).maybeSingle();
+  if (service.error || !service.data) return failure(service.error ?? { message: 'Internal Service tidak ditemukan.' }, 'Internal Service gagal dibaca.');
+  const folder = await ensureSopDriveFolder(supabase, ensured.sop.id, service.data.name);
+  if (!folder.ok) return folder.result;
+  try {
+    const uploadUrl = await createResumableUpload(folder.folder.google_folder_id, input.originalFilename.trim(), input.mimeType, input.sizeBytes);
+    return { ok: true, message: 'Sesi upload Google Drive siap.', data: { sopId: ensured.sop.id, folderId: folder.folder.id, uploadUrl } };
+  } catch (error) {
+    return driveFailure(error, 'Sesi upload file SOP gagal dibuat di Google Drive.');
+  }
 }
 
-export async function finalizeSopFileUploadAction(input: { fileId: string; expectedVersion: number }): Promise<ActionResult<{ version: number }>> {
+export async function finalizeSopFileUploadAction(input: {
+  sopId: string;
+  folderId: string;
+  fileType: 'FLOW' | 'REQUIREMENT';
+  title: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  googleFileId: string;
+}): Promise<ActionResult<{ fileId: string }>> {
   const supabase = await managerClient();
   if (!supabase) return { ok: false, message: 'Hanya admin atau super admin yang dapat mengunggah file SOP.' };
-  if (!UUID_PATTERN.test(input.fileId) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return { ok: false, message: 'Reservasi upload tidak valid.' };
-  const reservation = await supabase.from('sop_files').select('sop_id,file_type,bucket_id,storage_path').eq('id', input.fileId).maybeSingle();
-  if (reservation.error || !reservation.data) return failure(reservation.error ?? { message: 'Reservasi upload tidak ditemukan.' }, 'Reservasi upload tidak ditemukan.');
-  const previousFlow = reservation.data.file_type === 'FLOW'
-    ? await supabase.from('sop_files').select('bucket_id,storage_path').eq('sop_id', reservation.data.sop_id).eq('file_type', 'FLOW').eq('upload_status', 'READY').is('deleted_at', null).neq('id', input.fileId).order('uploaded_at', { ascending: false }).limit(1).maybeSingle()
-    : null;
-  if (previousFlow?.error) return failure(previousFlow.error, 'Flow lama gagal diperiksa. Upload belum difinalisasi.');
-  const result = await supabase.rpc('finalize_sop_file_upload', { p_file_id: input.fileId, p_expected_version: input.expectedVersion });
-  if (result.error) {
-    await supabase.rpc('fail_sop_file_upload', { p_file_id: input.fileId, p_expected_version: input.expectedVersion });
-    await supabase.storage.from(reservation.data.bucket_id).remove([reservation.data.storage_path]);
-    return failure(result.error, 'Finalisasi file gagal. Object upload yang belum valid telah dibersihkan.');
+  if (!UUID_PATTERN.test(input.sopId) || !UUID_PATTERN.test(input.folderId) || !input.googleFileId.trim()) return { ok: false, message: 'Hasil upload Google Drive tidak valid.' };
+  try {
+    const config = getGoogleDriveConfig();
+    const folder = await supabase.from('sop_drive_folders').select('google_folder_id').eq('id', input.folderId).eq('sop_id', input.sopId).maybeSingle();
+    if (folder.error || !folder.data) return failure(folder.error ?? { message: 'Folder SOP tidak ditemukan.' }, 'Folder SOP tidak ditemukan.');
+    const file = await getDriveFile(input.googleFileId.trim());
+    if (file.trashed || file.driveId !== config.sharedDriveId || !file.parents?.includes(folder.data.google_folder_id) || !file.webViewLink || file.name !== input.originalFilename || file.mimeType !== input.mimeType || Number(file.size ?? 0) !== input.sizeBytes) {
+      await trashDriveFile(input.googleFileId.trim()).catch(() => undefined);
+      return { ok: false, message: 'File hasil upload tidak sesuai atau tidak berada pada folder SOP yang benar.' };
+    }
+    const previousFlow = input.fileType === 'FLOW'
+      ? await supabase.from('sop_files').select('storage_provider,google_file_id').eq('sop_id', input.sopId).eq('file_type', 'FLOW').eq('upload_status', 'READY').is('deleted_at', null).limit(1).maybeSingle()
+      : null;
+    if (previousFlow?.error) return failure(previousFlow.error, 'Flow lama gagal diperiksa.');
+    const saved = await supabase.rpc('save_sop_drive_file_metadata', {
+      p_sop_id: input.sopId,
+      p_sop_drive_folder_id: input.folderId,
+      p_file_type: input.fileType,
+      p_title: input.title,
+      p_original_filename: file.name,
+      p_mime_type: file.mimeType,
+      p_size_bytes: Number(file.size),
+      p_sort_order: input.sortOrder,
+      p_google_file_id: file.id,
+      p_google_resource_key: file.resourceKey ?? '',
+      p_web_view_url: file.webViewLink,
+    });
+    if (saved.error) {
+      await trashDriveFile(file.id).catch(() => undefined);
+      return failure(saved.error, 'Metadata file SOP gagal disimpan. File upload telah dipindahkan ke Trash Drive.');
+    }
+    let cleanupFailed = false;
+    if (previousFlow?.data?.storage_provider === 'GOOGLE_DRIVE' && previousFlow.data.google_file_id && previousFlow.data.google_file_id !== file.id) {
+      cleanupFailed = await trashDriveFile(previousFlow.data.google_file_id).then(() => false).catch(() => true);
+    }
+    revalidatePath('/admin/sop');
+    return {
+      ok: true,
+      message: cleanupFailed ? 'File SOP berhasil diunggah. Flow lama masih perlu dipindahkan ke Trash Drive.' : 'File SOP berhasil diunggah.',
+      data: { fileId: saved.data },
+    };
+  } catch (error) {
+    return driveFailure(error, 'File berhasil diunggah, tetapi metadata Google Drive gagal diverifikasi.');
   }
-  const cleanup = previousFlow?.data
-    ? await supabase.storage.from(previousFlow.data.bucket_id).remove([previousFlow.data.storage_path])
-    : null;
-  revalidatePath('/admin/sop');
-  return {
-    ok: true,
-    message: cleanup?.error ? 'File SOP berhasil diunggah. Pembersihan Flow lama perlu dicoba kembali.' : 'File SOP berhasil diunggah.',
-    data: { version: result.data },
-  };
-}
-
-export async function failSopFileUploadAction(input: { fileId: string; expectedVersion: number }): Promise<void> {
-  const supabase = await managerClient();
-  if (!supabase || !UUID_PATTERN.test(input.fileId)) return;
-  await supabase.rpc('fail_sop_file_upload', { p_file_id: input.fileId, p_expected_version: input.expectedVersion });
 }
 
 export async function deleteSopFileAction(input: { fileId: string; expectedVersion: number }): Promise<ActionResult> {
   const supabase = await managerClient();
   if (!supabase) return { ok: false, message: 'Hanya admin atau super admin yang dapat menghapus file SOP.' };
   if (!UUID_PATTERN.test(input.fileId) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) return { ok: false, message: 'File SOP tidak valid.' };
-  const marked = await supabase.rpc('mark_sop_file_deleted', { p_file_id: input.fileId, p_expected_version: input.expectedVersion });
-  if (marked.error) return failure(marked.error, 'File SOP gagal dihapus.');
-  const removed = await supabase.storage.from('sop-documents').remove([marked.data]);
-  revalidatePath('/admin/sop');
-  return {
-    ok: true,
-    message: removed.error ? 'File disembunyikan dari SOP. Pembersihan object Storage perlu dicoba kembali.' : 'File SOP berhasil dihapus.',
-    data: undefined,
-  };
+  const file = await supabase.from('sop_files').select('storage_provider,google_file_id').eq('id', input.fileId).is('deleted_at', null).maybeSingle();
+  if (file.error || !file.data) return failure(file.error ?? { message: 'File SOP tidak ditemukan.' }, 'File SOP tidak ditemukan.');
+  try {
+    if (file.data.storage_provider === 'GOOGLE_DRIVE' && file.data.google_file_id) await trashDriveFile(file.data.google_file_id);
+    const archived = await supabase.rpc('archive_sop_file', { p_file_id: input.fileId, p_expected_version: input.expectedVersion });
+    if (archived.error) return failure(archived.error, file.data.storage_provider === 'GOOGLE_DRIVE' ? 'File sudah dipindahkan ke Trash Drive, tetapi metadata database belum diperbarui.' : 'File SOP gagal dihapus.');
+    revalidatePath('/admin/sop');
+    return { ok: true, message: 'File SOP berhasil dihapus.', data: undefined };
+  } catch (error) {
+    return driveFailure(error, 'File SOP gagal dipindahkan ke Trash Drive.');
+  }
 }

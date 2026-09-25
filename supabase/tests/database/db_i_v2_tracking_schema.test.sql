@@ -255,8 +255,20 @@ select extensions.lives_ok(
 );
 select extensions.is((select currency from public.sop_price_items where sop_id=current_setting('test.v2_sop_id')::uuid),'IDR','SOP Price List is IDR-only');
 select extensions.throws_ok(
-  $$ select * from public.prepare_sop_file_upload(current_setting('test.v2_sop_id')::uuid,'REQUIREMENT','Too large','large.pdf','application/pdf',10485761,0) $$,
-  '22023','File must be 10 MiB or smaller.','SOP file reservation enforces the 10 MiB limit'
+  $$
+    select public.save_sop_drive_file_metadata(
+      current_setting('test.v2_sop_id')::uuid,
+      public.save_sop_drive_folder(
+        current_setting('test.v2_sop_id')::uuid,
+        'test-drive','test-sop-folder','Visa SOP',
+        'https://drive.google.com/drive/folders/test-sop-folder'
+      ),
+      'REQUIREMENT','Too large','large.pdf','application/pdf',10485761,0,
+      'test-large-file','',
+      'https://drive.google.com/file/d/test-large-file/view'
+    )
+  $$,
+  '22023','SOP Drive file metadata is invalid.','SOP Drive metadata enforces the 10 MiB limit'
 );
 
 select extensions.lives_ok(

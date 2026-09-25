@@ -43,7 +43,7 @@ export function SopFlowCard({ service, canManage }: { service: SopService; canMa
         divider
         action={asset ? <div className="flex flex-wrap items-center justify-end gap-2">
           <span className="rounded bg-[#E9EBEE] px-2 py-1 text-[10px] font-bold text-[#4B5059]">{asset.mimeType === 'application/pdf' ? 'PDF' : 'IMAGE'} · {formatSize(asset.sizeBytes)}</span>
-          {asset.signedUrl ? <a href={asset.signedUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-2 rounded border border-[#9EACBF] px-3 text-[11px] font-semibold text-[#536075] transition hover:bg-gray-50 hover:text-[#8C1010]">
+          {asset.signedUrl ? <a href={asset.driveUrl ?? asset.signedUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-2 rounded border border-[#9EACBF] px-3 text-[11px] font-semibold text-[#536075] transition hover:bg-gray-50 hover:text-[#8C1010]">
             View <ExternalLink aria-hidden="true" className="size-3.5" />
           </a> : null}
           {canManage ? <button type="button" disabled={pending} onClick={() => inputRef.current?.click()} className="inline-flex h-8 items-center gap-2 rounded border border-[#D6A6A2] px-3 text-[11px] font-semibold text-[#8C1010] transition hover:bg-[#FFF7F6] disabled:cursor-not-allowed disabled:opacity-50">

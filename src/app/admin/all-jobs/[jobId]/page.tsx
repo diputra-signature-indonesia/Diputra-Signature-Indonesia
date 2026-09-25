@@ -27,7 +27,7 @@ async function TaskAssignmentSection({ jobId, taskId }: { jobId: string; taskId?
 
 async function JobDocumentsSection({ jobId, canManage }: { jobId: string; canManage: boolean }) {
   const data = await getJobDocuments(jobId);
-  return <JobDocumentsPanel data={data} canManage={canManage} />;
+  return <JobDocumentsPanel jobId={jobId} data={data} canManage={canManage} />;
 }
 
 const demoDocuments: DemoJobDocument[] = [

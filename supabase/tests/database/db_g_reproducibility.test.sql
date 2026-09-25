@@ -41,7 +41,13 @@ select extensions.is(
 );
 
 select extensions.is(
-  (select count(*)::bigint from public.profiles where role = 'staff' and is_active),
+  (
+    select count(*)::bigint
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where p.role = 'staff' and p.is_active
+      and u.raw_user_meta_data ->> 'local_fixture' = 'true'
+  ),
   1::bigint,
   'one active staff profile exists'
 );

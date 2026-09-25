@@ -9,6 +9,7 @@ export type SopFile = {
   uploadedAt: string;
   version: number;
   signedUrl: string | null;
+  driveUrl: string | null;
 };
 
 export type SopPriceItem = {

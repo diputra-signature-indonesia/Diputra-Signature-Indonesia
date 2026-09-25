@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(22);
+select extensions.plan(28);
 
 select extensions.has_table('public','job_drive_folders','Job Drive folder mapping table exists');
 select extensions.has_table('public','job_documents','Job document metadata table exists');
@@ -113,6 +113,31 @@ select extensions.ok(
       and contype='c'
   ),
   'document browser links are restricted to Google domains'
+);
+
+select extensions.ok(
+  exists (select 1 from pg_proc where oid = 'public.save_job_drive_folder(uuid,text,text,text,text)'::regprocedure),
+  'folder metadata has an authenticated RPC write path'
+);
+select extensions.ok(
+  exists (select 1 from pg_proc where oid = 'public.save_job_document_metadata(uuid,uuid,text,text,text,text,bigint,text)'::regprocedure),
+  'document metadata has an authenticated RPC write path'
+);
+select extensions.ok(
+  exists (select 1 from pg_proc where oid = 'public.archive_job_document(uuid,integer)'::regprocedure),
+  'document archival has an authenticated RPC write path'
+);
+select extensions.ok(
+  has_function_privilege('authenticated','public.save_job_drive_folder(uuid,text,text,text,text)','EXECUTE'),
+  'authenticated users can execute folder metadata RPC'
+);
+select extensions.ok(
+  has_function_privilege('authenticated','public.save_job_document_metadata(uuid,uuid,text,text,text,text,bigint,text)','EXECUTE'),
+  'authenticated users can execute document metadata RPC'
+);
+select extensions.ok(
+  has_function_privilege('authenticated','public.archive_job_document(uuid,integer)','EXECUTE'),
+  'authenticated users can execute document archival RPC'
 );
 
 select extensions.finish();

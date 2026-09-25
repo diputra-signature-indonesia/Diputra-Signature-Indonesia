@@ -20,7 +20,7 @@ export async function getSopWorkspaceData(): Promise<SopWorkspaceData> {
   const sopIds = sops.map((sop) => sop.id);
   const [filesResult, pricesResult] = sopIds.length ? await Promise.all([
     supabase.from('sop_files')
-      .select('id,sop_id,file_type,title,original_filename,bucket_id,storage_path,mime_type,size_bytes,sort_order,uploaded_at,version')
+      .select('id,sop_id,file_type,title,original_filename,storage_provider,mime_type,size_bytes,sort_order,uploaded_at,version,web_view_url')
       .in('sop_id', sopIds).eq('upload_status', 'READY').is('deleted_at', null).order('sort_order').order('id'),
     supabase.from('sop_price_items')
       .select('id,sop_id,item_name,amount,notes,sort_order').in('sop_id', sopIds).order('sort_order').order('id'),
@@ -28,8 +28,7 @@ export async function getSopWorkspaceData(): Promise<SopWorkspaceData> {
   if (filesResult.error) throw new Error(`Unable to load SOP files: ${filesResult.error.message}`);
   if (pricesResult.error) throw new Error(`Unable to load SOP prices: ${pricesResult.error.message}`);
 
-  const files = await Promise.all((filesResult.data ?? []).map(async (file): Promise<SopFile & { sopId: string }> => {
-    const { data } = await supabase.storage.from(file.bucket_id).createSignedUrl(file.storage_path, 3600);
+  const files = (filesResult.data ?? []).map((file): SopFile & { sopId: string } => {
     return {
       id: file.id,
       sopId: file.sop_id,
@@ -41,9 +40,10 @@ export async function getSopWorkspaceData(): Promise<SopWorkspaceData> {
       sortOrder: file.sort_order,
       uploadedAt: file.uploaded_at ?? '',
       version: file.version,
-      signedUrl: data?.signedUrl ?? null,
+      signedUrl: `/admin/sop/files/${file.id}`,
+      driveUrl: file.storage_provider === 'GOOGLE_DRIVE' ? file.web_view_url : null,
     };
-  }));
+  });
   const filesBySop = new Map<string, typeof files>();
   for (const file of files) filesBySop.set(file.sopId, [...(filesBySop.get(file.sopId) ?? []), file]);
   const pricesBySop = new Map<string, NonNullable<typeof pricesResult.data>>();

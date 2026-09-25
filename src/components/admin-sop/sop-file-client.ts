@@ -1,11 +1,9 @@
 'use client';
 
 import {
-  failSopFileUploadAction,
   finalizeSopFileUploadAction,
   prepareSopFileUploadAction,
 } from '@/app/admin/sop/actions';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -40,18 +38,32 @@ export async function uploadSopFile(input: {
   });
   if (!reservation.ok) return reservation;
 
-  const supabase = createSupabaseBrowserClient();
-  const uploaded = await supabase.storage.from(reservation.data.bucketId).upload(reservation.data.storagePath, input.file, {
-    cacheControl: '3600',
-    contentType: mimeType,
-    upsert: false,
-  });
-  if (uploaded.error) {
-    await failSopFileUploadAction({ fileId: reservation.data.fileId, expectedVersion: reservation.data.version });
-    return { ok: false as const, message: `Upload file gagal: ${uploaded.error.message}` };
+  let googleFileId = '';
+  try {
+    const uploaded = await fetch(reservation.data.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': mimeType },
+      body: input.file,
+    });
+    if (!uploaded.ok) return { ok: false as const, message: `Google Drive menolak upload file (${uploaded.status}).` };
+    const metadata = await uploaded.json() as { id?: string };
+    googleFileId = metadata.id?.trim() ?? '';
+  } catch {
+    return { ok: false as const, message: 'Upload ke Google Drive terputus. Silakan coba kembali.' };
   }
+  if (!googleFileId) return { ok: false as const, message: 'Google Drive tidak mengembalikan identitas file hasil upload.' };
 
-  const finalized = await finalizeSopFileUploadAction({ fileId: reservation.data.fileId, expectedVersion: reservation.data.version });
+  const finalized = await finalizeSopFileUploadAction({
+    sopId: reservation.data.sopId,
+    folderId: reservation.data.folderId,
+    fileType: input.fileType,
+    title,
+    originalFilename: input.file.name,
+    mimeType,
+    sizeBytes: input.file.size,
+    sortOrder: input.sortOrder,
+    googleFileId,
+  });
   if (!finalized.ok) return finalized;
   return { ok: true as const, message: finalized.message };
 }

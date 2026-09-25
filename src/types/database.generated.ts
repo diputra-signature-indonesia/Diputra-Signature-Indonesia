@@ -574,6 +574,13 @@ export type Database = {
             foreignKeyName: "job_documents_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_documents_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -658,6 +665,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_drive_folders_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "job_overview"
             referencedColumns: ["id"]
           },
           {
@@ -1620,69 +1634,157 @@ export type Database = {
           },
         ]
       }
+      sop_drive_folders: {
+        Row: {
+          connection_status: string
+          created_at: string
+          created_by: string
+          folder_name: string
+          google_drive_id: string
+          google_folder_id: string
+          id: string
+          last_synced_at: string | null
+          sop_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+          web_view_url: string
+        }
+        Insert: {
+          connection_status?: string
+          created_at?: string
+          created_by: string
+          folder_name: string
+          google_drive_id: string
+          google_folder_id: string
+          id?: string
+          last_synced_at?: string | null
+          sop_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+          web_view_url: string
+        }
+        Update: {
+          connection_status?: string
+          created_at?: string
+          created_by?: string
+          folder_name?: string
+          google_drive_id?: string
+          google_folder_id?: string
+          id?: string
+          last_synced_at?: string | null
+          sop_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+          web_view_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sop_drive_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sop_drive_folders_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: true
+            referencedRelation: "sops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sop_drive_folders_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sop_files: {
         Row: {
-          bucket_id: string
+          bucket_id: string | null
           created_at: string
           created_by: string
           deleted_at: string | null
           deleted_by: string | null
           file_type: string
+          google_file_id: string | null
+          google_resource_key: string | null
           id: string
+          last_synced_at: string | null
           mime_type: string
           original_filename: string
           size_bytes: number
+          sop_drive_folder_id: string | null
           sop_id: string
           sort_order: number
-          storage_path: string
+          storage_path: string | null
+          storage_provider: string
           title: string
           updated_at: string
           updated_by: string
           upload_status: string
           uploaded_at: string | null
           version: number
+          web_view_url: string | null
         }
         Insert: {
-          bucket_id?: string
+          bucket_id?: string | null
           created_at?: string
           created_by: string
           deleted_at?: string | null
           deleted_by?: string | null
           file_type: string
+          google_file_id?: string | null
+          google_resource_key?: string | null
           id?: string
+          last_synced_at?: string | null
           mime_type: string
           original_filename: string
           size_bytes: number
+          sop_drive_folder_id?: string | null
           sop_id: string
           sort_order?: number
-          storage_path: string
+          storage_path?: string | null
+          storage_provider?: string
           title: string
           updated_at?: string
           updated_by: string
           upload_status?: string
           uploaded_at?: string | null
           version?: number
+          web_view_url?: string | null
         }
         Update: {
-          bucket_id?: string
+          bucket_id?: string | null
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           deleted_by?: string | null
           file_type?: string
+          google_file_id?: string | null
+          google_resource_key?: string | null
           id?: string
+          last_synced_at?: string | null
           mime_type?: string
           original_filename?: string
           size_bytes?: number
+          sop_drive_folder_id?: string | null
           sop_id?: string
           sort_order?: number
-          storage_path?: string
+          storage_path?: string | null
+          storage_provider?: string
           title?: string
           updated_at?: string
           updated_by?: string
           upload_status?: string
           uploaded_at?: string | null
           version?: number
+          web_view_url?: string | null
         }
         Relationships: [
           {
@@ -1698,6 +1800,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sop_files_drive_folder_fkey"
+            columns: ["sop_id", "sop_drive_folder_id"]
+            isOneToOne: false
+            referencedRelation: "sop_drive_folders"
+            referencedColumns: ["sop_id", "id"]
           },
           {
             foreignKeyName: "sop_files_sop_id_fkey"
@@ -2290,10 +2399,18 @@ export type Database = {
         Args: { p_expected_version: number; p_job_id: string }
         Returns: number
       }
+      archive_job_document: {
+        Args: { p_document_id: string; p_expected_version: number }
+        Returns: string
+      }
       archive_review: { Args: { p_review_id: string }; Returns: undefined }
       archive_review_request: {
         Args: { p_request_id: string }
         Returns: undefined
+      }
+      archive_sop_file: {
+        Args: { p_expected_version: number; p_file_id: string }
+        Returns: string
       }
       change_job_status: {
         Args: {
@@ -2426,14 +2543,6 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["admin_access_request_status"]
       }
-      fail_sop_file_upload: {
-        Args: { p_expected_version: number; p_file_id: string }
-        Returns: number
-      }
-      finalize_sop_file_upload: {
-        Args: { p_expected_version: number; p_file_id: string }
-        Returns: number
-      }
       is_active_super_admin: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_admin_role: { Args: never; Returns: boolean }
@@ -2480,10 +2589,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      mark_sop_file_deleted: {
-        Args: { p_expected_version: number; p_file_id: string }
-        Returns: string
-      }
       moderate_blog_post: {
         Args: {
           p_expected_version: number
@@ -2518,22 +2623,6 @@ export type Database = {
           p_task_id: string
         }
         Returns: number
-      }
-      prepare_sop_file_upload: {
-        Args: {
-          p_file_type: string
-          p_mime_type: string
-          p_original_filename: string
-          p_size_bytes: number
-          p_sop_id: string
-          p_sort_order?: number
-          p_title: string
-        }
-        Returns: {
-          bucket_id: string
-          file_id: string
-          storage_path: string
-        }[]
       }
       reject_admin_access_request: {
         Args: { p_rejection_reason?: string; p_user_id: string }
@@ -2576,6 +2665,29 @@ export type Database = {
         }
         Returns: string
       }
+      save_job_document_metadata: {
+        Args: {
+          p_file_name: string
+          p_file_size_bytes: number
+          p_google_file_id: string
+          p_google_resource_key: string
+          p_job_drive_folder_id: string
+          p_job_id: string
+          p_mime_type: string
+          p_web_view_url: string
+        }
+        Returns: string
+      }
+      save_job_drive_folder: {
+        Args: {
+          p_folder_name: string
+          p_google_drive_id: string
+          p_google_folder_id: string
+          p_job_id: string
+          p_web_view_url: string
+        }
+        Returns: string
+      }
       save_job_status: {
         Args: {
           p_code: string
@@ -2605,6 +2717,32 @@ export type Database = {
           p_description: string
           p_expected_version?: number
           p_internal_service_id: string
+        }
+        Returns: string
+      }
+      save_sop_drive_file_metadata: {
+        Args: {
+          p_file_type: string
+          p_google_file_id: string
+          p_google_resource_key: string
+          p_mime_type: string
+          p_original_filename: string
+          p_size_bytes: number
+          p_sop_drive_folder_id: string
+          p_sop_id: string
+          p_sort_order: number
+          p_title: string
+          p_web_view_url: string
+        }
+        Returns: string
+      }
+      save_sop_drive_folder: {
+        Args: {
+          p_folder_name: string
+          p_google_drive_id: string
+          p_google_folder_id: string
+          p_sop_id: string
+          p_web_view_url: string
         }
         Returns: string
       }
