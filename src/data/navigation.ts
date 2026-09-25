@@ -16,23 +16,25 @@ export function isDropdown(item: NavItem): item is NavDropdownItem {
   return 'children' in item;
 }
 
+export const SERVICE_NAV_ITEMS: NavLinkItem[] = [
+  { href: '/services/legal-and-corporate', label: 'Legal', slug: 'legal-and-corporate' },
+  { href: '/services/visa', label: 'Visa', slug: 'visa' },
+  { href: '/services/real-estate', label: 'Real Estate', slug: 'real-estate' },
+  { href: '/services/insurance', label: 'Insurance', slug: 'insurance' },
+  {
+    href: '/services/intellectual-property-and-trademark-registration-services',
+    label: 'Intellectual Property & Trademark Registration',
+    slug: 'intellectual-property-and-trademark-registration-services',
+  },
+];
+
 export const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', slug: 'home' },
   { href: '/about', label: 'About', slug: 'about' },
   {
     label: 'Services',
     slug: 'services',
-    children: [
-      { href: '/services/legal-and-corporate', label: 'Legal', slug: 'legal-and-corporate' },
-      { href: '/services/visa', label: 'Visa', slug: 'visa' },
-      { href: '/services/real-estate', label: 'Real Estate', slug: 'real-estate' },
-      { href: '/services/insurance', label: 'Insurance', slug: 'insurance' },
-      {
-        href: '/services/intellectual-property-and-trademark-registration-services',
-        label: 'Intellectual Property & Trademark Registration',
-        slug: 'intellectual-property-and-trademark-registration-services',
-      },
-    ],
+    children: SERVICE_NAV_ITEMS,
   },
   { href: '/blog', label: 'Blog', slug: 'blog' },
 ];
