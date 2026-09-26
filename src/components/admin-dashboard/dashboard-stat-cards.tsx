@@ -1,4 +1,4 @@
-import type { DashboardMetric, DashboardMetricIcon, DashboardMetricTone } from '@/data/admin-dashboard/dashboard-dummy-data';
+import type { DashboardMetric, DashboardMetricIcon, DashboardMetricTone } from '@/types/admin-dashboard';
 import { CalendarClock, CheckCircle2, CirclePause, Clock3, ClipboardList, RefreshCw, TriangleAlert } from 'lucide-react';
 
 const metricIcons: Record<DashboardMetricIcon, React.ElementType> = {

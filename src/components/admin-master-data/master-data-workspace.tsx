@@ -1,6 +1,7 @@
 'use client';
 
 import { archiveMasterDataAction, saveMasterDataAction } from '@/app/admin/master-data/actions';
+import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import type { MasterDataCategory, MasterDataCategoryId, MasterDataRow } from '@/data/admin-master-data/master-data';
 import { Archive, ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -101,7 +102,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
   };
 
   return (
-    <main className="p-4 pb-20 sm:p-5 lg:p-6">
+    <main className="p-4 pb-20 sm:p-5 lg:p-6" aria-busy={isPending}>
       <section className="grid min-h-[650px] overflow-hidden rounded-xl border border-[#D9DDE3] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.04)] lg:grid-cols-[260px_minmax(0,1fr)]">
         <MasterDataCategoryList categories={initialCategories} selectedId={selectedCategory.id} onSelect={selectCategory} />
 
@@ -178,6 +179,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
           onSave={saveForm}
         />
       ) : null}
+      {isPending ? <AdminPendingOverlay label={pendingRowId ? 'Updating Master Data...' : 'Saving Master Data...'} /> : null}
     </main>
   );
 }

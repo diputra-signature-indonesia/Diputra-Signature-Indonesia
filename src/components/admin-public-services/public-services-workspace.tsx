@@ -10,6 +10,7 @@ import {
   type SavePublicServiceItemInput,
 } from '@/app/admin/public-services/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import { PUBLIC_SERVICE_IMAGE_ACCEPT, PUBLIC_SERVICE_SVG_ACCEPT } from '@/lib/public-service-storage';
 import type { AdminPublicServiceCategory, AdminPublicServiceDetail, AdminPublicServiceItem } from '@/lib/supabase/queries/public-service-management';
 import { deletePublicServiceAssetUrl, uploadPublicServiceImage, uploadPublicServiceSvg } from '@/lib/upload-public-service-asset';
@@ -684,7 +685,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
   };
 
   return (
-    <main className="p-4 pb-20 sm:p-5 lg:p-6">
+    <main className="p-4 pb-20 sm:p-5 lg:p-6" aria-busy={isPending}>
       {notice ? (
         <div
           role="status"
@@ -962,6 +963,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
           onSave={saveDetail}
         />
       ) : null}
+      {isPending ? <AdminPendingOverlay label="Saving Client Services..." /> : null}
     </main>
   );
 }

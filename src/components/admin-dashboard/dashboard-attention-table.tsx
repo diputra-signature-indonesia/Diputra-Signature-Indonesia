@@ -1,30 +1,20 @@
-import type { AttentionTask } from '@/data/admin-dashboard/dashboard-dummy-data';
-import { ChevronDown, EllipsisVertical } from 'lucide-react';
+import type { AttentionTask } from '@/types/admin-dashboard';
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
-function PriorityBadge({ priority }: { priority: AttentionTask['priority'] }) {
-  const isHigh = priority === 'High';
-
+function Badge({ label, color }: { label: string; color: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold uppercase ${isHigh ? 'bg-[#FFDADA] text-[#A80C0C]' : 'bg-[#FFF1C9] text-[#8A7100]'}`}>
-      <span className="size-1.5 rounded-full bg-current" />
-      {priority}
+    <span className="inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] font-semibold" style={{ color, borderColor: `${color}55`, backgroundColor: `${color}12` }}>
+      <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
+      {label}
     </span>
   );
 }
 
-function StatusBadge({ status }: { status: AttentionTask['status'] }) {
-  const isOnHold = status === 'On Hold';
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] font-semibold ${isOnHold ? 'border-[#194DB8] bg-[#EAF1FF] text-[#073A98]' : 'border-[#E4B400] bg-[#FFF9E8] text-[#5F4A24]'}`}
-    >
-      <span className="size-1.5 rounded-full bg-current" />
-      {status}
-      {isOnHold ? null : <ChevronDown aria-hidden="true" className="size-3" />}
-    </span>
-  );
+function deadlineClasses(tone: AttentionTask['deadlineTone']) {
+  if (tone === 'urgent') return 'border-[#E33434] bg-[#FFF5F5] text-[#D51E1E]';
+  if (tone === 'warning') return 'border-[#E4B400] bg-[#FFF9E8] text-[#806500]';
+  return 'border-[#CBD2DC] bg-[#F8F9FA] text-[#626B78]';
 }
 
 export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
@@ -58,6 +48,11 @@ export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
             </tr>
           </thead>
           <tbody>
+            {tasks.length === 0 ? (
+              <tr className="border-t border-[#E7E9ED]">
+                <td colSpan={8} className="px-6 py-12 text-center text-sm text-[#98A1B0]">Tidak ada task yang memerlukan perhatian untuk filter ini.</td>
+              </tr>
+            ) : null}
             {tasks.map((task) => (
               <tr key={task.id} className="border-t border-[#E7E9ED] text-sm text-[#555B64] transition hover:bg-[#FCFCFD]">
                 <td className="px-6 py-5 pl-16">
@@ -66,8 +61,8 @@ export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
                 </td>
                 <td className="px-4 py-5">{task.pic}</td>
                 <td className="px-4 py-5">{task.internalService}</td>
-                <td className="px-4 py-5"><PriorityBadge priority={task.priority} /></td>
-                <td className="px-4 py-5"><StatusBadge status={task.status} /></td>
+                <td className="px-4 py-5"><Badge label={task.priority} color={task.priorityColor} /></td>
+                <td className="px-4 py-5"><Badge label={task.status} color={task.statusColor} /></td>
                 <td className="px-4 py-5">
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[#E4E7EB]">
@@ -77,12 +72,12 @@ export function DashboardAttentionTable({ tasks }: { tasks: AttentionTask[] }) {
                   </div>
                 </td>
                 <td className="px-4 py-5">
-                  <span className="inline-flex rounded border border-[#E33434] px-2 py-1 text-[10px] font-semibold uppercase text-[#D51E1E]">{task.deadline}</span>
+                  <span className={`inline-flex rounded border px-2 py-1 text-[10px] font-semibold uppercase ${deadlineClasses(task.deadlineTone)}`}>{task.deadline}</span>
                 </td>
                 <td className="px-4 py-5 text-center">
-                  <button type="button" aria-label={`Actions for ${task.client}`} className="rounded-md p-1.5 text-[#98A1B0] transition hover:bg-gray-100 hover:text-[#202938]">
-                    <EllipsisVertical aria-hidden="true" className="size-4" />
-                  </button>
+                  <Link href={`/admin/all-jobs/${task.jobId}?tab=assignment`} aria-label={`Buka task ${task.task}`} className="inline-flex rounded-md p-1.5 text-[#98A1B0] transition hover:bg-gray-100 hover:text-[#202938]">
+                    <ArrowUpRight aria-hidden="true" className="size-4" />
+                  </Link>
                 </td>
               </tr>
             ))}

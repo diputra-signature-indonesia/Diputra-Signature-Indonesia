@@ -10,6 +10,7 @@ import {
   updateProfileRoleAction,
 } from '@/app/admin/access-requests/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import type { ManagedProfile, PendingAccessRequest, TeamJobTitleOption } from '@/lib/supabase/queries/user-management';
 import { ASSIGNABLE_ADMIN_ROLES, type UserRole } from '@/types/auth-role';
 import { Avatar } from '@mui/material';
@@ -188,7 +189,7 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
   };
 
   return (
-    <main className="p-4 pb-20 sm:p-5 lg:p-6">
+    <main className="p-4 pb-20 sm:p-5 lg:p-6" aria-busy={isPending}>
       {notice ? (
         <div
           role="status"
@@ -644,6 +645,7 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
           </label>
         </div>
       </AdminModal>
+      {isPending ? <AdminPendingOverlay label={pendingId ? 'Updating user...' : 'Loading user data...'} /> : null}
     </main>
   );
 }

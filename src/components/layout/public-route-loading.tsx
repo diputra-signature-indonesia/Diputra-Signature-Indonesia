@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { useEffect, useState, type ReactNode } from 'react';
 
 type PublicRouteLoadingVariant = 'home' | 'about' | 'list' | 'category' | 'article' | 'detail';
 
@@ -143,6 +145,13 @@ function DetailLoading() {
 }
 
 export function PublicRouteLoading({ variant }: PublicRouteLoadingProps) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), 220);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const loadingByVariant = {
     home: <HomeLoading />,
     about: <AboutLoading />,
@@ -152,12 +161,23 @@ export function PublicRouteLoading({ variant }: PublicRouteLoadingProps) {
     detail: <DetailLoading />,
   } satisfies Record<PublicRouteLoadingVariant, ReactNode>;
 
+  const minimumHeightByVariant = {
+    home: 'min-h-[85svh]',
+    about: 'min-h-[calc(100svh-5rem)]',
+    list: 'min-h-[720px]',
+    category: 'min-h-[600px]',
+    article: 'min-h-screen',
+    detail: 'min-h-[680px]',
+  } satisfies Record<PublicRouteLoadingVariant, string>;
+
   return (
-    <div role="status" aria-live="polite" aria-busy="true" className="bg-brand-white w-full">
+    <div role="status" aria-live="polite" aria-busy="true" className={`bg-brand-white w-full ${minimumHeightByVariant[variant]}`}>
       <span className="sr-only">Loading page</span>
-      <div aria-hidden="true" className="motion-safe:animate-pulse">
-        {loadingByVariant[variant]}
-      </div>
+      {visible ? (
+        <div aria-hidden="true" className="motion-safe:animate-pulse">
+          {loadingByVariant[variant]}
+        </div>
+      ) : null}
     </div>
   );
 }

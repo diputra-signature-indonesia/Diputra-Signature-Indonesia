@@ -1,27 +1,14 @@
-import { DashboardAttentionTable } from '@/components/admin-dashboard/dashboard-attention-table';
-import { DashboardCategoryCard } from '@/components/admin-dashboard/dashboard-category-card';
-import { DashboardFilters } from '@/components/admin-dashboard/dashboard-filters';
-import { DashboardPicLoadCard } from '@/components/admin-dashboard/dashboard-pic-load-card';
-import { DashboardStatCards } from '@/components/admin-dashboard/dashboard-stat-cards';
+import { DashboardWorkspace } from '@/components/admin-dashboard/dashboard-workspace';
 import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
-import { attentionTasks, dashboardMetrics, internalServiceSummary, picTaskLoads } from '@/data/admin-dashboard/dashboard-dummy-data';
+import { getDashboardData } from '@/lib/supabase/queries/dashboard';
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const data = await getDashboardData();
+
   return (
     <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
       <AdminPageHeader title="Dashboard" description="Manage all client jobs and monitor responsibilities across the team." />
-      <DashboardFilters />
-
-      <div className="space-y-5 px-4 py-5 sm:px-5 lg:px-6">
-        <DashboardStatCards metrics={dashboardMetrics} />
-
-        <section className="grid gap-5 xl:grid-cols-2">
-          <DashboardPicLoadCard taskLoads={picTaskLoads} />
-          <DashboardCategoryCard internalServices={internalServiceSummary} />
-        </section>
-
-        <DashboardAttentionTable tasks={attentionTasks} />
-      </div>
+      <DashboardWorkspace data={data} />
     </div>
   );
 }

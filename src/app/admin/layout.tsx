@@ -1,4 +1,5 @@
 import { AdminLayoutProvider } from '@/components/layout-admin/admin-layout-provider';
+import { AdminRouteLoading } from '@/components/layout-admin/admin-route-loading';
 import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { MuiProvider } from '@/components/mui-provider';
 import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
@@ -15,7 +16,7 @@ const adminSidebarFont = IBM_Plex_Sans({
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AdminRouteLoading fullScreen label="Preparing admin workspace..." />}>
       <DynamicAdminLayout>{children}</DynamicAdminLayout>
     </Suspense>
   );
