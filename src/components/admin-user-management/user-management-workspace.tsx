@@ -12,10 +12,12 @@ import {
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import type { ManagedProfile, PendingAccessRequest, TeamJobTitleOption } from '@/lib/supabase/queries/user-management';
+import { TEAM_PROFILE_ACCEPT, TEAM_PROFILE_MAX_LABEL, validateTeamProfilePhotoFile } from '@/lib/team-profile-storage';
+import { deleteManagedTeamProfilePhoto, uploadTeamProfilePhoto } from '@/lib/upload-team-profile-photo';
 import { ASSIGNABLE_ADMIN_ROLES, type UserRole } from '@/types/auth-role';
 import { Avatar } from '@mui/material';
-import { BadgeCheck, Eye, EyeOff, Pencil, Power, PowerOff, Search, Trash2, UserRoundCheck } from 'lucide-react';
-import { FormEvent, useState, useTransition } from 'react';
+import { BadgeCheck, Eye, EyeOff, ImagePlus, Pencil, Power, PowerOff, Search, Trash2, UserRoundCheck } from 'lucide-react';
+import { FormEvent, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Notice = { tone: 'success' | 'error'; message: string };
@@ -78,8 +80,22 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
   const [teamFullName, setTeamFullName] = useState('');
   const [teamJobTitleId, setTeamJobTitleId] = useState('');
   const [teamAvatarUrl, setTeamAvatarUrl] = useState('');
+  const [teamAvatarFile, setTeamAvatarFile] = useState<File | null>(null);
+  const [teamAvatarPreview, setTeamAvatarPreview] = useState('');
   const [teamShortBio, setTeamShortBio] = useState('');
   const [teamIsVisible, setTeamIsVisible] = useState(false);
+  const teamAvatarObjectUrlRef = useRef<string | null>(null);
+
+  const clearTeamAvatarFile = () => {
+    if (teamAvatarObjectUrlRef.current) URL.revokeObjectURL(teamAvatarObjectUrlRef.current);
+    teamAvatarObjectUrlRef.current = null;
+    setTeamAvatarFile(null);
+    setTeamAvatarPreview('');
+  };
+
+  useEffect(() => () => {
+    if (teamAvatarObjectUrlRef.current) URL.revokeObjectURL(teamAvatarObjectUrlRef.current);
+  }, []);
 
   const finishMutation = (result: { ok: boolean; message: string }, onSuccess?: () => void) => {
     setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
@@ -163,6 +179,7 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
   };
 
   const openTeamEditor = (profile: ManagedProfile) => {
+    clearTeamAvatarFile();
     setTeamEditing(profile);
     setTeamFullName(profile.teamMember?.full_name || displayName(profile));
     setTeamJobTitleId(profile.teamMember?.job_title_id ?? '');
@@ -171,20 +188,58 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
     setTeamIsVisible(profile.teamMember?.is_visible ?? false);
   };
 
+  const closeTeamEditor = () => {
+    clearTeamAvatarFile();
+    setTeamEditing(null);
+  };
+
+  const selectTeamAvatar = (file: File | null) => {
+    if (!file) return;
+    try {
+      validateTeamProfilePhotoFile(file);
+      clearTeamAvatarFile();
+      const previewUrl = URL.createObjectURL(file);
+      teamAvatarObjectUrlRef.current = previewUrl;
+      setTeamAvatarFile(file);
+      setTeamAvatarPreview(previewUrl);
+      setTeamAvatarUrl('');
+      setNotice(null);
+    } catch (error) {
+      setNotice({ tone: 'error', message: error instanceof Error ? error.message : 'Foto profil tidak valid.' });
+    }
+  };
+
   const saveTeamProfile = () => {
     if (!teamEditing) return;
+    const profile = teamEditing;
+    const previousAvatarUrl = profile.teamMember?.avatar_url ?? profile.avatar_url ?? '';
     setPendingId(teamEditing.id);
     setNotice(null);
     startTransition(async () => {
-      const result = await saveTeamMemberAction({
-        profileId: teamEditing.id,
-        fullName: teamFullName,
-        jobTitleId: teamJobTitleId,
-        avatarUrl: teamAvatarUrl,
-        shortBio: teamShortBio,
-        isVisible: teamIsVisible,
-      });
-      finishMutation(result, () => setTeamEditing(null));
+      let uploadedUrl = '';
+      try {
+        let avatarUrl = teamAvatarUrl.trim();
+        if (teamAvatarFile) {
+          const uploaded = await uploadTeamProfilePhoto(profile.id, teamAvatarFile);
+          uploadedUrl = uploaded.publicUrl;
+          avatarUrl = uploaded.publicUrl;
+        }
+        const result = await saveTeamMemberAction({
+          profileId: profile.id,
+          fullName: teamFullName,
+          jobTitleId: teamJobTitleId,
+          avatarUrl,
+          shortBio: teamShortBio,
+          isVisible: teamIsVisible,
+        });
+        if (!result.ok && uploadedUrl) await deleteManagedTeamProfilePhoto(uploadedUrl).catch(() => undefined);
+        if (result.ok && previousAvatarUrl !== avatarUrl) await deleteManagedTeamProfilePhoto(previousAvatarUrl).catch(() => undefined);
+        finishMutation(result, closeTeamEditor);
+      } catch (error) {
+        if (uploadedUrl) await deleteManagedTeamProfilePhoto(uploadedUrl).catch(() => undefined);
+        setPendingId(null);
+        setNotice({ tone: 'error', message: error instanceof Error ? error.message : 'Foto profil gagal diunggah.' });
+      }
     });
   };
 
@@ -552,13 +607,13 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
 
       <AdminModal
         open={Boolean(teamEditing)}
-        onClose={() => !isPending && setTeamEditing(null)}
+        onClose={() => !isPending && closeTeamEditor()}
         title="Public Team Profile"
         description={teamEditing ? `Complete the About-page details for ${displayName(teamEditing)}.` : undefined}
         size="md"
         footer={
           <>
-            <button type="button" disabled={isPending} onClick={() => setTeamEditing(null)} className="h-9 rounded-lg px-4 text-xs font-semibold text-[#586273] hover:bg-[#F0F2F4]">
+            <button type="button" disabled={isPending} onClick={closeTeamEditor} className="h-9 rounded-lg px-4 text-xs font-semibold text-[#586273] hover:bg-[#F0F2F4]">
               Cancel
             </button>
             <button
@@ -607,18 +662,67 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
             <p className="mt-1 text-[10px] text-[#7B8491]">Job Titles and their public order are managed in Master Data.</p>
           </div>
           <div>
-            <label htmlFor="team-avatar-url" className="text-xs font-semibold text-[#303846]">
-              Public Photo URL
-            </label>
-            <input
-              id="team-avatar-url"
-              type="url"
-              value={teamAvatarUrl}
-              onChange={(event) => setTeamAvatarUrl(event.target.value)}
-              maxLength={2048}
-              placeholder="https://..."
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] px-3 text-sm outline-none focus:border-[#9F1010] focus:ring-2 focus:ring-[#9F1010]/10"
-            />
+            <span className="text-xs font-semibold text-[#303846]">Public Photo</span>
+            <div className="mt-1.5 rounded-xl border border-[#D9DDE3] bg-[#FAFBFC] p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Avatar
+                  src={teamAvatarPreview || teamAvatarUrl || undefined}
+                  alt={teamFullName || 'Team member'}
+                  sx={{ width: 96, height: 96, fontSize: 24, bgcolor: '#A6192E', flexShrink: 0 }}
+                >
+                  {(teamFullName || 'T').trim().charAt(0).toUpperCase()}
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-[#303846]">
+                    {teamAvatarFile ? teamAvatarFile.name : teamAvatarUrl ? 'Current public photo' : 'No photo selected'}
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4 text-[#7B8491]">JPEG, PNG, atau WebP. Maksimal {TEAM_PROFILE_MAX_LABEL}.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#9F1010] bg-white px-3 text-xs font-semibold text-[#9F1010] transition hover:bg-[#FFF5F5]">
+                      <ImagePlus aria-hidden="true" className="size-4" />
+                      {teamAvatarUrl || teamAvatarFile ? 'Replace Photo' : 'Add Photo'}
+                      <input
+                        type="file"
+                        accept={TEAM_PROFILE_ACCEPT}
+                        disabled={isPending}
+                        onChange={(event) => {
+                          selectTeamAvatar(event.target.files?.[0] ?? null);
+                          event.currentTarget.value = '';
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
+                    {teamAvatarUrl || teamAvatarFile ? (
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => { clearTeamAvatarFile(); setTeamAvatarUrl(''); }}
+                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#586273] transition hover:border-[#E0A5A5] hover:text-[#9F1010]"
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" />
+                        Remove Photo
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-[#E2E5E9] pt-4">
+                <label htmlFor="team-avatar-url" className="text-[10px] font-semibold tracking-[0.03em] text-[#697383] uppercase">
+                  Photo URL
+                </label>
+                <input
+                  id="team-avatar-url"
+                  type="url"
+                  value={teamAvatarUrl}
+                  onChange={(event) => { clearTeamAvatarFile(); setTeamAvatarUrl(event.target.value); }}
+                  maxLength={2048}
+                  placeholder="https://..."
+                  className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] bg-white px-3 text-sm outline-none focus:border-[#9F1010] focus:ring-2 focus:ring-[#9F1010]/10"
+                />
+                <p className="mt-1 text-[10px] text-[#7B8491]">Terisi otomatis setelah upload, atau dapat menggunakan URL gambar publik lama.</p>
+              </div>
+            </div>
           </div>
           <div>
             <div className="flex items-center justify-between gap-3">

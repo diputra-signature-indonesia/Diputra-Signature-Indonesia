@@ -31,6 +31,20 @@ alter table public.blog_posts
   drop constraint if exists blog_posts_version_positive,
   drop constraint if exists blog_posts_featured_published;
 
+-- Normalize legacy metadata before enforcing the editorial limits. Production
+-- already contains articles created before these limits existed, so adding the
+-- checks directly would make the migration fail and block otherwise valid
+-- content. The article title and body remain untouched.
+update public.blog_posts
+set seo_title = nullif(pg_catalog.left(pg_catalog.btrim(seo_title), 70), '')
+where seo_title is not null
+  and pg_catalog.char_length(pg_catalog.btrim(seo_title)) > 70;
+
+update public.blog_posts
+set seo_description = nullif(pg_catalog.left(pg_catalog.btrim(seo_description), 180), '')
+where seo_description is not null
+  and pg_catalog.char_length(pg_catalog.btrim(seo_description)) > 180;
+
 alter table public.blog_posts
   add constraint blog_posts_created_by_fkey foreign key (created_by) references public.profiles(id) on update cascade on delete restrict,
   add constraint blog_posts_updated_by_fkey foreign key (updated_by) references public.profiles(id) on update cascade on delete restrict,

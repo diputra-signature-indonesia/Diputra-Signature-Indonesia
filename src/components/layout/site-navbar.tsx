@@ -14,6 +14,9 @@ type SiteNavbarProps = {
   contactLink: NavLinkItem;
 };
 
+// Dipertahankan agar tab kategori service dapat diaktifkan kembali jika dibutuhkan.
+const SHOW_SERVICE_CATEGORY_TABS = false;
+
 export function SiteNavbar(props: SiteNavbarProps) {
   const pathname = usePathname();
   return <SiteNavbarContent key={pathname} {...props} pathname={pathname} />;
@@ -37,6 +40,7 @@ function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps 
   const isServicePage = pathname.startsWith('/services/');
   const servicesNavigation = navItems.find((item) => isDropdown(item) && item.slug === 'services');
   const serviceItems = servicesNavigation && isDropdown(servicesNavigation) ? servicesNavigation.children : [];
+  const showServiceCategoryTabs = SHOW_SERVICE_CATEGORY_TABS && isServicePage && serviceItems.length > 0;
 
   useEffect(() => {
     const el = headerRef.current;
@@ -90,7 +94,7 @@ function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps 
   useEffect(() => {
     const tabs = serviceTabsRef.current;
     const activeTab = activeServiceTabRef.current;
-    if (!isServicePage || !tabs || !activeTab) return;
+    if (!showServiceCategoryTabs || !tabs || !activeTab) return;
 
     const frame = window.requestAnimationFrame(() => {
       tabs.scrollTo({
@@ -100,10 +104,10 @@ function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps 
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [isServicePage, pathname]);
+  }, [pathname, showServiceCategoryTabs]);
 
   // untuk mobile menu (biar tetap sederhana: semua link tampil)
-  const mobileNavItems: NavLinkItem[] = navItems.filter((item) => !(isServicePage && isDropdown(item) && item.slug === 'services')).flatMap((item) => (isDropdown(item) ? item.children : [item]));
+  const mobileNavItems: NavLinkItem[] = navItems.flatMap((item) => (isDropdown(item) ? item.children : [item]));
 
   const shouldHideHeader = isServicePage && headerHidden && !open && !serviceDropDown;
 
@@ -124,8 +128,6 @@ function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps 
           {/* DESKTOP NAV */}
           <nav className={`flex flex-row max-lg:hidden`} aria-label="Primary navigation">
             {navItems.map((item) => {
-              if (isServicePage && isDropdown(item) && item.slug === 'services') return null;
-
               // normal link
               if (!isDropdown(item)) {
                 const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -251,7 +253,7 @@ function SiteNavbarContent({ navItems, contactLink, pathname }: SiteNavbarProps 
         </div>
       </header>
 
-      {isServicePage && serviceItems.length > 0 && (
+      {showServiceCategoryTabs && (
         <nav aria-label="Service categories" className="border-brand-black/10 bg-brand-white border-t border-b shadow-sm">
           <div ref={serviceTabsRef} className="hide-scrollbar w-full snap-x snap-mandatory overflow-x-auto">
             <div className="mx-auto flex w-max max-w-[1440px] min-w-full items-stretch justify-center px-5 sm:px-10 lg:px-13">
