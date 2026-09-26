@@ -14,9 +14,10 @@ import {
   trashDriveFile,
   updateDrivePermission,
 } from '@/lib/google-drive/client';
-import { getGoogleDriveConfig, GoogleDriveConfigurationError } from '@/lib/google-drive/auth';
+import { getGoogleDriveConfig, getGoogleDriveUploadOrigin, GoogleDriveConfigurationError } from '@/lib/google-drive/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,7 +130,8 @@ export async function prepareJobDocumentUploadAction(input: {
   const result = await ensureFolder(input.jobId);
   if (!result.ok) return result.result;
   try {
-    const uploadUrl = await createResumableUpload(result.folder.google_folder_id, name, mimeType, input.sizeBytes);
+    const uploadOrigin = getGoogleDriveUploadOrigin((await headers()).get('origin'));
+    const uploadUrl = await createResumableUpload(result.folder.google_folder_id, name, mimeType, input.sizeBytes, uploadOrigin);
     return { ok: true, message: 'Sesi upload siap.', data: { uploadUrl, folderId: result.folder.google_folder_id, maxUploadBytes: MAX_UPLOAD_BYTES } };
   } catch (error) {
     return driveFailure(error, 'Sesi upload Google Drive gagal dibuat.');

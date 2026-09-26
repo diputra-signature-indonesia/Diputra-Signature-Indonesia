@@ -148,7 +148,7 @@ export async function getDriveFileContent(fileId: string) {
   return response;
 }
 
-export async function createResumableUpload(folderId: string, fileName: string, mimeType: string, sizeBytes: number) {
+export async function createResumableUpload(folderId: string, fileName: string, mimeType: string, sizeBytes: number, uploadOrigin: string) {
   const token = await getGoogleDriveAccessToken();
   const params = new URLSearchParams({
     uploadType: 'resumable',
@@ -162,6 +162,8 @@ export async function createResumableUpload(folderId: string, fileName: string, 
       'Content-Type': 'application/json; charset=UTF-8',
       'X-Upload-Content-Length': String(sizeBytes),
       'X-Upload-Content-Type': mimeType,
+      Origin: uploadOrigin,
+      'X-Origin': uploadOrigin,
     },
     body: JSON.stringify({ name: fileName, parents: [folderId], appProperties: { managedBy: 'diputra-admin' } }),
     cache: 'no-store',
