@@ -1,4 +1,5 @@
 import type { BlogPostSummary } from '@/lib/supabase/queries';
+import { Newspaper } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BrandButton } from '../ui/button';
@@ -6,6 +7,7 @@ import { ViewportReveal } from '../viewport-reveal';
 
 type BlogSectionProps = {
   blogPosts: BlogPostSummary[]; // berapa item yang tampil
+  emptyState?: 'hide' | 'message';
 };
 
 function formatDateParts(iso: string) {
@@ -14,8 +16,27 @@ function formatDateParts(iso: string) {
   return { d, m, y };
 }
 
-export function BlogSection({ blogPosts }: BlogSectionProps) {
+export function BlogSection({ blogPosts, emptyState = 'hide' }: BlogSectionProps) {
   // const posts = [...DSI_BLOG_POSTS].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, limit);
+
+  if (!blogPosts.length) {
+    if (emptyState === 'hide') return null;
+
+    return (
+      <section aria-labelledby="empty-blog-heading" className="brand-section-px font-raleway mx-auto flex min-h-[52vh] max-w-[1440px] items-center justify-center py-16">
+        <ViewportReveal as="div" delay={0.1} duration={0.5} y={20} x={0} className="flex max-w-2xl flex-col items-center text-center">
+          <div className="border-brand-maroon/15 bg-brand-maroon/5 text-brand-maroon mb-6 flex size-16 items-center justify-center rounded-full border">
+            <Newspaper aria-hidden="true" className="size-7" strokeWidth={1.6} />
+          </div>
+          <h2 id="empty-blog-heading" className="brand-h2 text-brand-maroon font-semibold">
+            News is on the way
+          </h2>
+          <p className="brand-p-desc mt-4 max-w-xl text-balance text-[#595959]">Sorry, we haven&apos;t published any news yet. Stay tuned for our latest updates, insights, and important announcements.</p>
+          <div aria-hidden="true" className="bg-brand-yellow mt-7 h-1 w-14 rounded-full" />
+        </ViewportReveal>
+      </section>
+    );
+  }
 
   return (
     <section className="brand-section-px brand-stretch font-raleway mx-auto flex flex-col justify-center gap-7 xl:h-[700px] xl:max-w-[1440px]">

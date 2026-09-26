@@ -26,7 +26,7 @@ export default async function BlogListPage() {
   return (
     <div className="py-13">
       <h1 className="sr-only">Blog & Insights</h1>
-      <BlogSection blogPosts={blogPosts} />
+      <BlogSection blogPosts={blogPosts} emptyState="message" />
     </div>
   );
 }
