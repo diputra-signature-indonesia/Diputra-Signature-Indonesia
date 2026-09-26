@@ -148,7 +148,15 @@ export async function getDriveFileContent(fileId: string) {
   return response;
 }
 
-export async function createResumableUpload(folderId: string, fileName: string, mimeType: string, sizeBytes: number, uploadOrigin: string) {
+export async function generateDriveFileId() {
+  const params = new URLSearchParams({ count: '1', space: 'drive', type: 'files' });
+  const result = await driveFetch<{ ids?: string[] }>(`${DRIVE_API}/files/generateIds?${params}`);
+  const fileId = result.ids?.[0]?.trim();
+  if (!fileId) throw new Error('Google Drive did not return a pre-generated file ID.');
+  return fileId;
+}
+
+export async function createResumableUpload(folderId: string, fileId: string, fileName: string, mimeType: string, sizeBytes: number) {
   const token = await getGoogleDriveAccessToken();
   const params = new URLSearchParams({
     uploadType: 'resumable',
@@ -162,10 +170,8 @@ export async function createResumableUpload(folderId: string, fileName: string, 
       'Content-Type': 'application/json; charset=UTF-8',
       'X-Upload-Content-Length': String(sizeBytes),
       'X-Upload-Content-Type': mimeType,
-      Origin: uploadOrigin,
-      'X-Origin': uploadOrigin,
     },
-    body: JSON.stringify({ name: fileName, parents: [folderId], appProperties: { managedBy: 'diputra-admin' } }),
+    body: JSON.stringify({ id: fileId, name: fileName, parents: [folderId], appProperties: { managedBy: 'diputra-admin' } }),
     cache: 'no-store',
   });
   if (!response.ok) {

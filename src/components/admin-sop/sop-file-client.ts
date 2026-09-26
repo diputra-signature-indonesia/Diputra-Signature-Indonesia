@@ -38,7 +38,6 @@ export async function uploadSopFile(input: {
   });
   if (!reservation.ok) return reservation;
 
-  let googleFileId = '';
   try {
     const uploaded = await fetch(reservation.data.uploadUrl, {
       method: 'PUT',
@@ -46,12 +45,11 @@ export async function uploadSopFile(input: {
       body: input.file,
     });
     if (!uploaded.ok) return { ok: false as const, message: `Google Drive menolak upload file (${uploaded.status}).` };
-    const metadata = await uploaded.json() as { id?: string };
-    googleFileId = metadata.id?.trim() ?? '';
+    // The Drive response body is not needed because the server reserved the ID.
   } catch {
-    return { ok: false as const, message: 'Upload ke Google Drive terputus. Silakan coba kembali.' };
+    // Drive can finish the upload while CORS prevents reading its final response.
+    // Finalization below verifies whether the reserved ID actually exists.
   }
-  if (!googleFileId) return { ok: false as const, message: 'Google Drive tidak mengembalikan identitas file hasil upload.' };
 
   const finalized = await finalizeSopFileUploadAction({
     sopId: reservation.data.sopId,
@@ -62,7 +60,7 @@ export async function uploadSopFile(input: {
     mimeType,
     sizeBytes: input.file.size,
     sortOrder: input.sortOrder,
-    googleFileId,
+    googleFileId: reservation.data.googleFileId,
   });
   if (!finalized.ok) return finalized;
   return { ok: true as const, message: finalized.message };

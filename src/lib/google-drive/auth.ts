@@ -33,36 +33,6 @@ export function getGoogleDriveSopRootFolderId() {
   return required('GOOGLE_DRIVE_SOP_ROOT_FOLDER_ID');
 }
 
-function normalizedOrigin(value: string) {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'https:' && !(process.env.NODE_ENV !== 'production' && url.protocol === 'http:')) {
-      throw new Error('Unsupported protocol.');
-    }
-    return url.origin;
-  } catch {
-    throw new GoogleDriveConfigurationError('Google Drive upload origin is invalid.');
-  }
-}
-
-export function getGoogleDriveUploadOrigin(requestOrigin: string | null) {
-  const configuredOrigin = normalizedOrigin(required('NEXT_PUBLIC_SITE_URL'));
-  const allowedOrigins = new Set([configuredOrigin]);
-
-  for (const hostname of [process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_URL]) {
-    if (hostname?.trim()) allowedOrigins.add(normalizedOrigin(`https://${hostname.trim()}`));
-  }
-
-  if (process.env.NODE_ENV !== 'production') {
-    allowedOrigins.add('http://localhost:3000');
-    allowedOrigins.add('http://127.0.0.1:3000');
-  }
-
-  const origin = requestOrigin ? normalizedOrigin(requestOrigin) : configuredOrigin;
-  if (!allowedOrigins.has(origin)) throw new GoogleDriveConfigurationError('Google Drive upload origin is not allowed.');
-  return origin;
-}
-
 async function readError(response: Response) {
   const text = await response.text();
   try {

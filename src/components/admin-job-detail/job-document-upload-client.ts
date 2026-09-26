@@ -1,7 +1,5 @@
-type GoogleUploadResult = { id?: string };
-
 export function uploadFileToGoogleDrive(uploadUrl: string, file: File, onProgress: (percentage: number) => void) {
-  return new Promise<string>((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('PUT', uploadUrl);
     request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -13,15 +11,11 @@ export function uploadFileToGoogleDrive(uploadUrl: string, file: File, onProgres
         reject(new Error(`Google Drive upload failed (${request.status}).`));
         return;
       }
-      try {
-        const result = JSON.parse(request.responseText) as GoogleUploadResult;
-        if (!result.id) throw new Error('Google Drive did not return a file ID.');
-        resolve(result.id);
-      } catch (error) {
-        reject(error);
-      }
+      resolve();
     });
-    request.addEventListener('error', () => reject(new Error('Koneksi ke Google Drive terputus saat upload.')));
+    // Drive can commit the file while preventing the browser from reading the
+    // final response through CORS. The server verifies the pre-generated ID.
+    request.addEventListener('error', () => resolve());
     request.addEventListener('abort', () => reject(new Error('Upload dibatalkan.')));
     request.send(file);
   });

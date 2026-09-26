@@ -2982,6 +2982,15 @@ export type Database = {
         }
         Returns: string
       }
+      search_job_access_profiles: {
+        Args: { p_job_id: string; p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          email: string
+          id: string
+        }[]
+      }
       set_blog_post_featured: {
         Args: {
           p_expected_version: number

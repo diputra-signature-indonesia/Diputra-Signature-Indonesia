@@ -8,12 +8,14 @@ import {
   finalizeJobDocumentUploadAction,
   listJobFolderPermissionsAction,
   prepareJobDocumentUploadAction,
+  searchJobAccessUsersAction,
   updateJobFolderPermissionAction,
+  type JobAccessUserOption,
   type JobFolderPermission,
 } from '@/app/admin/all-jobs/[jobId]/document-actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import type { JobDocumentsData } from '@/lib/supabase/queries/job-documents';
-import { ExternalLink, FileText, FolderOpen, HardDrive, LoaderCircle, LockKeyhole, MailPlus, RefreshCw, ShieldCheck, Trash2, UploadCloud, UserRound } from 'lucide-react';
+import { Check, ExternalLink, FileText, FolderOpen, HardDrive, LoaderCircle, LockKeyhole, MailPlus, RefreshCw, Search, ShieldCheck, Trash2, UploadCloud, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { uploadFileToGoogleDrive } from './job-document-upload-client';
@@ -31,6 +33,7 @@ export type DemoJobDocument = {
 };
 
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const roleLabels: Record<string, string> = {
   reader: 'Viewer', commenter: 'Commenter', writer: 'Editor', fileOrganizer: 'Content manager', organizer: 'Manager', owner: 'Owner',
 };
@@ -54,6 +57,15 @@ function AccessAvatar({ permission }: { permission: JobFolderPermission }) {
   return <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#F5E7E7] text-xs font-bold text-[#8C1010]">{permission.displayName.slice(0, 1).toUpperCase() || <UserRound className="size-4" />}</span>;
 }
 
+function AccessUserOptionAvatar({ user }: { user: JobAccessUserOption }) {
+  if (user.avatarUrl) {
+    // External profile URLs can come from different Google hosts.
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={user.avatarUrl} alt="" className="size-7 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />;
+  }
+  return <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#F5E7E7] text-[10px] font-bold text-[#8C1010]">{user.displayName.slice(0, 1).toUpperCase()}</span>;
+}
+
 export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: explicitJobId }: {
   data?: JobDocumentsData;
   canManage: boolean;
@@ -62,6 +74,7 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const accessPickerRef = useRef<HTMLDivElement>(null);
   const documents = demoDocuments ?? data?.documents ?? [];
   const folder = data?.folder ?? null;
   const jobId = explicitJobId ?? folder?.job_id ?? documents[0]?.job_id ?? null;
@@ -77,6 +90,10 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
   const [accessLoaded, setAccessLoaded] = useState(false);
   const [accessError, setAccessError] = useState('');
   const [email, setEmail] = useState('');
+  const [accessSearch, setAccessSearch] = useState('');
+  const [accessOptions, setAccessOptions] = useState<JobAccessUserOption[]>([]);
+  const [accessSearchOpen, setAccessSearchOpen] = useState(false);
+  const [accessSearchLoading, setAccessSearchLoading] = useState(false);
   const [role, setRole] = useState<'reader' | 'commenter' | 'writer'>('reader');
   const [removingPermission, setRemovingPermission] = useState<JobFolderPermission | null>(null);
 
@@ -93,6 +110,29 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
 
   useEffect(() => { void loadPermissions(); }, [loadPermissions]);
 
+  useEffect(() => {
+    if (!accessSearchOpen || !canManage || !connected || !jobId) return;
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      setAccessSearchLoading(true);
+      const result = await searchJobAccessUsersAction({ jobId, query: accessSearch });
+      if (!active) return;
+      setAccessSearchLoading(false);
+      if (!result.ok) { setAccessError(result.message); setAccessOptions([]); return; }
+      const grantedEmails = new Set(permissions.flatMap((permission) => permission.emailAddress ? [permission.emailAddress.toLowerCase()] : []));
+      setAccessOptions(result.data.users.filter((user) => !grantedEmails.has(user.email.toLowerCase())));
+    }, 300);
+    return () => { active = false; window.clearTimeout(timeout); };
+  }, [accessSearch, accessSearchOpen, canManage, connected, jobId, permissions]);
+
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (accessPickerRef.current && !accessPickerRef.current.contains(event.target as Node)) setAccessSearchOpen(false);
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, []);
+
   async function upload(file?: File) {
     if (!file || !jobId || busy) return;
     if (file.size > MAX_UPLOAD_BYTES) { setError('Ukuran file maksimal 100 MiB.'); return; }
@@ -100,8 +140,8 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
     try {
       const prepared = await prepareJobDocumentUploadAction({ jobId, fileName: file.name, mimeType: file.type || 'application/octet-stream', sizeBytes: file.size });
       if (!prepared.ok) { setError(prepared.message); return; }
-      const googleFileId = await uploadFileToGoogleDrive(prepared.data.uploadUrl, file, setUploadProgress);
-      const finalized = await finalizeJobDocumentUploadAction({ jobId, googleFileId });
+      await uploadFileToGoogleDrive(prepared.data.uploadUrl, file, setUploadProgress);
+      const finalized = await finalizeJobDocumentUploadAction({ jobId, googleFileId: prepared.data.googleFileId });
       if (!finalized.ok) { setError(finalized.message); return; }
       setMessage(finalized.message);
       router.refresh();
@@ -141,7 +181,7 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
     startTransition(async () => {
       const result = await addJobFolderPermissionAction({ jobId, email, role });
       if (!result.ok) { setAccessError(result.message); return; }
-      setEmail(''); await loadPermissions();
+      setEmail(''); setAccessSearch(''); setAccessOptions([]); setAccessSearchOpen(false); await loadPermissions();
     });
   }
 
@@ -206,7 +246,43 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
           </header>
           <div className="space-y-4 p-5">
             {!canManage ? <div className="rounded-lg bg-[#F6F7F9] p-4 text-xs leading-5 text-[#68717E]"><LockKeyhole className="mb-2 size-5 text-[#8C1010]" />Hanya PIC Job, admin, atau super admin yang dapat melihat dan mengelola akses folder.</div> : !connected ? <div className="rounded-lg border border-dashed border-[#C8CDD5] bg-[#FAFBFC] p-4 text-center"><FolderOpen className="mx-auto size-6 text-[#8C1010]" /><p className="mt-2 text-xs leading-5 text-[#68717E]">Siapkan folder Job terlebih dahulu untuk mengelola akses.</p>{jobId ? <button type="button" disabled={isPending} onClick={prepareFolder} className="mt-3 rounded-lg bg-[#8C1010] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Prepare Folder</button> : null}</div> : <>
-              <form onSubmit={addAccess} className="space-y-2"><label htmlFor="drive-access-email" className="text-xs font-semibold text-[#303846]">Add person</label><div className="flex items-center gap-2"><div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#D5DAE1] px-3 focus-within:border-[#8C1010]"><MailPlus className="size-4 shrink-0 text-[#7B8491]" /><input id="drive-access-email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" className="min-w-0 flex-1 bg-transparent text-xs outline-none" /></div><select aria-label="Access role" value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="h-10 rounded-lg border border-[#D5DAE1] bg-white px-2 text-xs outline-none focus:border-[#8C1010]"><option value="reader">Viewer</option><option value="commenter">Commenter</option><option value="writer">Editor</option></select></div><button type="submit" disabled={isPending || accessLoading || !email.trim()} className="h-9 w-full rounded-lg bg-[#8C1010] text-xs font-semibold text-white hover:bg-[#730D0D] disabled:opacity-50">Add access</button></form>
+              <form onSubmit={addAccess} className="space-y-2">
+                <label htmlFor="drive-access-email" className="text-xs font-semibold text-[#303846]">Add person</label>
+                <div className="flex items-start gap-2">
+                  <div ref={accessPickerRef} className="relative min-w-0 flex-1">
+                    <div className="flex h-10 items-center gap-2 rounded-lg border border-[#D5DAE1] px-3 focus-within:border-[#8C1010] focus-within:ring-2 focus-within:ring-[#8C1010]/10">
+                      <MailPlus className="size-4 shrink-0 text-[#7B8491]" />
+                      <input
+                        id="drive-access-email"
+                        type="text"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded={accessSearchOpen}
+                        aria-controls="drive-access-user-options"
+                        autoComplete="off"
+                        value={accessSearch}
+                        onFocus={() => setAccessSearchOpen(true)}
+                        onChange={(event) => { setAccessSearch(event.target.value); setEmail(event.target.value.trim()); setAccessSearchOpen(true); setAccessError(''); }}
+                        placeholder="Search name or email"
+                        className="min-w-0 flex-1 bg-transparent text-xs outline-none"
+                      />
+                      {accessSearchLoading ? <LoaderCircle className="size-3.5 shrink-0 animate-spin text-[#8C1010]" /> : <Search className="size-3.5 shrink-0 text-[#9AA2AE]" />}
+                    </div>
+                    {accessSearchOpen ? <div id="drive-access-user-options" role="listbox" className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-56 overflow-y-auto rounded-lg border border-[#D9DDE3] bg-white p-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)]">
+                      {accessSearchLoading && !accessOptions.length ? <div className="flex items-center justify-center gap-2 px-3 py-5 text-[11px] text-[#7B8491]"><LoaderCircle className="size-3.5 animate-spin" />Searching users...</div> : null}
+                      {!accessSearchLoading && !accessOptions.length ? <p className="px-3 py-5 text-center text-[11px] leading-4 text-[#7B8491]">No available users found. You can still enter an email manually.</p> : null}
+                      {accessOptions.map((user) => <button key={user.id} type="button" role="option" aria-selected={email.toLowerCase() === user.email.toLowerCase()} onMouseDown={(event) => event.preventDefault()} onClick={() => { setEmail(user.email); setAccessSearch(user.displayName); setAccessSearchOpen(false); setAccessError(''); }} className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left hover:bg-[#F8EFEF] focus-visible:bg-[#F8EFEF] focus-visible:outline-none">
+                        <AccessUserOptionAvatar user={user} />
+                        <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#2C3441]">{user.displayName}</span><span className="block truncate text-[10px] text-[#7B8491]">{user.email}</span></span>
+                        {email.toLowerCase() === user.email.toLowerCase() ? <Check className="size-3.5 shrink-0 text-[#8C1010]" /> : null}
+                      </button>)}
+                    </div> : null}
+                  </div>
+                  <select aria-label="Access role" value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="h-10 rounded-lg border border-[#D5DAE1] bg-white px-2 text-xs outline-none focus:border-[#8C1010]"><option value="reader">Viewer</option><option value="commenter">Commenter</option><option value="writer">Editor</option></select>
+                </div>
+                {email && accessSearch !== email ? <p className="truncate text-[10px] text-[#7B8491]">Access will be sent to {email}</p> : null}
+                <button type="submit" disabled={isPending || accessLoading || !EMAIL_PATTERN.test(email)} className="h-9 w-full rounded-lg bg-[#8C1010] text-xs font-semibold text-white hover:bg-[#730D0D] disabled:opacity-50">Add access</button>
+              </form>
               {accessError ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{accessError}</p> : null}
               <div className="max-h-[460px] space-y-2 overflow-y-auto pr-1">
                 {accessLoading && !accessLoaded ? <div className="flex items-center justify-center py-10"><LoaderCircle className="size-6 animate-spin text-[#8C1010]" /></div> : null}

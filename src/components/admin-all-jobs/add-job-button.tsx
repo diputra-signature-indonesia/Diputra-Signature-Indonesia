@@ -2,6 +2,7 @@
 
 import { createJobAction, type CreateJobInput } from '@/app/admin/all-jobs/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { ProfileCombobox } from '@/components/layout-admin/profile-combobox';
 import type { AddJobOptions } from '@/lib/supabase/queries/add-job';
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -84,7 +85,7 @@ export function AddJobButton({ options }: { options: AddJobOptions }) {
             <div><label htmlFor="add-job-priority" className={labelClass}>Priority *</label><select id="add-job-priority" className={fieldClass} required value={form.priorityId} onChange={(event) => setField('priorityId', event.target.value)}><option value="">Pilih Priority</option>{options.priorities.map((priority) => <option key={priority.id} value={priority.id}>{priority.name}</option>)}</select></div>
           </div>
           {selectedService ? <div className="rounded-lg border border-[#E4E7EC] bg-[#F8F9FA] p-3 text-xs text-[#4B5563]"><strong className="text-[#303846]">Workflow: {selectedService.workflowName}</strong><p className="mt-1">{selectedService.steps.join(' → ')}</p></div> : null}
-          {canAssignPic ? <div><label htmlFor="add-job-pic" className={labelClass}>PIC *</label><select id="add-job-pic" className={fieldClass} value={form.picId ?? options.actor.id} onChange={(event) => setField('picId', event.target.value)}>{options.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name}</option>)}</select></div> : <p className="text-xs text-[#68717E]">PIC: {options.actor.name} (otomatis)</p>}
+          {canAssignPic ? <div><label htmlFor="add-job-pic" className={labelClass}>PIC *</label><ProfileCombobox id="add-job-pic" value={form.picId ?? options.actor.id} options={options.profiles} onChange={(profileId) => setField('picId', profileId)} placeholder="Search PIC..." /></div> : <p className="text-xs text-[#68717E]">PIC: {options.actor.name} (otomatis)</p>}
           <div><label htmlFor="add-job-description" className={labelClass}>Deskripsi</label><textarea id="add-job-description" className={`${fieldClass} h-24 py-2`} maxLength={5000} value={form.description} onChange={(event) => setField('description', event.target.value)} placeholder="Rincian pekerjaan (opsional)" /></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label htmlFor="add-job-start" className={labelClass}>Tanggal mulai</label><input id="add-job-start" type="date" className={fieldClass} value={form.startDate} onChange={(event) => setField('startDate', event.target.value)} /></div>

@@ -1,10 +1,11 @@
 'use server';
 
 import { requireActiveAdmin } from '@/lib/auth/admin-access';
-import { getGoogleDriveConfig, getGoogleDriveUploadOrigin } from '@/lib/google-drive/auth';
+import { getGoogleDriveConfig } from '@/lib/google-drive/auth';
 import {
   createResumableUpload,
   createSopFolder,
+  generateDriveFileId,
   findSopFolder,
   getDriveFile,
   GoogleDriveApiError,
@@ -14,7 +15,6 @@ import {
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database.generated';
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
 
 type ActionResult<T = undefined> = { ok: true; message: string; data: T } | { ok: false; message: string };
 type PriceInput = { itemName: string; amount: number; notes: string };
@@ -147,7 +147,7 @@ async function ensureSopDriveFolder(
 export async function prepareSopFileUploadAction(input: {
   serviceId: string; description: string | null; fileType: 'FLOW' | 'REQUIREMENT'; title: string;
   originalFilename: string; mimeType: string; sizeBytes: number; sortOrder: number;
-}): Promise<ActionResult<{ sopId: string; folderId: string; uploadUrl: string }>> {
+}): Promise<ActionResult<{ sopId: string; folderId: string; uploadUrl: string; googleFileId: string }>> {
   const supabase = await managerClient();
   if (!supabase) return { ok: false, message: 'Hanya admin atau super admin yang dapat mengunggah file SOP.' };
   const title = input.title.trim();
@@ -162,9 +162,9 @@ export async function prepareSopFileUploadAction(input: {
   const folder = await ensureSopDriveFolder(supabase, ensured.sop.id, service.data.name);
   if (!folder.ok) return folder.result;
   try {
-    const uploadOrigin = getGoogleDriveUploadOrigin((await headers()).get('origin'));
-    const uploadUrl = await createResumableUpload(folder.folder.google_folder_id, input.originalFilename.trim(), input.mimeType, input.sizeBytes, uploadOrigin);
-    return { ok: true, message: 'Sesi upload Google Drive siap.', data: { sopId: ensured.sop.id, folderId: folder.folder.id, uploadUrl } };
+    const googleFileId = await generateDriveFileId();
+    const uploadUrl = await createResumableUpload(folder.folder.google_folder_id, googleFileId, input.originalFilename.trim(), input.mimeType, input.sizeBytes);
+    return { ok: true, message: 'Sesi upload Google Drive siap.', data: { sopId: ensured.sop.id, folderId: folder.folder.id, uploadUrl, googleFileId } };
   } catch (error) {
     return driveFailure(error, 'Sesi upload file SOP gagal dibuat di Google Drive.');
   }
@@ -225,6 +225,7 @@ export async function finalizeSopFileUploadAction(input: {
       data: { fileId: saved.data },
     };
   } catch (error) {
+    if (error instanceof GoogleDriveApiError && error.status === 404) return { ok: false, message: 'Upload belum tersimpan di Google Drive. Periksa koneksi dan coba kembali.' };
     return driveFailure(error, 'File berhasil diunggah, tetapi metadata Google Drive gagal diverifikasi.');
   }
 }
