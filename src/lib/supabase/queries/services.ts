@@ -1,116 +1,135 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
+import { cacheLife, cacheTag } from 'next/cache';
+import type { Tables } from '@/types/database.generated';
 
-import { ServiceIconKey } from '@/types/dsi-services';
+export type ServiceCategory = Tables<'services_categories'>;
+export type ServiceItem = Tables<'services_items'>;
+export type ServiceItemDetail = Tables<'services_item_details'>;
 
-export type ServiceCategory = {
-  id: string;
-  slug: string;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
-  title: string | null;
-  type: string | null;
-  short_description: string | null;
-  description: string | null;
-  hero_heading: string | null;
-  hero_image: string | null;
-  card_image: string | null;
-  card_icon_key: ServiceIconKey | null;
-  sort_order: number | null;
-  is_published: boolean | null;
+export type ServiceCategorySummary = Pick<ServiceCategory, 'id' | 'slug' | 'title' | 'type' | 'short_description' | 'card_image' | 'card_icon_key'>;
+
+export type ServiceCategoryPageCategory = Pick<ServiceCategory, 'seo_title' | 'seo_description' | 'title' | 'short_description' | 'description' | 'hero_heading' | 'hero_image'>;
+
+export type ServiceCategoryPageItem = Pick<ServiceItem, 'slug' | 'title' | 'description' | 'icon_key' | 'cta_label' | 'cta_type'>;
+
+export type ServiceDetailPageCategory = Pick<ServiceCategory, 'seo_title'>;
+
+export type ServiceDetailPageItem = Pick<ServiceItem, 'seo_title' | 'seo_description' | 'title' | 'description'>;
+
+export type ServiceDetailPageContent = Pick<ServiceItemDetail, 'title' | 'description' | 'cta_description'>;
+
+export type ServiceCategoryPageData = {
+  category: ServiceCategoryPageCategory;
+  items: ServiceCategoryPageItem[];
 };
 
-export type ServiceItem = {
-  id: string;
-  category_id: string;
-  slug: string;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
-  title: string | null;
-  description: string | null;
-  icon_key: string | null;
-  cta_label: string | null;
-  cta_type: string | null;
-  sort_order: number | null;
-  is_published: boolean | null;
-};
-
-export type ServiceItemDetail = {
-  id: string;
-  service_item_id: string;
-  title: string | null; // atau detail_title, sesuaikan
-  description: string | null;
-  cta_description: string | null;
-  sort_order: number | null;
-  is_published: boolean | null;
+export type ServiceDetailPageData = {
+  category: ServiceDetailPageCategory;
+  item: ServiceDetailPageItem;
+  details: ServiceDetailPageContent[];
 };
 
 /** LIST categories (untuk section Services / services page) */
-export async function getServiceCategories(): Promise<ServiceCategory[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from('services_categories').select('*').eq('is_published', true).order('sort_order', { ascending: true });
+export async function getServiceCategories(): Promise<ServiceCategorySummary[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
+
+  const supabase = createSupabasePublicServerClient();
+  const { data, error } = await supabase
+    .from('services_categories')
+    .select('id, slug, title, type, short_description, card_image, card_icon_key')
+    .eq('is_published', true)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as ServiceCategory[];
+  return data ?? [];
 }
 
-/** SINGLE category by slug */
-export async function getServiceCategoryBySlug(slug: string): Promise<ServiceCategory> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from('services_categories').select('*').eq('slug', slug).eq('is_published', true).single();
+/** SINGLE category with its published items */
+export async function getServiceCategoryPageData(categorySlug: string): Promise<ServiceCategoryPageData | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
+
+  const supabase = createSupabasePublicServerClient();
+  const { data, error } = await supabase
+    .from('services_categories')
+    .select(
+      `
+      seo_title,
+      seo_description,
+      title,
+      short_description,
+      description,
+      hero_heading,
+      hero_image,
+      services_items (
+        slug,
+        title,
+        description,
+        icon_key,
+        cta_label,
+        cta_type
+      )
+      `
+    )
+    .eq('slug', categorySlug)
+    .eq('is_published', true)
+    .is('deleted_at', null)
+    .eq('services_items.is_published', true)
+    .is('services_items.deleted_at', null)
+    .order('sort_order', { referencedTable: 'services_items', ascending: true })
+    .maybeSingle();
 
   if (error) throw error;
-  return data as ServiceCategory;
+  if (!data) return null;
+  const { services_items: items, ...category } = data;
+  return { category, items: items ?? [] };
 }
 
-/** LIST items by category slug (join) */
-export async function getServiceItemsByCategorySlug(categorySlug: string): Promise<ServiceItem[]> {
-  const supabase = await createSupabaseServerClient();
-  // 2-step: ambil category id dulu, lalu items
-  const category = await getServiceCategoryBySlug(categorySlug);
+/** Convenience: detail page data */
+export async function getServiceDetailPageData(categorySlug: string, itemSlug: string): Promise<ServiceDetailPageData | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.services);
 
-  const { data, error } = await supabase.from('services_items').select('*').eq('category_id', category.id).eq('is_published', true).order('sort_order', { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as ServiceItem[];
-}
-
-/** SINGLE item by (category slug + item slug) */
-export async function getServiceItemByCategoryAndSlug(categorySlug: string, itemSlug: string): Promise<ServiceItem> {
-  const supabase = await createSupabaseServerClient();
-  // join supaya validasi item benar-benar milik category itu
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('services_items')
     .select(
       `
-      *,
-      services_categories!inner(slug)
-    `
+      seo_title,
+      seo_description,
+      title,
+      description,
+      services_categories!inner (
+        seo_title
+      ),
+      services_item_details (
+        title,
+        description,
+        cta_description
+      )
+      `
     )
     .eq('services_categories.slug', categorySlug)
+    .eq('services_categories.is_published', true)
+    .is('services_categories.deleted_at', null)
     .eq('slug', itemSlug)
     .eq('is_published', true)
-    .single();
+    .is('deleted_at', null)
+    .eq('services_item_details.is_published', true)
+    .is('services_item_details.deleted_at', null)
+    .order('sort_order', { referencedTable: 'services_item_details', ascending: true })
+    .maybeSingle();
 
   if (error) throw error;
-  return data as ServiceItem;
-}
+  if (!data) return null;
 
-/** LIST details by item id */
-export async function getServiceItemDetailsByItemId(itemId: string): Promise<ServiceItemDetail[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from('services_item_details').select('*').eq('service_item_id', itemId).eq('is_published', true).order('sort_order', { ascending: true });
+  const { services_categories: category, services_item_details: details, ...item } = data;
 
-  if (error) throw error;
-  return (data ?? []) as ServiceItemDetail[];
-}
-
-/** Convenience: detail page data */
-export async function getServiceDetailPageData(categorySlug: string, itemSlug: string) {
-  const category = await getServiceCategoryBySlug(categorySlug);
-  const item = await getServiceItemByCategoryAndSlug(categorySlug, itemSlug);
-  const details = await getServiceItemDetailsByItemId(item.id);
-
-  return { category, item, details };
+  return { category, item, details: details ?? [] };
 }

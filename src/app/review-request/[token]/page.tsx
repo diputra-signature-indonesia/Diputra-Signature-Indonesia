@@ -2,6 +2,8 @@
 import ReviewRequestClient from '@/components/layout/review-request-client';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { connection } from 'next/server';
+import { Suspense } from 'react';
 import { getReviewRequestStatusAction } from './actions';
 
 export const metadata: Metadata = {
@@ -9,7 +11,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function ReviewRequestPage({ params }: { params: Promise<{ token: string }> }) {
+type ReviewRequestPageProps = {
+  params: Promise<{ token: string }>;
+};
+
+export default function ReviewRequestPage(props: ReviewRequestPageProps) {
+  return (
+    <Suspense fallback={null}>
+      <DynamicReviewRequestPage {...props} />
+    </Suspense>
+  );
+}
+
+async function DynamicReviewRequestPage({ params }: ReviewRequestPageProps) {
+  await connection();
   const { token } = await params;
 
   const status = await getReviewRequestStatusAction(token);

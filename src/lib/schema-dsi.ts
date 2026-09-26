@@ -137,6 +137,10 @@ export interface DsiBlogPostSchemaInput {
   updatedAt?: string | null;
   coverImageUrl?: string | null;
   authorName?: string | null;
+  category?: string | null;
+  tags?: string[] | null;
+  wordCount?: number | null;
+  readingTimeMinutes?: number | null;
 }
 
 export function buildDsiBlogPostingJsonLd(post: DsiBlogPostSchemaInput) {
@@ -165,5 +169,25 @@ export function buildDsiBlogPostingJsonLd(post: DsiBlogPostSchemaInput) {
     },
     datePublished: post.date,
     dateModified: post.updatedAt || post.date,
+    articleSection: post.category || undefined,
+    keywords: post.tags?.join(', ') || undefined,
+    wordCount: post.wordCount || undefined,
+    timeRequired: post.readingTimeMinutes ? `PT${post.readingTimeMinutes}M` : undefined,
   });
+}
+
+export function buildBlogBreadcrumbJsonLd(slug: string, title: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { '@type': 'ListItem', position: 3, name: title, item: `${baseUrl}/blog/${slug}` },
+    ],
+  };
+}
+
+export function serializeJsonLd(value: unknown) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
 }

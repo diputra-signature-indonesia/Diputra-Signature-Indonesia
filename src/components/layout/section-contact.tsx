@@ -3,6 +3,7 @@ import IconInstagram from '@/icons/BrandIconInstagram';
 import IconMap from '@/icons/BrandIconMap';
 import IconPhone from '@/icons/BrandIconPhone';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
+import { Suspense } from 'react';
 import { Motion } from '../motion';
 import { ContactForm } from './section-contact-form';
 
@@ -52,8 +53,25 @@ export function ContactSection() {
             </div>
           </div>
         </Motion>
-        <ContactForm />
+        <Suspense fallback={<ContactFormFallback />}>
+          <ContactForm />
+        </Suspense>
       </div>
     </section>
+  );
+}
+
+function ContactFormFallback() {
+  return (
+    <div aria-hidden="true" className="flex w-full animate-pulse flex-col gap-7 px-5 sm:px-10 md:px-0">
+      <div className="h-12 rounded-lg bg-neutral-200 sm:rounded-xl" />
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="h-10 rounded-xl bg-neutral-200" />
+        <div className="h-10 rounded-xl bg-neutral-200" />
+        <div className="h-10 rounded-xl bg-neutral-200" />
+        <div className="h-24 rounded-xl bg-neutral-200" />
+        <div className="mt-7 h-16 rounded-xl bg-neutral-200" />
+      </div>
+    </div>
   );
 }

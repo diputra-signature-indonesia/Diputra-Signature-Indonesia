@@ -4,7 +4,6 @@ import type { StoryExperience } from '@/lib/supabase/queries';
 import { useState } from 'react';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import { Mousewheel } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Motion } from '../motion';
 interface ReviewProps {
@@ -12,7 +11,9 @@ interface ReviewProps {
 }
 
 export function ReviewSection({ testimonials }: ReviewProps) {
-  const [activeIndex, setActiveIndex] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  if (!testimonials.length) return null;
 
   return (
     <section id="reviews-section" aria-labelledby="reviews-heading" className="brand-section-px brand-stretch font-raleway mx-auto mt-30 flex max-w-[1440px] flex-col xl:max-h-[700px]">
@@ -27,12 +28,10 @@ export function ReviewSection({ testimonials }: ReviewProps) {
       </Motion>
 
       <Swiper
-        modules={[Mousewheel]}
         centeredSlides
-        initialSlide={1}
+        initialSlide={0}
         grabCursor
         touchStartPreventDefault={false}
-        mousewheel={{ forceToAxis: true, releaseOnEdges: true }}
         slidesPerView={'auto'}
         onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
         className="h-64! w-full! pb-7! sm:h-72! lg:h-80!"
@@ -51,7 +50,7 @@ export function ReviewSection({ testimonials }: ReviewProps) {
                 <figcaption className="flex shrink-0 flex-col pt-5 pr-10">
                   <h3 className="brand-p text-brand-burgundy truncate font-semibold">{item.name}</h3>
                   <time dateTime={item.created_at ?? ''} className="brand-p flex items-center text-[9px] sm:text-xs lg:text-sm">
-                    {item.created_at}
+                    {item.created_at ? new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date(item.created_at)) : ''}
                   </time>
                 </figcaption>
               </figure>

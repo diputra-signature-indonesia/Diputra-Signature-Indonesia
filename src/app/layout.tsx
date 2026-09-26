@@ -6,7 +6,7 @@ import './globals.css';
 export const raleway = Raleway({
   subsets: ['latin'],
   variable: '--font-raleway',
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'], // lengkap
+  weight: 'variable',
   display: 'swap',
 });
 
@@ -18,6 +18,30 @@ export const viewport: Viewport = {
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
+// Some form-filling browser extensions inject this non-standard attribute before
+// React hydrates. Remove only that extension marker; real hydration mismatches
+// remain visible to React and the Next.js development overlay.
+const removeExtensionHydrationAttribute = `
+(() => {
+  const attributeName = 'fdprocessedid';
+  const clean = (root) => {
+    if (root instanceof Element && root.hasAttribute(attributeName)) root.removeAttribute(attributeName);
+    if ('querySelectorAll' in root) root.querySelectorAll('[' + attributeName + ']').forEach((element) => element.removeAttribute(attributeName));
+  };
+  const observer = new MutationObserver((records) => {
+    records.forEach((record) => {
+      if (record.type === 'attributes') clean(record.target);
+      record.addedNodes.forEach((node) => { if (node instanceof Element) clean(node); });
+    });
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: [attributeName], childList: true, subtree: true });
+  clean(document);
+  window.addEventListener('load', () => window.setTimeout(() => {
+    clean(document);
+    observer.disconnect();
+  }, 2000), { once: true });
+})();`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl), // Ini Disesuaikan
   title: {
@@ -25,6 +49,7 @@ export const metadata: Metadata = {
     template: '%s | Diputra Signature Indonesia',
   },
   description: 'Legal, immigration, and real estate consulting services with a professional, transparent, and integrity-based approach.', //1–2 kalimat “about” resmi yang mereka setuju (tone legal/corporate)
+  alternates: { types: { 'application/rss+xml': '/feed.xml' } },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -62,6 +87,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${raleway.variable}`}>
+      <head>
+        <script
+          id="remove-browser-extension-hydration-attributes"
+          dangerouslySetInnerHTML={{ __html: removeExtensionHydrationAttribute }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

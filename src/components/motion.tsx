@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, type HTMLMotionProps } from 'framer-motion';
+import { domAnimation, LazyMotion, m, type HTMLMotionProps } from 'framer-motion';
 import type { ReactNode } from 'react';
 
 type MotionTag = 'div' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'nav' | 'aside' | 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'ul' | 'li' | 'button' | 'a';
@@ -18,9 +18,17 @@ type Base = {
 
 export type MotionProps<T extends MotionTag = 'div'> = Base & Omit<HTMLMotionProps<T>, 'children' | 'transition' | 'initial' | 'whileInView' | 'viewport'>;
 
+export function MotionProvider({ children }: { children: ReactNode }) {
+  return (
+    <LazyMotion features={domAnimation} strict>
+      {children}
+    </LazyMotion>
+  );
+}
+
 export function Motion<T extends MotionTag = 'div'>({ children, as, delay = 0, duration = 0.4, y = 12, x = 0, once = true, className, ...props }: MotionProps<T>) {
   const Tag = (as ?? 'div') as T;
-  const Component = motion[Tag] as unknown as React.ComponentType<HTMLMotionProps<T>>;
+  const Component = m[Tag] as unknown as React.ComponentType<HTMLMotionProps<T>>;
 
   return (
     <Component

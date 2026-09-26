@@ -1,4 +1,5 @@
 import { ContactSection } from '@/components/layout/section-contact';
+import { MotionProvider } from '@/components/motion';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -22,8 +23,10 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="my-20">
-      <ContactSection />
-    </div>
+    <MotionProvider>
+      <div className="my-20">
+        <ContactSection />
+      </div>
+    </MotionProvider>
   );
 }

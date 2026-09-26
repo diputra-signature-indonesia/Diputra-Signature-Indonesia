@@ -8,9 +8,22 @@ import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; contactLink: NavLinkItem }) {
-  const pathname = usePathname();
+type SiteFooterProps = {
+  navItems: NavItem[];
+  contactLink: NavLinkItem;
+  currentYear: number;
+};
 
+export function SiteFooter(props: SiteFooterProps) {
+  const pathname = usePathname();
+  return <SiteFooterContent {...props} pathname={pathname} />;
+}
+
+export function SiteFooterFallback(props: SiteFooterProps) {
+  return <SiteFooterContent {...props} pathname="" />;
+}
+
+function SiteFooterContent({ navItems, contactLink, currentYear, pathname }: SiteFooterProps & { pathname: string }) {
   return (
     <footer className="brand-section-px **:font-raleway **:brand-stretch text-brand-white bg-brand-burgundy flex w-full flex-col gap-5 py-20 drop-shadow-lg">
       <p className="text-brand-white border-brand-yellow border-l-4 pl-7 text-2xl font-semibold sm:text-3xl">
@@ -90,7 +103,7 @@ export function SiteFooter({ navItems, contactLink }: { navItems: NavItem[]; con
         </div>
       </div>
       <div className="border-brand-gray brand-p mt-7 border-t pt-2.5">
-        <p>© {new Date().getFullYear()} Diputra Signature Indonesia. All rights reserved.</p>
+        <p>© {currentYear} Diputra Signature Indonesia. All rights reserved.</p>
       </div>
     </footer>
   );

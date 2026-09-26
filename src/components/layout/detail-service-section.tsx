@@ -2,20 +2,19 @@
 
 import IconArrow from '@/icons/BrandIconArrow';
 import IconPlus from '@/icons/BrandIconPlus';
-import type { ServiceItemDetail } from '@/lib/supabase/queries';
+import type { ServiceDetailPageContent } from '@/lib/supabase/queries';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Motion } from '../motion';
 import { BrandButton } from '../ui/button';
+import { ViewportReveal } from '../viewport-reveal';
 
 interface DetailService {
-  categoryTitle: string;
   serviceTitle: string;
   serviceDescription: string;
-  servicesDetail: ServiceItemDetail[];
+  servicesDetail: ServiceDetailPageContent[];
 }
 
-export function DetailServiceSection({ categoryTitle, serviceTitle, serviceDescription, servicesDetail }: DetailService) {
+export function DetailServiceSection({ serviceTitle, serviceDescription, servicesDetail }: DetailService) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   return (
     <section
@@ -39,7 +38,7 @@ export function DetailServiceSection({ categoryTitle, serviceTitle, serviceDescr
         {servicesDetail.map((item, idx) => {
           const isOpen = openIndex === idx;
           return (
-            <Motion as="article" delay={0.2} duration={0.6} y={24} x={0} once={true} key={item.title} className="flex w-full flex-col">
+            <ViewportReveal as="article" delay={0.2} duration={0.6} y={24} x={0} key={item.title} className="flex w-full flex-col">
               <button
                 type="button"
                 aria-controls={`service-detail-panel-${idx}`}
@@ -66,7 +65,7 @@ export function DetailServiceSection({ categoryTitle, serviceTitle, serviceDescr
                   </BrandButton>
                 </div>
               </div>
-            </Motion>
+            </ViewportReveal>
           );
         })}
       </div>

@@ -1,0 +1,60 @@
+import 'server-only';
+
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isUserRole, type UserRole } from '@/types/auth-role';
+import { redirect } from 'next/navigation';
+
+export type ActiveAdminContext = {
+  userId: string;
+  role: UserRole;
+  displayName: string | null;
+  avatarUrl: string | null;
+  email: string | null;
+};
+
+function metadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect('/login');
+  }
+
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active, deleted_at').eq('id', user.id).maybeSingle();
+
+  if (profileError) {
+    throw new Error(`Unable to verify admin access: ${profileError.message}`);
+  }
+
+  if (!profile?.is_active || profile.deleted_at !== null || !isUserRole(profile.role)) {
+    redirect('/auth/access-denied');
+  }
+
+  const metadata = user.user_metadata as Record<string, unknown>;
+
+  return {
+    userId: user.id,
+    role: profile.role,
+    displayName: metadataString(metadata, 'full_name') ?? metadataString(metadata, 'name'),
+    avatarUrl: metadataString(metadata, 'avatar_url') ?? metadataString(metadata, 'picture'),
+    email: user.email ?? null,
+  };
+}
+
+export async function requireActiveSuperAdmin(): Promise<ActiveAdminContext> {
+  const context = await requireActiveAdmin();
+
+  if (context.role !== 'super_admin') {
+    redirect('/admin');
+  }
+
+  return context;
+}

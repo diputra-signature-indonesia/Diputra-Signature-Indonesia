@@ -47,9 +47,13 @@ export async function sendContactEmail(payload: Payload) {
       html,
     });
 
+    if (res.error) {
+      return { skipped: false as const, error: true as const, message: res.error.message };
+    }
+
     return { skipped: false as const, res };
-  } catch (err: any) {
-    return { skipped: false as const, error: true as const, message: err?.message ?? 'Resend send failed', err };
+  } catch (err: unknown) {
+    return { skipped: false as const, error: true as const, message: err instanceof Error ? err.message : 'Resend send failed' };
   }
 }
 

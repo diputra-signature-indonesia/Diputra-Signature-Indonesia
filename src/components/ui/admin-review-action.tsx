@@ -14,7 +14,7 @@ type ReviewActionProps = {
 };
 
 const can = (role: UserRole | null) => ({
-  publish: role === 'super_admin' || role === 'admin' || role === 'editor',
+  publish: role === 'super_admin' || role === 'admin' || role === 'staff',
   delete: role === 'super_admin' || role === 'admin',
 });
 
@@ -22,7 +22,7 @@ function getAllowedActions(role: UserRole | null, status: ReviewStatus, featured
   const p = can(role);
   const actions: ReviewActionTable[] = []; // always
 
-  // editor/admin can move draft<->pending
+  // staff/admin can move draft<->pending
   if (p.publish && status === 'unpublished') actions.push('publish');
   if (p.publish && status === 'published') actions.push('unpublish');
 

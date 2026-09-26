@@ -9,7 +9,7 @@ export const SERVICE_ICONS: Record<ServiceIconKey, React.ElementType> = {
   realestate: IconTwoBuilding,
 };
 
-export function getServiceIcon(key: ServiceIconKey | null | undefined) {
-  const k: ServiceIconKey = key ?? 'law';
-  return SERVICE_ICONS[k];
+export function getServiceIcon(key: string | null | undefined) {
+  if (key && key in SERVICE_ICONS) return SERVICE_ICONS[key as ServiceIconKey];
+  return SERVICE_ICONS.law;
 }

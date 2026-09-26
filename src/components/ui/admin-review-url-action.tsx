@@ -13,7 +13,7 @@ type ReviewUrlActionProps = {
 };
 
 const can = (role: UserRole | null) => ({
-  manage: role === 'super_admin' || role === 'admin' || role === 'editor',
+  manage: role === 'super_admin' || role === 'admin' || role === 'staff',
   delete: role === 'super_admin' || role === 'admin',
 });
 

@@ -1,261 +1,189 @@
+import { requireActiveAdmin } from '@/lib/auth/admin-access';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { Status } from '@/types/blog-status';
+import type { BlogFilters, BlogManagementData, BlogRevision, ManagedBlogPost } from '@/types/admin-blog';
+import type { Tables } from '@/types/database.generated';
+import { cacheLife, cacheTag } from 'next/cache';
 
-export type BlogPost = {
-  id: string; // kalau tabelmu pakai uuid id
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string | null;
-  reading_time_min: number | null;
-  featured_image: string | null; // cover src
-  cover_alt: string | null;
-  published_at: string | null; // date/timestamptz
-  status: Status;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+type BlogPostRecord = Tables<'blog_posts'>;
 
-type GetAdminBlogPostsParams = {
-  page: number; // 0-based
-  pageSize: number;
-};
+export type BlogPostSummary = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'featured_image' | 'published_at' | 'updated_at'>;
+export type PublishedBlogPost = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'featured_image' | 'cover_alt' | 'published_at' | 'updated_at' | 'seo_title' | 'seo_description' | 'category' | 'tags' | 'reading_time_min'>;
+export type AdminBlogPostPreview = Pick<
+  BlogPostRecord,
+  'title' | 'excerpt' | 'content_md' | 'featured_image' | 'status' | 'created_by' | 'archived_at'
+>;
 
-export type CreateDraftBlogPostInput = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string; // HTML dari Tiptap
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
-  cover_alt: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
-};
+const ADMIN_COLUMNS = `
+  id, slug, title, excerpt, content_md, author_name, reading_time_min,
+  featured_image, cover_alt, seo_title, seo_description, category, tags,
+  status, is_featured, rejection_reason, created_by, updated_by, published_by,
+  created_at, updated_at, published_at, archived_at, version
+`;
 
-export type DefaultInputBlogPost = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
-};
-
-export type EditableBlogPost = {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content_md: string;
-  author_name: string;
-  reading_time_min: number;
-  featured_image: string | null;
-  cover_alt: string | null;
-  seo_title: string | null;
-  seo_description: string | null;
-  og_image: string | null;
-};
-
-export type BlogPostRow = {
-  id: string;
-  slug: string;
-  status: Status;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-export async function getAdminBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select(
-      `
-      id,
-      title,
-      slug,
-      excerpt,
-      content_md,
-      featured_image,
-      status,
-      published_at,
-      created_at,
-      updated_at,
-      author_name
-      `
-    )
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data ?? null) as BlogPost | null;
-}
-
-// admin read all
-export async function getAdminBlogPosts({ page, pageSize }: GetAdminBlogPostsParams): Promise<{ data: BlogPost[]; count: number }> {
-  const supabase = await createSupabaseServerClient();
-
-  const from = page * pageSize;
-  const to = from + pageSize - 1;
-
-  const { data, error, count } = await supabase
-    .from('blog_posts')
-    .select(
-      `
-      id,
-      title,
-      slug,
-      excerpt,
-      status,
-      created_at,
-      updated_at
-      `,
-      { count: 'exact' }
-    )
-    .order('created_at', { ascending: false })
-    .range(from, to);
-
-  if (error) throw error;
-
+function mapManagedPost(row: BlogPostRecord): ManagedBlogPost {
   return {
-    data: (data ?? []) as BlogPost[],
-    count: count ?? 0,
+    id: row.id,
+    slug: row.slug,
+    title: row.title ?? 'Untitled',
+    excerpt: row.excerpt ?? '',
+    contentHtml: row.content_md ?? '',
+    authorName: row.author_name ?? 'Diputra Team',
+    readingTimeMinutes: Number(row.reading_time_min ?? 1),
+    featuredImage: row.featured_image,
+    coverAlt: row.cover_alt,
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
+    category: row.category,
+    tags: row.tags,
+    status: row.status ?? 'draft',
+    isFeatured: row.is_featured,
+    rejectionReason: row.rejection_reason,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+    publishedBy: row.published_by,
+    createdAt: row.created_at ?? row.updated_at ?? new Date(0).toISOString(),
+    updatedAt: row.updated_at ?? row.created_at ?? new Date(0).toISOString(),
+    publishedAt: row.published_at,
+    archivedAt: row.archived_at,
+    version: row.version,
   };
 }
 
-/** BLOG list (untuk /blog) */
-export async function getPublishedBlogPosts(limit = 50): Promise<BlogPost[]> {
+export async function getBlogManagementData(filters: BlogFilters): Promise<BlogManagementData> {
+  const actor = await requireActiveAdmin();
+  const supabase = await createSupabaseServerClient();
+  const pageSize = 10;
+  const from = (filters.page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from('blog_posts')
+    .select(ADMIN_COLUMNS, { count: 'exact' })
+    .order(filters.view === 'ARCHIVED' ? 'archived_at' : 'updated_at', { ascending: false })
+    .range(from, to);
+
+  query = filters.view === 'ARCHIVED' ? query.not('archived_at', 'is', null) : query.is('archived_at', null);
+  if (filters.status !== 'ALL') query = query.eq('status', filters.status);
+  if (filters.category !== 'ALL') query = query.eq('category', filters.category);
+  if (filters.featured !== 'ALL') query = query.eq('is_featured', filters.featured === 'FEATURED');
+  if (filters.query) {
+    const safe = filters.query.replace(/[,%()]/g, ' ').trim();
+    if (safe) query = query.or(`title.ilike.%${safe}%,excerpt.ilike.%${safe}%,author_name.ilike.%${safe}%`);
+  }
+
+  const countStatus = (status: 'draft' | 'pending' | 'published' | 'rejected') =>
+    supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', status).is('archived_at', null);
+
+  const [listResult, categoriesResult, draftResult, pendingResult, publishedResult, rejectedResult] = await Promise.all([
+    query,
+    supabase.from('blog_posts').select('category').is('archived_at', null).order('category'),
+    countStatus('draft'),
+    countStatus('pending'),
+    countStatus('published'),
+    countStatus('rejected'),
+  ]);
+
+  if (listResult.error) throw new Error(`Unable to load blog posts: ${listResult.error.message}`);
+  if (categoriesResult.error) throw new Error(`Unable to load blog categories: ${categoriesResult.error.message}`);
+
+  return {
+    actorId: actor.userId,
+    actorRole: actor.role,
+    posts: ((listResult.data ?? []) as BlogPostRecord[]).map(mapManagedPost),
+    total: listResult.count ?? 0,
+    pageSize,
+    categories: Array.from(new Set((categoriesResult.data ?? []).map((row) => row.category))).filter(Boolean),
+    summary: {
+      draft: draftResult.count ?? 0,
+      pending: pendingResult.count ?? 0,
+      published: publishedResult.count ?? 0,
+      rejected: rejectedResult.count ?? 0,
+    },
+  };
+}
+
+export async function getAdminBlogPostBySlug(slug: string): Promise<AdminBlogPostPreview | null> {
+  await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(
-      `
-      slug,
-      title,
-      excerpt,
-      author_name,
-      reading_time_min,
-      featured_image,
-      cover_alt,
-      published_at,
-      status
-      `
-    )
+    .select('title, excerpt, content_md, featured_image, status, created_by, archived_at')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function getBlogPostForEdit(slug: string): Promise<ManagedBlogPost | null> {
+  await requireActiveAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from('blog_posts').select(ADMIN_COLUMNS).eq('slug', slug).is('archived_at', null).maybeSingle();
+  if (error) throw error;
+  return data ? mapManagedPost(data as BlogPostRecord) : null;
+}
+
+export async function getBlogPostRevisions(postId: string): Promise<BlogRevision[]> {
+  await requireActiveAdmin();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('blog_post_revisions')
+    .select('id, source_version, snapshot, created_at')
+    .eq('post_id', postId)
+    .order('source_version', { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  return (data ?? []).map((revision) => {
+    const snapshot = revision.snapshot && typeof revision.snapshot === 'object' && !Array.isArray(revision.snapshot)
+      ? revision.snapshot as Record<string, unknown>
+      : {};
+    return {
+      id: revision.id,
+      sourceVersion: revision.source_version,
+      createdAt: revision.created_at,
+      title: typeof snapshot.title === 'string' ? snapshot.title : 'Untitled article',
+      status: typeof snapshot.status === 'string' ? snapshot.status : 'draft',
+    };
+  });
+}
+
+/** Public blog list. Featured posts are intentionally shown first. */
+export async function getPublishedBlogPosts(limit = 50): Promise<BlogPostSummary[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.blog);
+
+  const supabase = createSupabasePublicServerClient();
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('slug, title, excerpt, featured_image, published_at, updated_at')
     .eq('status', 'published')
+    .is('archived_at', null)
+    .order('is_featured', { ascending: false })
     .order('published_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as BlogPost[];
+  return data ?? [];
 }
 
-export async function getBlogPostForEdit(slug: string): Promise<EditableBlogPost> {
-  const supabase = await createSupabaseServerClient();
+/** Public blog detail. */
+export async function getPublishedBlogPostBySlug(slug: string): Promise<PublishedBlogPost | null> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.blog);
+
+  const supabase = createSupabasePublicServerClient();
   const { data, error } = await supabase
     .from('blog_posts')
-    .select(
-      `
-    id,
-    slug,
-    title,
-    excerpt,
-    content_md,
-    author_name,
-    reading_time_min,
-    featured_image,
-    cover_alt,
-    seo_title,
-    seo_description,
-    og_image
-  `
-    )
+    .select('slug, title, excerpt, content_md, author_name, featured_image, cover_alt, published_at, updated_at, seo_title, seo_description, category, tags, reading_time_min')
     .eq('slug', slug)
-    .single();
-  if (error) throw error;
-  return data as EditableBlogPost;
-}
-
-/** BLOG detail (untuk /blog/[slug]) */
-export async function getPublishedBlogPostBySlug(slug: string): Promise<BlogPost> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').single();
+    .eq('status', 'published')
+    .is('archived_at', null)
+    .maybeSingle();
 
   if (error) throw error;
-  return data as BlogPost;
-}
-
-async function ensureUniqueSlug(baseSlug: string) {
-  const supabase = await createSupabaseServerClient();
-
-  // cek apakah slug sudah ada
-  const { data, error } = await supabase.from('blog_posts').select('slug').eq('slug', baseSlug).maybeSingle();
-
-  if (error) throw error;
-  if (!data) return baseSlug;
-
-  // kalau bentrok, cari suffix -2, -3, ...
-  for (let i = 2; i <= 50; i++) {
-    const candidate = `${baseSlug}-${i}`;
-    const { data: d2, error: e2 } = await supabase.from('blog_posts').select('slug').eq('slug', candidate).maybeSingle();
-
-    if (e2) throw e2;
-    if (!d2) return candidate;
-  }
-
-  // fallback ekstrem
-  return `${baseSlug}-${Date.now()}`;
-}
-
-export type CreateBlogInput = DefaultInputBlogPost;
-export type UpdateBlogInput = Omit<DefaultInputBlogPost, 'author_name' | 'slug'>;
-
-// INSERT draft
-export async function createDraftBlogPost(input: CreateDraftBlogPostInput): Promise<BlogPostRow> {
-  const supabase = await createSupabaseServerClient();
-
-  const uniqueSlug = await ensureUniqueSlug(input.slug);
-
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .insert({
-      slug: uniqueSlug,
-      title: input.title,
-      excerpt: input.excerpt,
-      content_md: input.content_md,
-      author_name: input.author_name,
-      reading_time_min: input.reading_time_min,
-      featured_image: input.featured_image,
-      cover_alt: input.cover_alt,
-      seo_title: input.seo_title,
-      seo_description: input.seo_description,
-      og_image: input.og_image,
-      status: 'draft',
-      published_at: null,
-    })
-    .select('id, slug, status, created_at, updated_at')
-    .single();
-
-  if (error) throw error;
-  return data as BlogPostRow;
-}
-
-export async function updateEditedBlogPost(
-  id: string,
-  input: UpdateBlogInput & {
-    cover_alt: string | null;
-    seo_title: string | null;
-    seo_description: string | null;
-    og_image: string | null;
-  }
-) {
-  const supabase = await createSupabaseServerClient();
-  const { ...rest } = input;
-  const { error } = await supabase.from('blog_posts').update(rest).eq('id', id).select('id, slug, status, updated_at').single();
-
-  if (error) throw error;
+  return data;
 }

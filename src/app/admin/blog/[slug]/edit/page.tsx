@@ -1,6 +1,7 @@
-import CreateBlogForm from '@/components/layout-admin/blog-form';
-import { getBlogPostForEdit } from '@/lib/supabase/queries';
-import { notFound } from 'next/navigation';
+import { BlogEditorForm } from '@/components/admin-blog/blog-editor-form';
+import { requireActiveAdmin } from '@/lib/auth/admin-access';
+import { getBlogPostForEdit, getBlogPostRevisions } from '@/lib/supabase/queries';
+import { notFound, redirect } from 'next/navigation';
 
 interface EditBlogProps {
   slug: string;
@@ -8,13 +9,10 @@ interface EditBlogProps {
 
 export default async function AdminEditBlogPage({ params }: { params: Promise<EditBlogProps> }) {
   const { slug } = await params;
-
-  const editBlog = await getBlogPostForEdit(slug);
+  const [actor, editBlog] = await Promise.all([requireActiveAdmin(), getBlogPostForEdit(slug)]);
   if (!editBlog) return notFound();
-
-  return (
-    <section className="font-raleway flex h-full w-full flex-col px-4 py-6">
-      <CreateBlogForm mode="edit" initialValues={editBlog} />
-    </section>
-  );
+  const canEdit = actor.role === 'admin' || actor.role === 'super_admin' || (editBlog.createdBy === actor.userId && (editBlog.status === 'draft' || editBlog.status === 'rejected'));
+  if (!canEdit) redirect(`/admin/blog/preview/${editBlog.slug}`);
+  const revisions = await getBlogPostRevisions(editBlog.id);
+  return <BlogEditorForm mode="edit" post={editBlog} revisions={revisions} authorName={actor.displayName || actor.email?.split('@')[0] || 'Diputra Team'} />;
 }

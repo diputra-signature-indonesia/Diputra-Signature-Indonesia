@@ -1,15 +1,38 @@
 import { AdminLayoutProvider } from '@/components/layout-admin/admin-layout-provider';
+import { AdminRouteLoading } from '@/components/layout-admin/admin-route-loading';
+import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { MuiProvider } from '@/components/mui-provider';
 import { getCurrentAuthorFromTeamMember } from '@/lib/supabase/queries/admin';
-import type { ReactNode } from 'react';
+import { connection } from 'next/server';
+import { IBM_Plex_Sans } from 'next/font/google';
+import { Suspense, type ReactNode } from 'react';
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const author = await getCurrentAuthorFromTeamMember();
-  const authorName = author?.nickname || author?.full_name || 'Admin';
+const adminSidebarFont = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-admin-sidebar',
+  display: 'swap',
+});
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="font-raleway flex max-h-svh min-h-svh flex-col">
+    <Suspense fallback={<AdminRouteLoading fullScreen label="Preparing admin workspace..." />}>
+      <DynamicAdminLayout>{children}</DynamicAdminLayout>
+    </Suspense>
+  );
+}
+
+async function DynamicAdminLayout({ children }: { children: ReactNode }) {
+  await connection();
+  const admin = await requireActiveAdmin();
+  const author = await getCurrentAuthorFromTeamMember(admin.userId);
+  const authorName = admin.displayName || author?.nickname || author?.full_name || admin.email?.split('@')[0] || 'Admin';
+  return (
+    <div className={`${adminSidebarFont.variable} font-raleway flex h-dvh overflow-hidden`}>
       <MuiProvider>
-        <AdminLayoutProvider username={authorName}>{children}</AdminLayoutProvider>
+        <AdminLayoutProvider username={authorName} avatarUrl={admin.avatarUrl} role={admin.role}>
+          {children}
+        </AdminLayoutProvider>
       </MuiProvider>
     </div>
   );

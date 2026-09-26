@@ -1,39 +1,28 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
+import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
+import { cacheLife, cacheTag } from 'next/cache';
 
-export type TeamMember = {
+export type PublicTeamMember = {
   id: string;
-  full_name: string | null;
-  job_title: string | null;
-  short_bio: string | null;
+  full_name: string;
+  job_title: string;
   avatar_url: string | null;
-  display_order: number | null;
-  is_visible: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
+  short_bio: string | null;
 };
 
 /**
  * LIST team members (public website)
  * Hanya yang is_visible = true
  */
-export async function getVisibleTeamMembers(): Promise<TeamMember[]> {
-  const supabase = await createSupabaseServerClient();
+export async function getVisibleTeamMembers(): Promise<PublicTeamMember[]> {
+  'use cache';
+  cacheLife(PUBLIC_CACHE_LIFE);
+  cacheTag(PUBLIC_CACHE_TAGS.team);
 
-  const { data, error } = await supabase
-    .from('team_members')
-    .select(
-      `
-        id,
-        full_name,
-        job_title,
-        short_bio,
-        avatar_url,
-        display_order
-      `
-    )
-    .eq('is_visible', true)
-    .order('display_order', { ascending: true });
+  const supabase = createSupabasePublicServerClient();
+
+  const { data, error } = await supabase.rpc('list_visible_team_members');
 
   if (error) throw error;
-  return (data ?? []) as TeamMember[];
+  return data ?? [];
 }

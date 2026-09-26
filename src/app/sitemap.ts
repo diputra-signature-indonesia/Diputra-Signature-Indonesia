@@ -1,9 +1,9 @@
 // src/app/sitemap.ts
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/site-config';
-import { DSI_BLOG_POSTS } from '@/data/dsi-blog';
+import { getPublishedBlogPosts } from '@/lib/supabase/queries';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_URL;
   const now = new Date();
 
@@ -23,9 +23,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority,
   }));
 
-  const blogRoutes: MetadataRoute.Sitemap = DSI_BLOG_POSTS.map((post) => ({
+  const posts = await getPublishedBlogPosts(1000);
+  const blogRoutes: MetadataRoute.Sitemap = posts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: post.updatedAt ? new Date(post.updatedAt) : new Date(post.date),
+    lastModified: post.updated_at ? new Date(post.updated_at) : post.published_at ? new Date(post.published_at) : now,
     changeFrequency: 'weekly',
     priority: 0.7,
   }));
