@@ -1,5 +1,5 @@
 import type { UserRole } from '@/types/auth-role';
-import { ArrowLeftRight, BriefcaseBusiness, Database, FileCheck2, LayoutDashboard, ListTodo, SquarePen, UserRoundCog } from 'lucide-react';
+import { ArrowLeftRight, BriefcaseBusiness, Database, FileCheck2, LayoutDashboard, ListTodo, PanelsTopLeft, SquarePen, UserRoundCog } from 'lucide-react';
 
 export type AdminNavLink = {
   label: string;
@@ -64,11 +64,19 @@ export const ADMIN_NAV_ITEM: AdminNavLink[] = [
     activePaths: [`${ADMIN_ROUTE}/master-data`],
   },
   {
+    label: 'Client Services',
+    href: `${ADMIN_ROUTE}/public-services`,
+    slug: 'public-services',
+    icon: PanelsTopLeft,
+    roles: ['admin', 'super_admin'],
+    activePaths: [`${ADMIN_ROUTE}/public-services`],
+  },
+  {
     label: 'User Management',
     href: `${ADMIN_ROUTE}/access-requests`,
     slug: 'user-management',
     icon: UserRoundCog,
-    roles: ['super_admin'],
+    roles: ['admin', 'super_admin'],
     activePaths: [`${ADMIN_ROUTE}/access-requests`],
   },
 ];

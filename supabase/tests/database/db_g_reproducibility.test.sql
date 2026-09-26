@@ -72,8 +72,8 @@ select extensions.is(
 
 select extensions.is(
   (select count(*)::bigint from public.team_members where profile_id is not null),
-  3::bigint,
-  'three active fixture accounts are linked to team members'
+  (select count(*)::bigint from public.profiles),
+  'every approved profile is linked to a team member record'
 );
 
 select extensions.is(

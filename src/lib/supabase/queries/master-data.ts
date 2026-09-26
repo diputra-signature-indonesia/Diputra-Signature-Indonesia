@@ -22,12 +22,13 @@ function ensureResult<T>(label: string, result: { data: T | null; error: { messa
 export async function getMasterDataCategories(): Promise<MasterDataCategory[]> {
   const supabase = await createSupabaseServerClient();
 
-  const [priorityResult, publicCategoryResult, serviceResult, jobStatusResult, taskStatusResult, workflowResult, stepResult] = await Promise.all([
+  const [priorityResult, publicCategoryResult, serviceResult, jobStatusResult, taskStatusResult, jobTitleResult, workflowResult, stepResult] = await Promise.all([
     supabase.from('priorities').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
     supabase.from('services_categories').select('id, title, short_description, slug, type, is_published, sort_order').order('sort_order').order('title'),
     supabase.from('internal_services').select('id, code, name, summary, workflow_template_id, is_active, version').order('name'),
     supabase.from('job_statuses').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
     supabase.from('task_statuses').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
+    supabase.from('job_titles').select('id, code, name, sort_order, is_active, version').order('sort_order').order('name'),
     supabase.from('workflow_templates').select('id, code, name, description, is_active, version').order('name'),
     supabase.from('workflow_template_steps').select('id, workflow_template_id, name, position').order('position'),
   ]);
@@ -37,6 +38,7 @@ export async function getMasterDataCategories(): Promise<MasterDataCategory[]> {
   const services = ensureResult('internal services', serviceResult);
   const jobStatuses = ensureResult('Job statuses', jobStatusResult);
   const taskStatuses = ensureResult('Task statuses', taskStatusResult);
+  const jobTitles = ensureResult('Job titles', jobTitleResult);
   const workflows = ensureResult('workflow templates', workflowResult);
   const steps = ensureResult('workflow steps', stepResult);
 
@@ -132,6 +134,13 @@ export async function getMasterDataCategories(): Promise<MasterDataCategory[]> {
         activeBadge(status.is_active),
         systemBadge(status.is_system),
       ],
+    })),
+    'job-titles': jobTitles.map((title) => ({
+      id: title.id,
+      code: title.code,
+      version: title.version,
+      isActive: title.is_active,
+      cells: [{ type: 'text', value: title.name }, { type: 'text', value: title.code, mono: true }, { type: 'text', value: String(title.sort_order) }, activeBadge(title.is_active)],
     })),
     'workflow-templates': workflows.map((workflow) => {
       const serviceCount = serviceCountByWorkflow.get(workflow.id) ?? 0;

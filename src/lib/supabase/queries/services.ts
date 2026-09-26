@@ -41,6 +41,7 @@ export async function getServiceCategories(): Promise<ServiceCategorySummary[]> 
     .from('services_categories')
     .select('id, slug, title, type, short_description, card_image, card_icon_key')
     .eq('is_published', true)
+    .is('deleted_at', null)
     .order('sort_order', { ascending: true });
 
   if (error) throw error;
@@ -77,7 +78,9 @@ export async function getServiceCategoryPageData(categorySlug: string): Promise<
     )
     .eq('slug', categorySlug)
     .eq('is_published', true)
+    .is('deleted_at', null)
     .eq('services_items.is_published', true)
+    .is('services_items.deleted_at', null)
     .order('sort_order', { referencedTable: 'services_items', ascending: true })
     .maybeSingle();
 
@@ -114,9 +117,12 @@ export async function getServiceDetailPageData(categorySlug: string, itemSlug: s
     )
     .eq('services_categories.slug', categorySlug)
     .eq('services_categories.is_published', true)
+    .is('services_categories.deleted_at', null)
     .eq('slug', itemSlug)
     .eq('is_published', true)
+    .is('deleted_at', null)
     .eq('services_item_details.is_published', true)
+    .is('services_item_details.deleted_at', null)
     .order('sort_order', { referencedTable: 'services_item_details', ascending: true })
     .maybeSingle();
 

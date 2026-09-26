@@ -1,11 +1,14 @@
 import { PUBLIC_CACHE_LIFE, PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabasePublicServerClient } from '@/lib/supabase/public-server';
-import type { Tables } from '@/types/database.generated';
 import { cacheLife, cacheTag } from 'next/cache';
 
-export type TeamMember = Tables<'team_members'>;
-
-export type PublicTeamMember = Pick<TeamMember, 'id' | 'full_name' | 'job_title' | 'avatar_url'>;
+export type PublicTeamMember = {
+  id: string;
+  full_name: string;
+  job_title: string;
+  avatar_url: string | null;
+  short_bio: string | null;
+};
 
 /**
  * LIST team members (public website)
@@ -18,18 +21,7 @@ export async function getVisibleTeamMembers(): Promise<PublicTeamMember[]> {
 
   const supabase = createSupabasePublicServerClient();
 
-  const { data, error } = await supabase
-    .from('team_members')
-    .select(
-      `
-        id,
-        full_name,
-        job_title,
-        avatar_url
-      `
-    )
-    .eq('is_visible', true)
-    .order('display_order', { ascending: true });
+  const { data, error } = await supabase.rpc('list_visible_team_members');
 
   if (error) throw error;
   return data ?? [];

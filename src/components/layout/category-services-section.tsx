@@ -1,6 +1,7 @@
 import IconArrow from '@/icons/BrandIconArrow';
 import { ServicesIcon } from '@/icons/service-items-icons';
 import type { ServiceCategoryPageItem } from '@/lib/supabase/queries';
+import Image from 'next/image';
 import Link from 'next/link';
 import { BrandButton } from '../ui/button';
 import { ViewportReveal } from '../viewport-reveal';
@@ -44,7 +45,11 @@ export function CategoryServicesSection({ categorySlug, title, short_description
               <div className="group-hover:bg-brand-burgundy absolute top-0 left-0 -z-10 h-full w-full scale-110 bg-gray-100 transition-colors duration-500" />
               <div className="bg-brand-yellow absolute -left-2 size-12 -translate-x-[110%] rotate-45 transition-all duration-500 group-hover:-translate-x-1/2" />
               <div className="*:text-brand-burgundy flex flex-col gap-4">
-                <ServicesIcon name={item.icon_key ?? ''} className="group-hover:text-brand-yellow size-12 transition-colors duration-200" />
+                {item.icon_key?.startsWith('http') ? (
+                  <Image src={item.icon_key} alt="" width={48} height={48} unoptimized className="size-12 object-contain" />
+                ) : (
+                  <ServicesIcon name={item.icon_key ?? ''} className="group-hover:text-brand-yellow size-12 transition-colors duration-200" />
+                )}
                 <h3 className="brand-h3 group-hover:text-brand-white font-semibold transition-colors duration-200">{item.title}</h3>
               </div>
               <p className="brand-p group-hover:text-brand-white font-normal transition-colors duration-200">{item.description}</p>

@@ -929,6 +929,60 @@ export type Database = {
           },
         ]
       }
+      job_titles: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_titles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_titles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_updates: {
         Row: {
           created_at: string
@@ -1473,6 +1527,8 @@ export type Database = {
           card_icon_key: string | null
           card_image: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           hero_heading: string | null
           hero_image: string | null
@@ -1487,11 +1543,14 @@ export type Database = {
           title: string | null
           type: Database["public"]["Enums"]["categories_type"]
           updated_at: string | null
+          version: number
         }
         Insert: {
           card_icon_key?: string | null
           card_image?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           hero_heading?: string | null
           hero_image?: string | null
@@ -1506,11 +1565,14 @@ export type Database = {
           title?: string | null
           type?: Database["public"]["Enums"]["categories_type"]
           updated_at?: string | null
+          version?: number
         }
         Update: {
           card_icon_key?: string | null
           card_image?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           hero_heading?: string | null
           hero_image?: string | null
@@ -1525,13 +1587,24 @@ export type Database = {
           title?: string | null
           type?: Database["public"]["Enums"]["categories_type"]
           updated_at?: string | null
+          version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_categories_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services_item_details: {
         Row: {
           created_at: string | null
           cta_description: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           id: string
           is_published: boolean | null
@@ -1539,10 +1612,13 @@ export type Database = {
           sort_order: number | null
           title: string | null
           updated_at: string | null
+          version: number
         }
         Insert: {
           created_at?: string | null
           cta_description?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_published?: boolean | null
@@ -1550,10 +1626,13 @@ export type Database = {
           sort_order?: number | null
           title?: string | null
           updated_at?: string | null
+          version?: number
         }
         Update: {
           created_at?: string | null
           cta_description?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_published?: boolean | null
@@ -1561,8 +1640,16 @@ export type Database = {
           sort_order?: number | null
           title?: string | null
           updated_at?: string | null
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "services_item_details_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "services_item_details_service_item_id_fkey"
             columns: ["service_item_id"]
@@ -1578,6 +1665,8 @@ export type Database = {
           created_at: string | null
           cta_label: string | null
           cta_type: Database["public"]["Enums"]["cta_type"]
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           icon_key: string | null
           id: string
@@ -1589,12 +1678,15 @@ export type Database = {
           sort_order: number | null
           title: string | null
           updated_at: string | null
+          version: number
         }
         Insert: {
           category_id: string
           created_at?: string | null
           cta_label?: string | null
           cta_type?: Database["public"]["Enums"]["cta_type"]
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           icon_key?: string | null
           id?: string
@@ -1606,12 +1698,15 @@ export type Database = {
           sort_order?: number | null
           title?: string | null
           updated_at?: string | null
+          version?: number
         }
         Update: {
           category_id?: string
           created_at?: string | null
           cta_label?: string | null
           cta_type?: Database["public"]["Enums"]["cta_type"]
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           icon_key?: string | null
           id?: string
@@ -1623,6 +1718,7 @@ export type Database = {
           sort_order?: number | null
           title?: string | null
           updated_at?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -1630,6 +1726,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "services_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_items_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2124,11 +2227,10 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
-          display_order: number | null
           full_name: string
           id: string
           is_visible: boolean
-          job_title: string
+          job_title_id: string | null
           nickname: string | null
           profile_id: string | null
           short_bio: string | null
@@ -2137,11 +2239,10 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
-          display_order?: number | null
           full_name: string
           id?: string
           is_visible?: boolean
-          job_title: string
+          job_title_id?: string | null
           nickname?: string | null
           profile_id?: string | null
           short_bio?: string | null
@@ -2150,17 +2251,23 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string | null
-          display_order?: number | null
           full_name?: string
           id?: string
           is_visible?: boolean
-          job_title?: string
+          job_title_id?: string | null
           nickname?: string | null
           profile_id?: string | null
           short_bio?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_members_job_title_id_fkey"
+            columns: ["job_title_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_members_profile_id_fkey"
             columns: ["profile_id"]
@@ -2535,6 +2642,18 @@ export type Database = {
         Args: { p_expected_version: number; p_update_id: string }
         Returns: undefined
       }
+      delete_public_service_category: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
+      delete_public_service_detail: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
+      delete_public_service_item: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
       delete_task: {
         Args: { p_expected_version: number; p_task_id: string }
         Returns: undefined
@@ -2587,6 +2706,16 @@ export type Database = {
           full_name: string
           requested_at: string
           user_id: string
+        }[]
+      }
+      list_visible_team_members: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          job_title: string
+          short_bio: string
         }[]
       }
       moderate_blog_post: {
@@ -2700,6 +2829,17 @@ export type Database = {
         }
         Returns: string
       }
+      save_job_title: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_id: string
+          p_is_active?: boolean
+          p_name: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
       save_priority: {
         Args: {
           p_code: string
@@ -2709,6 +2849,59 @@ export type Database = {
           p_is_active?: boolean
           p_name: string
           p_sort_order?: number
+        }
+        Returns: string
+      }
+      save_public_service_category: {
+        Args: {
+          p_card_icon_key: string
+          p_card_image: string
+          p_description: string
+          p_expected_version: number
+          p_hero_heading: string
+          p_hero_image: string
+          p_id: string
+          p_is_published: boolean
+          p_og_image: string
+          p_seo_description: string
+          p_seo_title: string
+          p_short_description: string
+          p_slug: string
+          p_sort_order: number
+          p_title: string
+          p_type: Database["public"]["Enums"]["categories_type"]
+        }
+        Returns: string
+      }
+      save_public_service_detail: {
+        Args: {
+          p_cta_description: string
+          p_description: string
+          p_expected_version: number
+          p_id: string
+          p_is_published: boolean
+          p_service_item_id: string
+          p_sort_order: number
+          p_title: string
+        }
+        Returns: string
+      }
+      save_public_service_item: {
+        Args: {
+          p_category_id: string
+          p_cta_label: string
+          p_cta_type: Database["public"]["Enums"]["cta_type"]
+          p_description: string
+          p_expected_version: number
+          p_icon_key: string
+          p_id: string
+          p_is_published: boolean
+          p_og_image: string
+          p_seo_description: string
+          p_seo_title: string
+          p_slug: string
+          p_sort_order: number
+          p_title: string
         }
         Returns: string
       }
@@ -2763,6 +2956,17 @@ export type Database = {
           p_is_active?: boolean
           p_name: string
           p_sort_order?: number
+        }
+        Returns: string
+      }
+      save_team_member_profile: {
+        Args: {
+          p_avatar_url: string
+          p_full_name: string
+          p_is_visible: boolean
+          p_job_title_id: string
+          p_profile_id: string
+          p_short_bio: string
         }
         Returns: string
       }

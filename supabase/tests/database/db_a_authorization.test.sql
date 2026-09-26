@@ -60,8 +60,11 @@ values (
   'new'
 );
 
-insert into public.team_members (id, full_name, job_title, is_visible)
-values ('50000000-0000-4000-8000-000000000101', 'DB-A member', 'Tester', true);
+insert into public.job_titles (id, code, name, sort_order)
+values ('50000000-0000-4000-8000-000000000201', 'DB_A_TESTER', 'Tester', 99);
+
+insert into public.team_members (id, full_name, job_title_id, is_visible)
+values ('50000000-0000-4000-8000-000000000101', 'DB-A member', '50000000-0000-4000-8000-000000000201', true);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000101', true);
@@ -190,7 +193,7 @@ select extensions.results_eq(
 select extensions.results_eq(
   $$
     with changed as (
-      update public.team_members set job_title = 'Changed' where id = '50000000-0000-4000-8000-000000000101' returning 1
+      update public.team_members set full_name = 'Changed' where id = '50000000-0000-4000-8000-000000000101' returning 1
     )
     select count(*)::bigint from changed
   $$,
@@ -247,7 +250,7 @@ select extensions.lives_ok(
   'admin can delete contact messages'
 );
 select extensions.lives_ok(
-  $$ update public.team_members set job_title = 'Admin changed' where id = '50000000-0000-4000-8000-000000000101' $$,
+  $$ update public.team_members set full_name = 'Admin changed' where id = '50000000-0000-4000-8000-000000000101' $$,
   'admin can manage team members'
 );
 

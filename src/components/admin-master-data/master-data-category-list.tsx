@@ -1,5 +1,5 @@
 import type { MasterDataCategory, MasterDataIconName } from '@/data/admin-master-data/master-data';
-import { BriefcaseBusiness, Flag, ListChecks, Shapes, Workflow, WorkflowIcon } from 'lucide-react';
+import { BadgeCheck, BriefcaseBusiness, Flag, ListChecks, Shapes, Workflow, WorkflowIcon } from 'lucide-react';
 
 const categoryIcons: Record<MasterDataIconName, React.ElementType> = {
   priority: Flag,
@@ -7,6 +7,7 @@ const categoryIcons: Record<MasterDataIconName, React.ElementType> = {
   service: BriefcaseBusiness,
   'job-status': WorkflowIcon,
   'task-status': ListChecks,
+  'job-title': BadgeCheck,
   workflow: Workflow,
 };
 

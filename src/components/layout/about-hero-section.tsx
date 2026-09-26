@@ -22,14 +22,16 @@ export function HeroSection() {
         <div className="flex max-w-[760px] flex-col max-md:items-center">
           <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true}>
             <p className="brand-p text-brand-white mt-auto mb-2 max-md:mb-4 max-md:text-center">— Company Overview</p>
-            <h1 className="brand-h1 brand-h1-mb text-brand-white flex w-full flex-wrap items-center gap-x-4 gap-y-3 leading-[125%] text-balance max-md:justify-center max-md:text-center">
+            <h1 className="brand-h1 brand-h1-mb text-brand-white flex w-full flex-wrap items-baseline gap-x-4 gap-y-3 leading-[125%] text-balance max-md:justify-center max-md:text-center">
+              <span className="sr-only">Diputra </span>
               <Image
-                src="/image/diputra-wordmark-red.png"
-                alt="Diputra"
-                width={194}
-                height={41}
+                src="/image/diputra-wordmark-bright-red.png"
+                alt=""
+                aria-hidden="true"
+                width={473}
+                height={97}
                 priority
-                className="h-[clamp(2.5rem,4vw,3.6rem)] w-auto object-contain drop-shadow-[0_2px_12px_rgba(255,255,255,0.12)]"
+                className="h-[clamp(2.5rem,4vw,3.6rem)] w-auto translate-y-[2px] object-contain drop-shadow-[0_2px_14px_rgba(236,32,54,0.25)]"
               />
               <span className="brand-h1-semi text-brand-white font-medium">Signature Indonesia</span>
             </h1>

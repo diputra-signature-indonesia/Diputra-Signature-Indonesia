@@ -1,6 +1,6 @@
-export type MasterDataCategoryId = 'priorities' | 'service-categories' | 'internal-services' | 'job-statuses' | 'task-statuses' | 'workflow-templates';
+export type MasterDataCategoryId = 'priorities' | 'service-categories' | 'internal-services' | 'job-statuses' | 'task-statuses' | 'job-titles' | 'workflow-templates';
 
-export type MasterDataIconName = 'priority' | 'category' | 'service' | 'job-status' | 'task-status' | 'workflow';
+export type MasterDataIconName = 'priority' | 'category' | 'service' | 'job-status' | 'task-status' | 'job-title' | 'workflow';
 
 export type MasterDataCell =
   | { type: 'text'; value: string; secondary?: string; mono?: boolean }
@@ -69,6 +69,14 @@ export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
     addLabel: 'Add Task Status',
     icon: 'task-status',
     columns: ['Status', 'Code', 'Color', 'Order', 'Availability', 'Type'],
+  },
+  {
+    id: 'job-titles',
+    label: 'Job Titles',
+    description: 'Manage consistent public team titles and their order on the About page.',
+    addLabel: 'Add Job Title',
+    icon: 'job-title',
+    columns: ['Job Title', 'Code', 'Order', 'Status'],
   },
   {
     id: 'workflow-templates',

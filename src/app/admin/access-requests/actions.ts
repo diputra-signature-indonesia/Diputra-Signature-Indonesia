@@ -1,13 +1,22 @@
 'use server';
 
-import { requireActiveSuperAdmin } from '@/lib/auth/admin-access';
+import { requireActiveAdmin, requireActiveSuperAdmin } from '@/lib/auth/admin-access';
+import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { PendingAccessRequest } from '@/lib/supabase/queries/user-management';
 import { ASSIGNABLE_ADMIN_ROLES, type UserRole } from '@/types/auth-role';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 export type UserManagementActionResult = { ok: true; message: string } | { ok: false; message: string };
 export type SearchAccessRequestsResult = { ok: true; requests: PendingAccessRequest[] } | { ok: false; message: string };
+export type SaveTeamMemberInput = {
+  profileId: string;
+  fullName: string;
+  jobTitleId: string;
+  avatarUrl: string;
+  shortBio: string;
+  isVisible: boolean;
+};
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -17,6 +26,59 @@ function isAssignableRole(role: string): role is UserRole {
 
 function refreshUserManagement() {
   revalidatePath('/admin/access-requests');
+}
+
+export async function saveTeamMemberAction(input: SaveTeamMemberInput): Promise<UserManagementActionResult> {
+  const context = await requireActiveAdmin();
+  if (context.role !== 'admin' && context.role !== 'super_admin') {
+    return { ok: false, message: 'Hanya admin atau super admin yang dapat mengelola profil publik.' };
+  }
+
+  const fullName = input.fullName.trim();
+  const avatarUrl = input.avatarUrl.trim();
+  const shortBio = input.shortBio.trim();
+  if (!UUID_PATTERN.test(input.profileId) || !fullName || fullName.length > 160) {
+    return { ok: false, message: 'Nama anggota tim wajib diisi dan maksimal 160 karakter.' };
+  }
+  if (input.jobTitleId && !UUID_PATTERN.test(input.jobTitleId)) {
+    return { ok: false, message: 'Job title yang dipilih tidak valid.' };
+  }
+  if (input.isVisible && !input.jobTitleId) {
+    return { ok: false, message: 'Pilih Job title sebelum menampilkan anggota tim di About page.' };
+  }
+  if (avatarUrl.length > 2048 || shortBio.length > 1000) {
+    return { ok: false, message: 'URL foto atau bio melebihi batas karakter.' };
+  }
+  if (avatarUrl) {
+    try {
+      const url = new URL(avatarUrl);
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('invalid protocol');
+    } catch {
+      return { ok: false, message: 'URL foto publik tidak valid.' };
+    }
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc('save_team_member_profile', {
+    p_profile_id: input.profileId,
+    p_full_name: fullName,
+    p_job_title_id: input.jobTitleId || null,
+    p_avatar_url: avatarUrl || null,
+    p_short_bio: shortBio || null,
+    p_is_visible: input.isVisible,
+  } as never);
+
+  if (error) {
+    if (error.code === '23503') return { ok: false, message: 'Job title tidak aktif atau sudah tidak tersedia.' };
+    if (error.code === '23514') return { ok: false, message: 'Lengkapi Job title sebelum profil dipublikasikan.' };
+    if (error.code === '42501') return { ok: false, message: 'Anda tidak memiliki izin untuk mengelola profil publik.' };
+    return { ok: false, message: 'Profil publik gagal disimpan. Muat ulang halaman lalu coba kembali.' };
+  }
+
+  revalidatePath('/admin/access-requests');
+  revalidatePath('/about');
+  updateTag(PUBLIC_CACHE_TAGS.team);
+  return { ok: true, message: input.isVisible ? 'Profil anggota tim disimpan dan ditampilkan di About page.' : 'Profil anggota tim disimpan sebagai hidden.' };
 }
 
 function mutationError(message: string, fallback: string) {

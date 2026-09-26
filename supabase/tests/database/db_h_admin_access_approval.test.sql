@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(29);
+select extensions.plan(31);
 
 insert into auth.users (id, aud, role, email, raw_user_meta_data, created_at, updated_at)
 values
@@ -192,6 +192,18 @@ select extensions.is(
   (select email from public.profiles where id = '81000000-0000-4000-8000-000000000002'),
   'access-pending@example.test',
   'approval creates the profile for the Auth UUID'
+);
+
+select extensions.is(
+  (select count(*)::integer from public.team_members where profile_id = '81000000-0000-4000-8000-000000000002'),
+  1,
+  'approval provisions exactly one linked team member record'
+);
+
+select extensions.is(
+  (select is_visible from public.team_members where profile_id = '81000000-0000-4000-8000-000000000002'),
+  false,
+  'an approved user is hidden from the public About page by default'
 );
 
 select extensions.is(

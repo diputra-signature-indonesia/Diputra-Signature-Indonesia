@@ -23,7 +23,7 @@ type MasterDataWorkspaceProps = {
 };
 
 function isFormCategory(categoryId: MasterDataCategoryId): categoryId is MasterDataFormCategoryId {
-  return ['priorities', 'internal-services', 'task-statuses', 'job-statuses', 'workflow-templates'].includes(categoryId);
+  return ['priorities', 'internal-services', 'task-statuses', 'job-statuses', 'job-titles', 'workflow-templates'].includes(categoryId);
 }
 
 function rowLabel(row: MasterDataRow) {

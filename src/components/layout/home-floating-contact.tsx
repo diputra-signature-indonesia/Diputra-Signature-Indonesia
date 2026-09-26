@@ -138,7 +138,11 @@ export function HomeFloatingContact() {
           </span>
 
           <span className="relative z-10 flex items-center justify-center transition-transform duration-200">
-            {expanded ? <X aria-hidden="true" className="size-5 transition-transform duration-200 group-hover:rotate-90" /> : <MessageCircleMore aria-hidden="true" className="size-5 sm:size-6" />}
+            {expanded ? (
+              <X aria-hidden="true" className="size-5 transition-transform duration-200 group-hover:rotate-90" />
+            ) : (
+              <MessageCircleMore aria-hidden="true" className="text-brand-burgundy size-5 sm:size-6" />
+            )}
           </span>
         </button>
       </div>

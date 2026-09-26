@@ -28,8 +28,8 @@ select extensions.is(
     from storage.buckets
     where id = 'images'
   ),
-  'image/jpeg,image/png,image/webp',
-  'images bucket only accepts JPEG, PNG, and WebP'
+  'image/jpeg,image/png,image/webp,image/svg+xml',
+  'images bucket accepts approved raster formats and managed Service SVG icons'
 );
 
 select extensions.is(

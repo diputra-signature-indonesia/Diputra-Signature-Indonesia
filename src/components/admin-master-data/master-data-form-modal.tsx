@@ -5,7 +5,7 @@ import { type MasterDataCategoryId, type MasterDataRow } from '@/data/admin-mast
 import { useId, useState, type FormEvent } from 'react';
 import { WorkflowStepsEditor, type WorkflowStepFormValue } from './workflow-steps-editor';
 
-export type MasterDataFormCategoryId = Extract<MasterDataCategoryId, 'priorities' | 'internal-services' | 'task-statuses' | 'job-statuses' | 'workflow-templates'>;
+export type MasterDataFormCategoryId = Extract<MasterDataCategoryId, 'priorities' | 'internal-services' | 'task-statuses' | 'job-statuses' | 'job-titles' | 'workflow-templates'>;
 
 export type MasterDataFormValues = {
   code: string;
@@ -37,6 +37,7 @@ const categoryLabels: Record<MasterDataFormCategoryId, string> = {
   'internal-services': 'Internal Service',
   'task-statuses': 'Task Status',
   'job-statuses': 'Job Status',
+  'job-titles': 'Job Title',
   'workflow-templates': 'Workflow Template',
 };
 
@@ -85,6 +86,19 @@ function initialValues(categoryId: MasterDataFormCategoryId, row?: MasterDataRow
     };
   }
 
+  if (categoryId === 'job-titles') {
+    return {
+      code: textValue(row, 1),
+      name: textValue(row, 0),
+      color: '#8C1010',
+      sortOrder: Number(textValue(row, 2)) || 0,
+      isActive: row?.isActive ?? true,
+      summary: '',
+      workflowTemplateId: '',
+      steps: [],
+    };
+  }
+
   return {
     code: textValue(row, 1),
     name: textValue(row, 0),
@@ -108,6 +122,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, workflowTempl
   const isSystemRecord = Boolean(row?.isSystem);
   const isInternalService = categoryId === 'internal-services';
   const isWorkflowTemplate = categoryId === 'workflow-templates';
+  const isJobTitle = categoryId === 'job-titles';
 
   const updateValue = <Key extends keyof MasterDataFormValues>(key: Key, value: MasterDataFormValues[Key]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -272,7 +287,7 @@ export function MasterDataFormModal({ open, mode, categoryId, row, workflowTempl
 
               <WorkflowStepsEditor formId={formId} steps={values.steps} onAdd={addStep} onChange={updateStep} onMove={moveStep} onRemove={removeStep} />
             </>
-          ) : (
+          ) : isJobTitle ? null : (
             <div>
               <label htmlFor={`${formId}-color-text`} className="mb-1.5 block text-xs font-semibold text-[#303846]">
                 Color <RequiredMark />

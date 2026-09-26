@@ -3,9 +3,10 @@
 import type { MasterDataFormCategoryId, MasterDataFormValues } from '@/components/admin-master-data/master-data-form-modal';
 import type { MasterDataCategoryId } from '@/data/admin-master-data/master-data';
 import { requireActiveAdmin } from '@/lib/auth/admin-access';
+import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { Json } from '@/types/database.generated';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 
 export type MasterDataActionResult = { ok: true; message: string } | { ok: false; message: string };
 
@@ -45,7 +46,7 @@ function normalizeValues(values: MasterDataFormValues): MasterDataFormValues {
 function validateSaveInput(input: SaveMasterDataInput): string | null {
   const { categoryId, id, expectedVersion, values } = input;
   const maxCodeLength = categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 50 : 80;
-  const maxNameLength = categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 100 : 160;
+  const maxNameLength = categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 100 : categoryId === 'job-titles' ? 120 : 160;
 
   if (id && (!UUID_PATTERN.test(id) || !Number.isInteger(expectedVersion) || (expectedVersion ?? 0) < 1)) {
     return 'Data yang akan diperbarui tidak valid. Muat ulang halaman lalu coba lagi.';
@@ -60,8 +61,8 @@ function validateSaveInput(input: SaveMasterDataInput): string | null {
     return 'Deskripsi maksimal 500 karakter.';
   }
 
-  if (categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses') {
-    if (!COLOR_PATTERN.test(values.color)) return 'Warna harus menggunakan format hex, misalnya #8C1010.';
+  if (categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' || categoryId === 'job-titles') {
+    if (categoryId !== 'job-titles' && !COLOR_PATTERN.test(values.color)) return 'Warna harus menggunakan format hex, misalnya #8C1010.';
     if (!Number.isInteger(values.sortOrder) || values.sortOrder < 0) return 'Sort order harus berupa angka bulat nol atau lebih.';
   }
 
@@ -134,6 +135,15 @@ export async function saveMasterDataAction(rawInput: SaveMasterDataInput): Promi
       p_sort_order: values.sortOrder,
       p_is_active: values.isActive,
     } as never));
+  } else if (categoryId === 'job-titles') {
+    ({ error } = await supabase.rpc('save_job_title', {
+      p_id: id ?? null,
+      p_expected_version: expectedVersion ?? null,
+      p_code: values.code,
+      p_name: values.name,
+      p_sort_order: values.sortOrder,
+      p_is_active: values.isActive,
+    } as never));
   } else if (categoryId === 'internal-services') {
     ({ error } = await supabase.rpc('save_internal_service', {
       p_id: id ?? null,
@@ -160,6 +170,10 @@ export async function saveMasterDataAction(rawInput: SaveMasterDataInput): Promi
   if (error) return actionError(error);
 
   revalidatePath('/admin/master-data');
+  if (categoryId === 'job-titles') {
+    revalidatePath('/about');
+    updateTag(PUBLIC_CACHE_TAGS.team);
+  }
   return { ok: true, message: id ? 'Master Data berhasil diperbarui.' : 'Master Data berhasil ditambahkan.' };
 }
 
@@ -175,6 +189,7 @@ export async function archiveMasterDataAction(input: ArchiveMasterDataInput): Pr
     'internal-services': 'INTERNAL_SERVICE',
     'job-statuses': 'JOB_STATUS',
     'task-statuses': 'TASK_STATUS',
+    'job-titles': 'JOB_TITLE',
     'workflow-templates': 'WORKFLOW_TEMPLATE',
   };
   const supabase = await createSupabaseServerClient();
@@ -188,5 +203,9 @@ export async function archiveMasterDataAction(input: ArchiveMasterDataInput): Pr
   if (error) return actionError(error);
 
   revalidatePath('/admin/master-data');
+  if (input.categoryId === 'job-titles') {
+    revalidatePath('/about');
+    updateTag(PUBLIC_CACHE_TAGS.team);
+  }
   return { ok: true, message: 'Data berhasil dinonaktifkan dan histori tetap dipertahankan.' };
 }
