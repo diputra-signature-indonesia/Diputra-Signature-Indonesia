@@ -2638,6 +2638,14 @@ export type Database = {
         Returns: string
       }
       current_role: { Args: never; Returns: string }
+      delete_job_permanently: {
+        Args: {
+          p_confirmation: string
+          p_expected_version: number
+          p_job_id: string
+        }
+        Returns: string
+      }
       delete_job_update: {
         Args: { p_expected_version: number; p_update_id: string }
         Returns: undefined
@@ -2753,6 +2761,7 @@ export type Database = {
         }
         Returns: number
       }
+      purge_expired_job: { Args: { p_job_id: string }; Returns: string }
       reject_admin_access_request: {
         Args: { p_rejection_reason?: string; p_user_id: string }
         Returns: undefined
@@ -2771,6 +2780,10 @@ export type Database = {
           p_post_id: string
           p_revision_id: number
         }
+        Returns: number
+      }
+      restore_job: {
+        Args: { p_expected_version: number; p_job_id: string }
         Returns: number
       }
       restore_profile: { Args: { p_profile_id: string }; Returns: undefined }
@@ -3049,6 +3062,14 @@ export type Database = {
         Returns: string
       }
       sync_own_profile_identity: { Args: never; Returns: undefined }
+      trash_job: {
+        Args: {
+          p_confirmation: string
+          p_expected_version: number
+          p_job_id: string
+        }
+        Returns: number
+      }
       update_blog_post: {
         Args: {
           p_category?: string

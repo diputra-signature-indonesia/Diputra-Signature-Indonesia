@@ -6,7 +6,10 @@ const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 export class GoogleDriveApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
     super(message);
   }
 }
@@ -184,11 +187,21 @@ export async function createResumableUpload(folderId: string, fileId: string, fi
 }
 
 export async function trashDriveFile(fileId: string) {
+  return setDriveFileTrashed(fileId, true);
+}
+
+export async function setDriveFileTrashed(fileId: string, trashed: boolean) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,trashed' });
   return driveFetch<{ id: string; trashed: boolean }>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?${params}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trashed: true }),
+    body: JSON.stringify({ trashed }),
+  });
+}
+
+export async function deleteDriveFilePermanently(fileId: string) {
+  return driveFetch<void>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, {
+    method: 'DELETE',
   });
 }
 

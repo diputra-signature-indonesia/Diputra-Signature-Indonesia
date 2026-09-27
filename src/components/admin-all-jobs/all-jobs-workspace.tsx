@@ -10,12 +10,16 @@ import {
   type AllJobsFilterState,
 } from '@/data/admin-all-jobs/all-jobs-dummy-data';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { AddJobOptions } from '@/lib/supabase/queries/add-job';
 import { AllJobsFilters } from './all-jobs-filters';
 import { AllJobsTable } from './all-jobs-table';
 
 function todayInMakassar() {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Makassar',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'Asia/Makassar',
   }).formatToParts(new Date());
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
   return `${get('year')}-${get('month')}-${get('day')}`;
@@ -44,7 +48,8 @@ function matchesFilter(job: AllJob, filters: AllJobsFilterState) {
   if (filters.status === UNFINISHED_JOB_STATUS_FILTER && job.statusCode === 'COMPLETED') return false;
   if (filters.status === COMPLETED_JOB_STATUS_FILTER && job.statusCode !== 'COMPLETED') return false;
   if (filters.status.startsWith('STATUS:') && job.statusCode !== filters.status.slice('STATUS:'.length)) return false;
-  if (![ALL_JOB_STATUS_FILTER, UNFINISHED_JOB_STATUS_FILTER, COMPLETED_JOB_STATUS_FILTER].includes(filters.status) && !filters.status.startsWith('STATUS:') && job.status !== filters.status) return false;
+  if (![ALL_JOB_STATUS_FILTER, UNFINISHED_JOB_STATUS_FILTER, COMPLETED_JOB_STATUS_FILTER].includes(filters.status) && !filters.status.startsWith('STATUS:') && job.status !== filters.status)
+    return false;
   if (filters.priority !== 'All Priorities' && job.priority !== filters.priority) return false;
   if (filters.dateFrom && (!job.deadlineIso || job.deadlineIso < filters.dateFrom)) return false;
   if (filters.dateTo && (!job.deadlineIso || job.deadlineIso > filters.dateTo)) return false;
@@ -83,7 +88,7 @@ function groupValue(job: AllJob, groupBy: string) {
   return '';
 }
 
-export function AllJobsWorkspace({ realJobs, showDemoJobs }: { realJobs: AllJob[]; showDemoJobs: boolean }) {
+export function AllJobsWorkspace({ realJobs, showDemoJobs, options }: { realJobs: AllJob[]; showDemoJobs: boolean; options: AddJobOptions }) {
   const jobs = useMemo(() => {
     const today = todayInMakassar();
     return showDemoJobs ? [...realJobs, ...allJobsDummy.map((job) => ({ ...job, deadlineNote: dummyDeadlineNote(job, today) }))] : realJobs;
@@ -125,7 +130,7 @@ export function AllJobsWorkspace({ realJobs, showDemoJobs }: { realJobs: AllJob[
     <>
       <AllJobsFilters jobs={jobs} onApply={applyFilters} />
       <div className="px-4 py-5 sm:px-5 lg:px-6">
-        <AllJobsTable key={JSON.stringify(appliedFilters)} jobs={filteredJobs} groupBy={appliedFilters.groupBy} isLoading={isLoading} />
+        <AllJobsTable key={JSON.stringify(appliedFilters)} jobs={filteredJobs} groupBy={appliedFilters.groupBy} isLoading={isLoading} options={options} />
       </div>
     </>
   );
