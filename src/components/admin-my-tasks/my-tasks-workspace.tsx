@@ -53,8 +53,8 @@ export function MyTasksWorkspace({ jobs }: { jobs: MyTaskJob[] }) {
       <ClientTasksCard job={selectedJob} searchQuery={filters.query} activeStatus={effectiveStatus} onStatusChange={setActiveStatus} />
       <JobListCard jobs={filteredJobs} selectedJobId={selectedJob.id} query={jobQuery} onQueryChange={setJobQuery} onJobSelect={(jobId) => { setSelectedJobId(jobId); setActiveStatus('All'); }} />
     </section> : <section className="mx-4 my-5 rounded-xl border border-[#DEE2E7] bg-white px-6 py-16 text-center shadow-sm sm:mx-5 lg:mx-6">
-      <h2 className="text-lg font-semibold text-[#202938]">{jobs.length ? 'Tidak ada Job sesuai filter' : 'Belum ada Task untuk Anda'}</h2>
-      <p className="mt-2 text-sm text-[#68717E]">{jobs.length ? 'Ubah atau reset filter untuk melihat Job lainnya.' : 'Job yang Anda tangani sebagai PIC atau memiliki Task yang ditugaskan kepada Anda akan tampil di sini.'}</p>
+      <h2 className="text-lg font-semibold text-[#202938]">{jobs.length ? 'Tidak ada Job sesuai filter' : 'Belum ada Job untuk Anda'}</h2>
+      <p className="mt-2 text-sm text-[#68717E]">{jobs.length ? 'Ubah atau reset filter untuk melihat Job lainnya.' : 'Job yang Anda tangani sebagai PIC, contributor, atau assignee akan tampil di sini.'}</p>
       {!jobs.length ? <Link href="/admin/all-jobs" className="mt-5 inline-flex rounded-lg border border-[#8C1010] px-4 py-2 text-xs font-semibold text-[#8C1010] hover:bg-[#FFF6F6]">Lihat All Jobs</Link> : null}
     </section>}
   </>;

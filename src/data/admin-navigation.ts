@@ -68,7 +68,6 @@ export const ADMIN_NAV_ITEM: AdminNavLink[] = [
     href: `${ADMIN_ROUTE}/public-services`,
     slug: 'public-services',
     icon: PanelsTopLeft,
-    roles: ['admin', 'super_admin'],
     activePaths: [`${ADMIN_ROUTE}/public-services`],
   },
   {

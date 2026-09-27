@@ -1,6 +1,14 @@
 export type MyTaskItem = {
   id: string;
   detail: string;
+  description: string | null;
+  version: number;
+  assigneeId: string | null;
+  assigneeName: string;
+  priorityId: string | null;
+  priorityName: string;
+  createdAt: string;
+  canEdit: boolean;
   dueDate: string | null;
   deadline: string;
   deadlineNote: string;

@@ -478,6 +478,56 @@ export type Database = {
           },
         ]
       }
+      job_contributors: {
+        Row: {
+          added_at: string
+          added_by: string
+          job_id: string
+          profile_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          job_id: string
+          profile_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          job_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_contributors_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_documents: {
         Row: {
           archived_at: string | null
@@ -1294,36 +1344,75 @@ export type Database = {
         Row: {
           answer: string
           created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           is_visible: boolean
           question: string
           services_categories_id: string | null
+          sort_order: number
           updated_at: string | null
+          updated_by: string | null
+          version: number
         }
         Insert: {
           answer: string
           created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_visible?: boolean
           question: string
           services_categories_id?: string | null
+          sort_order?: number
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           answer?: string
           created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_visible?: boolean
           question?: string
           services_categories_id?: string | null
+          sort_order?: number
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "question_answer_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answer_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "question_answer_services_categories_id_fkey"
             columns: ["services_categories_id"]
             isOneToOne: false
             referencedRelation: "services_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answer_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2490,6 +2579,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_job_contributor: {
+        Args: { p_job_id: string; p_profile_id: string }
+        Returns: undefined
+      }
       approve_admin_access_request: {
         Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
         Returns: undefined
@@ -2662,6 +2755,14 @@ export type Database = {
         Args: { p_expected_version: number; p_id: string }
         Returns: undefined
       }
+      delete_question_answer: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
+      delete_rejected_admin_access_request: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       delete_task: {
         Args: { p_expected_version: number; p_task_id: string }
         Returns: undefined
@@ -2716,6 +2817,27 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_question_answer_categories: {
+        Args: never
+        Returns: {
+          id: string
+          is_published: boolean
+          slug: string
+          title: string
+        }[]
+      }
+      list_rejected_admin_access_requests: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          rejection_reason: string
+          requested_at: string
+          reviewed_at: string
+          user_id: string
+        }[]
+      }
       list_visible_team_members: {
         Args: never
         Returns: {
@@ -2766,9 +2888,17 @@ export type Database = {
         Args: { p_rejection_reason?: string; p_user_id: string }
         Returns: undefined
       }
+      remove_job_contributor: {
+        Args: { p_job_id: string; p_profile_id: string }
+        Returns: undefined
+      }
       reopen_job: {
         Args: { p_expected_version: number; p_job_id: string; p_reason: string }
         Returns: number
+      }
+      reorder_question_answers: {
+        Args: { p_ordered_ids: string[]; p_services_categories_id: string }
+        Returns: undefined
       }
       restore_blog_post: {
         Args: { p_expected_version: number; p_post_id: string }
@@ -2915,6 +3045,18 @@ export type Database = {
           p_slug: string
           p_sort_order: number
           p_title: string
+        }
+        Returns: string
+      }
+      save_question_answer: {
+        Args: {
+          p_answer: string
+          p_expected_version: number
+          p_id: string
+          p_is_visible?: boolean
+          p_question: string
+          p_services_categories_id?: string
+          p_sort_order?: number
         }
         Returns: string
       }

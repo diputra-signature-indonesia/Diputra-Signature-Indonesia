@@ -2,8 +2,11 @@
 
 import {
   approveAccessRequestAction,
+  deleteRejectedAccessRequestAction,
   rejectAccessRequestAction,
+  restoreProfileAction,
   searchPendingAccessRequestsAction,
+  searchRejectedAccessRequestsAction,
   saveTeamMemberAction,
   setProfileActiveAction,
   softDeleteProfileAction,
@@ -11,12 +14,12 @@ import {
 } from '@/app/admin/access-requests/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
-import type { ManagedProfile, PendingAccessRequest, TeamJobTitleOption } from '@/lib/supabase/queries/user-management';
+import type { ManagedProfile, PendingAccessRequest, RejectedAccessRequest, TeamJobTitleOption } from '@/lib/supabase/queries/user-management';
 import { TEAM_PROFILE_ACCEPT, TEAM_PROFILE_MAX_LABEL, validateTeamProfilePhotoFile } from '@/lib/team-profile-storage';
 import { deleteManagedTeamProfilePhoto, uploadTeamProfilePhoto } from '@/lib/upload-team-profile-photo';
 import { ASSIGNABLE_ADMIN_ROLES, type UserRole } from '@/types/auth-role';
 import { Avatar } from '@mui/material';
-import { BadgeCheck, Eye, EyeOff, ImagePlus, Pencil, Power, PowerOff, Search, Trash2, UserRoundCheck } from 'lucide-react';
+import { BadgeCheck, Eye, EyeOff, ImagePlus, Pencil, Power, PowerOff, RotateCcw, Search, Trash2, UserRoundCheck, UserX } from 'lucide-react';
 import { FormEvent, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -26,8 +29,11 @@ type Confirmation = { type: 'activate' | 'deactivate' | 'delete'; profile: Manag
 type UserManagementWorkspaceProps = {
   currentUserId: string;
   profiles: ManagedProfile[];
+  trashedProfiles: ManagedProfile[];
   initialRequests: PendingAccessRequest[];
   initialPendingRequestCount: number;
+  initialRejectedRequests: RejectedAccessRequest[];
+  initialRejectedRequestCount: number;
   jobTitles: TeamJobTitleOption[];
   canManageUsers: boolean;
 };
@@ -61,13 +67,19 @@ function formatRequestDate(value: string) {
   }).format(new Date(value));
 }
 
-export function UserManagementWorkspace({ currentUserId, profiles, initialRequests, initialPendingRequestCount, jobTitles, canManageUsers }: UserManagementWorkspaceProps) {
+export function UserManagementWorkspace({ currentUserId, profiles, trashedProfiles: initialTrashedProfiles, initialRequests, initialPendingRequestCount, initialRejectedRequests, initialRejectedRequestCount, jobTitles, canManageUsers }: UserManagementWorkspaceProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestView, setRequestView] = useState<'pending' | 'rejected'>('pending');
   const [requests, setRequests] = useState(initialRequests);
   const [requestCount, setRequestCount] = useState(initialPendingRequestCount);
+  const [rejectedRequests, setRejectedRequests] = useState(initialRejectedRequests);
+  const [rejectedRequestCount, setRejectedRequestCount] = useState(initialRejectedRequestCount);
+  const [deletingRejected, setDeletingRejected] = useState<RejectedAccessRequest | null>(null);
+  const [trashModalOpen, setTrashModalOpen] = useState(false);
+  const [trashedProfiles, setTrashedProfiles] = useState(initialTrashedProfiles);
   const [searchValue, setSearchValue] = useState('');
   const [roles, setRoles] = useState<Record<string, UserRole | ''>>({});
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -97,6 +109,15 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
     if (teamAvatarObjectUrlRef.current) URL.revokeObjectURL(teamAvatarObjectUrlRef.current);
   }, []);
 
+  useEffect(() => {
+    setTrashedProfiles(initialTrashedProfiles);
+  }, [initialTrashedProfiles]);
+
+  useEffect(() => {
+    setRejectedRequests(initialRejectedRequests);
+    setRejectedRequestCount(initialRejectedRequestCount);
+  }, [initialRejectedRequests, initialRejectedRequestCount]);
+
   const finishMutation = (result: { ok: boolean; message: string }, onSuccess?: () => void) => {
     setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
     setPendingId(null);
@@ -110,9 +131,36 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
     event.preventDefault();
     setNotice(null);
     startTransition(async () => {
-      const result = await searchPendingAccessRequestsAction(searchValue);
-      if (result.ok) setRequests(result.requests);
+      const result = requestView === 'pending' ? await searchPendingAccessRequestsAction(searchValue) : await searchRejectedAccessRequestsAction(searchValue);
+      if (result.ok) {
+        if (requestView === 'pending') setRequests(result.requests as PendingAccessRequest[]);
+        else setRejectedRequests(result.requests as RejectedAccessRequest[]);
+      }
       else setNotice({ tone: 'error', message: result.message });
+    });
+  };
+
+  const restoreProfile = (profile: ManagedProfile) => {
+    setPendingId(profile.id);
+    setNotice(null);
+    startTransition(async () => {
+      const result = await restoreProfileAction(profile.id);
+      finishMutation(result, () => setTrashedProfiles((current) => current.filter((item) => item.id !== profile.id)));
+    });
+  };
+
+  const deleteRejectedRequest = () => {
+    if (!deletingRejected) return;
+    setPendingId(deletingRejected.user_id);
+    setNotice(null);
+    startTransition(async () => {
+      const result = await deleteRejectedAccessRequestAction(deletingRejected.user_id);
+      finishMutation(result, () => {
+        setRejectedRequests((current) => current.filter((item) => item.user_id !== deletingRejected.user_id));
+        setRejectedRequestCount((current) => Math.max(0, current - 1));
+        setDeletingRejected(null);
+        setRequestModalOpen(true);
+      });
     });
   };
 
@@ -261,20 +309,41 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
             <p className="mt-1 text-xs leading-5 text-[#707988]">Manage roles and dashboard access for approved users.</p>
           </div>
           {canManageUsers ? (
-            <button
-              type="button"
-              onClick={() => setRequestModalOpen(true)}
-              aria-label={`Open access requests${requestCount ? `, ${requestCount} pending` : ''}`}
-              title="Access requests"
-              className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#E1BEBE] bg-white text-[#8C1010] transition hover:border-[#C98E8E] hover:bg-[#FFF7F7] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
-            >
-              <UserRoundCheck aria-hidden="true" className="size-5" strokeWidth={1.8} />
-              {requestCount > 0 ? (
-                <span className="absolute -top-2 -right-2 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#D92D20] px-1 text-[10px] leading-4 font-semibold text-white">
-                  {requestCount > 99 ? '99+' : requestCount}
-                </span>
-              ) : null}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTrashModalOpen(true)}
+                aria-label={`Open deleted users${trashedProfiles.length ? `, ${trashedProfiles.length} users` : ''}`}
+                title="Deleted users"
+                className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#D9DDE3] bg-white text-[#667181] transition hover:border-[#C98E8E] hover:bg-[#FFF7F7] hover:text-[#8C1010] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
+              >
+                <Trash2 aria-hidden="true" className="size-5" strokeWidth={1.8} />
+                {trashedProfiles.length > 0 ? (
+                  <span className="absolute -top-2 -right-2 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#667181] px-1 text-[10px] leading-4 font-semibold text-white">
+                    {trashedProfiles.length > 99 ? '99+' : trashedProfiles.length}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestView('pending');
+                  setSearchValue('');
+                  setRequests(initialRequests);
+                  setRequestModalOpen(true);
+                }}
+                aria-label={`Open access requests${requestCount ? `, ${requestCount} pending` : ''}`}
+                title="Access requests"
+                className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#E1BEBE] bg-white text-[#8C1010] transition hover:border-[#C98E8E] hover:bg-[#FFF7F7] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
+              >
+                <UserRoundCheck aria-hidden="true" className="size-5" strokeWidth={1.8} />
+                {requestCount > 0 ? (
+                  <span className="absolute -top-2 -right-2 inline-flex min-w-5 items-center justify-center rounded-full border-2 border-white bg-[#D92D20] px-1 text-[10px] leading-4 font-semibold text-white">
+                    {requestCount > 99 ? '99+' : requestCount}
+                  </span>
+                ) : null}
+              </button>
+            </div>
           ) : null}
         </header>
 
@@ -392,9 +461,25 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
           open={requestModalOpen}
           onClose={() => !isPending && setRequestModalOpen(false)}
           title="Access Requests"
-          description="Review up to 10 pending requests. Select a role before approving access."
+          description={requestView === 'pending' ? 'Review pending requests and assign a role before approval.' : 'Delete an incorrect rejection so the same Google account can request access again.'}
           size="xl"
         >
+          <div className="mb-4 flex gap-2 border-b border-[#E4E7EB]">
+            <button
+              type="button"
+              onClick={() => { setRequestView('pending'); setSearchValue(''); setRequests(initialRequests); }}
+              className={`border-b-2 px-4 py-2 text-xs font-semibold ${requestView === 'pending' ? 'border-[#9F1010] text-[#9F1010]' : 'border-transparent text-[#707988] hover:text-[#202938]'}`}
+            >
+              Pending ({requestCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setRequestView('rejected'); setSearchValue(''); setRejectedRequests(initialRejectedRequests); }}
+              className={`border-b-2 px-4 py-2 text-xs font-semibold ${requestView === 'rejected' ? 'border-[#9F1010] text-[#9F1010]' : 'border-transparent text-[#707988] hover:text-[#202938]'}`}
+            >
+              Rejected ({rejectedRequestCount})
+            </button>
+          </div>
           <form onSubmit={searchRequests} className="mb-4 flex flex-col gap-2 sm:flex-row">
             <label htmlFor="request-search" className="sr-only">
               Search access requests
@@ -419,6 +504,7 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
             </button>
           </form>
 
+          {requestView === 'pending' ? <>
           <div className="overflow-x-auto rounded-xl border border-[#D9DDE3]">
             <table className="w-full min-w-[820px] border-collapse text-left">
               <thead className="bg-[#F8F9FA] text-[10px] font-semibold tracking-[0.04em] text-[#737B87] uppercase">
@@ -495,6 +581,87 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
             {requests.length === 0 ? <div className="px-5 py-12 text-center text-sm text-[#7B8491]">No pending access requests found.</div> : null}
           </div>
           {requests.length === 10 ? <p className="mt-3 text-right text-[11px] text-[#7B8491]">Showing the first 10 matching requests.</p> : null}
+          </> : <>
+            <div className="overflow-x-auto rounded-xl border border-[#D9DDE3]">
+              <table className="w-full min-w-[760px] border-collapse text-left">
+                <thead className="bg-[#F8F9FA] text-[10px] font-semibold tracking-[0.04em] text-[#737B87] uppercase">
+                  <tr>
+                    <th className="px-4 py-3">User</th>
+                    <th className="px-4 py-3">Rejected</th>
+                    <th className="px-4 py-3">Reason</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E7E9ED]">
+                  {rejectedRequests.map((request) => {
+                    const loading = pendingId === request.user_id;
+                    const name = request.full_name?.trim() || request.email;
+                    return (
+                      <tr key={request.user_id}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar src={request.avatar_url ?? undefined} alt={name} sx={{ width: 34, height: 34, fontSize: 12, bgcolor: '#A6192E' }}>
+                              {name.slice(0, 1).toUpperCase()}
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-[#202938]">{name}</p>
+                              <p className="mt-0.5 truncate text-[11px] text-[#707988]">{request.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[11px] text-[#586273]">{request.reviewed_at ? `${formatRequestDate(request.reviewed_at)} WITA` : '—'}</td>
+                        <td className="max-w-72 px-4 py-3 text-[11px] leading-5 text-[#586273]">{request.rejection_reason || 'No reason provided.'}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => { setDeletingRejected(request); setRequestModalOpen(false); }}
+                            className="inline-flex h-8 items-center gap-2 rounded-md border border-red-200 bg-white px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 className="size-3.5" />
+                            Delete rejection
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {rejectedRequests.length === 0 ? <div className="px-5 py-12 text-center text-sm text-[#7B8491]">No rejected access requests found.</div> : null}
+            </div>
+            {rejectedRequests.length === 10 ? <p className="mt-3 text-right text-[11px] text-[#7B8491]">Showing the first 10 matching requests.</p> : null}
+          </>}
+        </AdminModal>
+      ) : null}
+
+      {canManageUsers ? (
+        <AdminModal
+          open={trashModalOpen}
+          onClose={() => !isPending && setTrashModalOpen(false)}
+          title="Deleted Users"
+          description="Restore a soft-deleted profile. Restored users remain inactive until you explicitly activate them."
+          size="xl"
+        >
+          <div className="overflow-x-auto rounded-xl border border-[#D9DDE3]">
+            <table className="w-full min-w-[680px] border-collapse text-left">
+              <thead className="bg-[#F8F9FA] text-[10px] font-semibold tracking-[0.04em] text-[#737B87] uppercase">
+                <tr><th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Deleted</th><th className="px-4 py-3 text-right">Action</th></tr>
+              </thead>
+              <tbody className="divide-y divide-[#E7E9ED]">
+                {trashedProfiles.map((profile) => {
+                  const name = displayName(profile);
+                  const loading = pendingId === profile.id;
+                  return <tr key={profile.id}>
+                    <td className="px-4 py-3"><div className="flex items-center gap-3"><Avatar src={profile.avatar_url ?? undefined} alt={name} sx={{ width: 34, height: 34, fontSize: 12, bgcolor: '#A6192E' }}>{name.slice(0, 1).toUpperCase()}</Avatar><div className="min-w-0"><p className="truncate text-xs font-semibold text-[#202938]">{name}</p><p className="mt-0.5 truncate text-[11px] text-[#707988]">{profile.email}</p></div></div></td>
+                    <td className="px-4 py-3"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${roleStyles[profile.role]}`}>{roleLabel(profile.role)}</span></td>
+                    <td className="px-4 py-3 text-[11px] text-[#586273]">{profile.deleted_at ? `${formatRequestDate(profile.deleted_at)} WITA` : '—'}</td>
+                    <td className="px-4 py-3 text-right"><button type="button" disabled={loading} onClick={() => restoreProfile(profile)} className="inline-flex h-8 items-center gap-2 rounded-md border border-[#C8D8CE] bg-white px-3 text-[11px] font-semibold text-[#147A46] hover:bg-[#EDFBF3] disabled:opacity-50"><RotateCcw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />Restore</button></td>
+                  </tr>;
+                })}
+              </tbody>
+            </table>
+            {trashedProfiles.length === 0 ? <div className="px-5 py-12 text-center text-sm text-[#7B8491]">Trash is empty.</div> : null}
+          </div>
         </AdminModal>
       ) : null}
 
@@ -536,6 +703,24 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
               </option>
             ))}
           </select>
+        </AdminModal>
+      ) : null}
+
+      {canManageUsers ? (
+        <AdminModal
+          open={Boolean(deletingRejected)}
+          onClose={() => {
+            if (!isPending) {
+              setDeletingRejected(null);
+              setRequestModalOpen(true);
+            }
+          }}
+          title="Delete Rejected Request?"
+          description={deletingRejected?.email}
+          size="sm"
+          footer={<><button type="button" disabled={isPending} onClick={() => { setDeletingRejected(null); setRequestModalOpen(true); }} className="h-9 rounded-lg px-4 text-xs font-semibold text-[#586273] hover:bg-[#F0F2F4]">Cancel</button><button type="button" disabled={isPending} onClick={deleteRejectedRequest} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white hover:bg-[#7E0C0C] disabled:opacity-60"><UserX className="size-4" />Delete Rejection</button></>}
+        >
+          <p className="text-sm leading-6 text-[#586273]">Only the rejected request record will be deleted. The Google/Supabase Auth account remains, and the user can log in again to create a new pending request.</p>
         </AdminModal>
       ) : null}
 

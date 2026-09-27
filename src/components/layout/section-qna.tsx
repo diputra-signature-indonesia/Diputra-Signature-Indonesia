@@ -1,11 +1,12 @@
 'use client';
-import { DSI_QNA } from '@/data/dsi-qna';
 import IconAnswer from '@/icons/BrandIconAnswer';
+import type { PublicQuestionAnswer } from '@/lib/supabase/queries/question-answers';
 import { useState } from 'react';
 import { Motion } from '../motion';
 
-export function QnaSection() {
+export function QnaSection({ items }: { items: PublicQuestionAnswer[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  if (!items.length) return null;
   return (
     <section className="brand-section-px brand-stretch font-raleway relative mx-auto my-auto mt-25 flex max-w-[1440px] flex-col justify-center gap-14">
       <Motion as="div" delay={0.2} duration={0.6} y={24} x={0} once={true} className="mx-auto flex flex-col items-center md:w-xl lg:w-4xl">
@@ -23,11 +24,11 @@ export function QnaSection() {
         </p>
       </Motion>
       <Motion as="div" delay={0.2} duration={0.6} y={-24} x={0} once={true} className="h-[450px] w-full overflow-y-scroll">
-        {DSI_QNA.map((item, idx) => {
+        {items.map((item, idx) => {
           const isOpen = openIndex === idx;
 
           return (
-            <article key={idx} className={`border-b transition-all duration-300 ${isOpen ? 'bg-brand-burgundy hover:bg-brand-burgundy px-5' : 'px-2.5 hover:bg-gray-200'}`}>
+            <article key={item.id} className={`border-b transition-all duration-300 ${isOpen ? 'bg-brand-burgundy hover:bg-brand-burgundy px-5' : 'px-2.5 hover:bg-gray-200'}`}>
               <button type="button" className="flex w-full cursor-pointer flex-col py-5 text-left" onClick={() => setOpenIndex((prev) => (prev === idx ? null : idx))} aria-expanded={isOpen}>
                 <div className="flex w-full justify-between">
                   <h3 className={`brand-p w-full ${isOpen && 'text-brand-white'}`}>{item.question}</h3>

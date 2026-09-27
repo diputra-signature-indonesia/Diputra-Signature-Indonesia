@@ -20,9 +20,7 @@ function todayInMakassar() {
 }
 
 function formatDate(value: string | null) {
-  return value
-    ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
-    : '—';
+  return value ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)) : '—';
 }
 
 function daysUntil(date: string, today: string) {
@@ -36,7 +34,7 @@ function dueInfo(date: string | null, completed: boolean, today: string) {
   if (days < 0) return { label: `Overdue by ${-days} ${days === -1 ? 'day' : 'days'}`, tone: 'urgent' as const };
   if (days === 0) return { label: 'Due today', tone: 'urgent' as const };
   if (days === 1) return { label: 'Due tomorrow', tone: 'urgent' as const };
-  return { label: `Due in ${days} days`, tone: days <= 7 ? 'warning' as const : 'normal' as const };
+  return { label: `Due in ${days} days`, tone: days <= 7 ? ('warning' as const) : ('normal' as const) };
 }
 
 export async function getMyTasks(): Promise<MyTaskJob[]> {
@@ -45,53 +43,78 @@ export async function getMyTasks(): Promise<MyTaskJob[]> {
   const relatedJobIds = new Set<string>();
 
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase.from('jobs').select('id').eq('pic_id', actor.userId).is('archived_at', null).order('id').range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw new Error(`Unable to load PIC Jobs: ${error.message}`);
-    for (const job of data ?? []) relatedJobIds.add(job.id);
-    if (!data || data.length < PAGE_SIZE) break;
-  }
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase.from('tasks').select('job_id').eq('assignee_id', actor.userId).is('deleted_at', null).order('id').range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw new Error(`Unable to load assigned Tasks: ${error.message}`);
-    for (const task of data ?? []) relatedJobIds.add(task.job_id);
+    const { data, error } = await supabase
+      .from('job_contributors')
+      .select('job_id')
+      .eq('profile_id', actor.userId)
+      .order('job_id')
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw new Error(`Unable to load contributed Jobs: ${error.message}`);
+    for (const contributor of data ?? []) relatedJobIds.add(contributor.job_id);
     if (!data || data.length < PAGE_SIZE) break;
   }
   if (!relatedJobIds.size) return [];
 
   type JobRow = {
-    id: string; client_id: string; pic_id: string; title: string; internal_service_id: string;
-    status_id: string; created_at: string; estimated_end_date: string | null;
+    id: string;
+    client_id: string;
+    pic_id: string;
+    title: string;
+    internal_service_id: string;
+    status_id: string;
+    created_at: string;
+    estimated_end_date: string | null;
   };
   type TaskRow = {
-    id: string; job_id: string; title: string; due_date: string | null; assignee_id: string | null;
-    job_task_status_id: string; position: number; created_at: string;
+    id: string;
+    job_id: string;
+    title: string;
+    description: string | null;
+    due_date: string | null;
+    assignee_id: string | null;
+    priority_id: string | null;
+    job_task_status_id: string;
+    position: number;
+    version: number;
+    created_at: string;
   };
   type ColumnRow = { id: string; job_id: string; task_status_id: string; column_order: number };
   const jobs: JobRow[] = [];
   const tasks: TaskRow[] = [];
   const columns: ColumnRow[] = [];
   for (const ids of chunks([...relatedJobIds], ID_CHUNK_SIZE)) {
-    const { data, error } = await supabase.from('jobs')
-      .select('id,client_id,pic_id,title,internal_service_id,status_id,created_at,estimated_end_date')
-      .in('id', ids).is('archived_at', null);
+    const { data, error } = await supabase.from('jobs').select('id,client_id,pic_id,title,internal_service_id,status_id,created_at,estimated_end_date').in('id', ids).is('archived_at', null);
     if (error) throw new Error(`Unable to load related Jobs: ${error.message}`);
     jobs.push(...(data ?? []));
   }
   if (!jobs.length) return [];
 
-  for (const ids of chunks(jobs.map((job) => job.id), ID_CHUNK_SIZE)) {
+  for (const ids of chunks(
+    jobs.map((job) => job.id),
+    ID_CHUNK_SIZE
+  )) {
     for (let offset = 0; ; offset += PAGE_SIZE) {
-      const { data, error } = await supabase.from('tasks')
-        .select('id,job_id,title,due_date,assignee_id,job_task_status_id,position,created_at')
-        .in('job_id', ids).is('deleted_at', null).order('position').order('created_at', { ascending: false }).order('id')
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id,job_id,title,description,due_date,assignee_id,priority_id,job_task_status_id,position,version,created_at')
+        .in('job_id', ids)
+        .is('deleted_at', null)
+        .order('position')
+        .order('created_at', { ascending: false })
+        .order('id')
         .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw new Error(`Unable to load Job Tasks: ${error.message}`);
       tasks.push(...(data ?? []));
       if (!data || data.length < PAGE_SIZE) break;
     }
     for (let offset = 0; ; offset += PAGE_SIZE) {
-      const { data, error } = await supabase.from('job_task_statuses')
-        .select('id,job_id,task_status_id,column_order').in('job_id', ids).order('job_id').order('column_order').range(offset, offset + PAGE_SIZE - 1);
+      const { data, error } = await supabase
+        .from('job_task_statuses')
+        .select('id,job_id,task_status_id,column_order')
+        .in('job_id', ids)
+        .order('job_id')
+        .order('column_order')
+        .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw new Error(`Unable to load Task columns: ${error.message}`);
       columns.push(...(data ?? []));
       if (!data || data.length < PAGE_SIZE) break;
@@ -110,49 +133,82 @@ export async function getMyTasks(): Promise<MyTaskJob[]> {
     if (error) throw new Error(`Unable to load Internal Service names: ${error.message}`);
     services.push(...(data ?? []));
   }
-  const [jobStatuses, taskStatuses] = await Promise.all([
+  const [jobStatuses, taskStatuses, priorities, profiles] = await Promise.all([
     supabase.from('job_statuses').select('id,name,code,color'),
     supabase.from('task_statuses').select('id,name,code,color'),
+    supabase.from('priorities').select('id,name'),
+    supabase.rpc('list_assignable_profiles'),
   ]);
-  const labelError = [jobStatuses, taskStatuses].find((result) => result.error)?.error;
+  const labelError = [jobStatuses, taskStatuses, priorities, profiles].find((result) => result.error)?.error;
   if (labelError) throw new Error(`Unable to load My Tasks labels: ${labelError.message}`);
 
   const clientNames = new Map(clients.map((row) => [row.id, row.name]));
   const serviceNames = new Map(services.map((row) => [row.id, row.name]));
   const jobStatusMap = new Map((jobStatuses.data ?? []).map((row) => [row.id, row]));
   const taskStatusMap = new Map((taskStatuses.data ?? []).map((row) => [row.id, row]));
+  const priorityMap = new Map((priorities.data ?? []).map((row) => [row.id, row.name]));
+  const profileMap = new Map((profiles.data ?? []).map((row) => [row.id, row.display_name]));
   const columnMap = new Map(columns.map((column) => [column.id, column]));
   const today = todayInMakassar();
 
-  return jobs.map((job): MyTaskJob => {
-    const isPic = job.pic_id === actor.userId;
-    const jobStatus = jobStatusMap.get(job.status_id);
-    const jobTasks: MyTaskItem[] = tasks.filter((task) => task.job_id === job.id && (isPic || task.assignee_id === actor.userId)).map((task) => {
-      const statusId = columnMap.get(task.job_task_status_id)?.task_status_id;
-      const status = taskStatusMap.get(statusId ?? '');
-      const completed = status?.code === 'COMPLETED';
+  return jobs
+    .map((job): MyTaskJob => {
+      const isPic = job.pic_id === actor.userId;
+      const jobStatus = jobStatusMap.get(job.status_id);
+      const jobTasks: MyTaskItem[] = tasks
+        .filter((task) => task.job_id === job.id && (isPic || task.assignee_id === actor.userId))
+        .map((task) => {
+          const statusId = columnMap.get(task.job_task_status_id)?.task_status_id;
+          const status = taskStatusMap.get(statusId ?? '');
+          const completed = status?.code === 'COMPLETED';
+          return {
+            id: task.id,
+            detail: task.title,
+            description: task.description,
+            version: task.version,
+            assigneeId: task.assignee_id,
+            assigneeName: task.assignee_id ? (profileMap.get(task.assignee_id) ?? 'Pengguna tidak aktif') : 'Unassigned',
+            priorityId: task.priority_id,
+            priorityName: task.priority_id ? (priorityMap.get(task.priority_id) ?? 'Prioritas tidak aktif') : 'No priority',
+            createdAt: task.created_at,
+            canEdit: jobStatus?.code !== 'COMPLETED',
+            dueDate: task.due_date,
+            deadline: formatDate(task.due_date),
+            deadlineNote: dueInfo(task.due_date, completed, today).label,
+            statusId: task.job_task_status_id,
+            status: status?.name ?? 'Unknown',
+            statusCode: status?.code ?? 'UNKNOWN',
+            statusColor: status?.color ?? '#64748B',
+          };
+        });
+      const completedCount = jobTasks.filter((task) => task.statusCode === 'COMPLETED').length;
+      const openDates = jobTasks.filter((task) => task.statusCode !== 'COMPLETED' && task.dueDate).map((task) => task.dueDate!);
+      const dueDate = openDates.sort()[0] ?? job.estimated_end_date;
+      const due = dueInfo(dueDate, jobStatus?.code === 'COMPLETED', today);
       return {
-        id: task.id, detail: task.title, dueDate: task.due_date, deadline: formatDate(task.due_date),
-        deadlineNote: dueInfo(task.due_date, completed, today).label,
-        statusId: task.job_task_status_id, status: status?.name ?? 'Unknown',
-        statusCode: status?.code ?? 'UNKNOWN', statusColor: status?.color ?? '#64748B',
+        id: job.id,
+        client: clientNames.get(job.client_id) ?? 'Client tidak tersedia',
+        title: job.title,
+        badgeNumber: jobTasks.length,
+        status: jobStatus?.name ?? 'Unknown',
+        statusCode: jobStatus?.code ?? 'UNKNOWN',
+        statusColor: jobStatus?.color ?? '#64748B',
+        internalServiceId: job.internal_service_id,
+        internalService: serviceNames.get(job.internal_service_id) ?? 'Service tidak tersedia',
+        createdAt: job.created_at,
+        openCount: jobTasks.length - completedCount,
+        completedCount,
+        dueDate,
+        dueLabel: due.label,
+        dueTone: due.tone,
+        statuses: columns
+          .filter((column) => column.job_id === job.id)
+          .map((column) => {
+            const status = taskStatusMap.get(column.task_status_id);
+            return { id: column.id, name: status?.name ?? 'Unknown', code: status?.code ?? 'UNKNOWN', color: status?.color ?? '#64748B' };
+          }),
+        tasks: jobTasks,
       };
-    });
-    const completedCount = jobTasks.filter((task) => task.statusCode === 'COMPLETED').length;
-    const openDates = jobTasks.filter((task) => task.statusCode !== 'COMPLETED' && task.dueDate).map((task) => task.dueDate!);
-    const dueDate = openDates.sort()[0] ?? job.estimated_end_date;
-    const due = dueInfo(dueDate, jobStatus?.code === 'COMPLETED', today);
-    return {
-      id: job.id, client: clientNames.get(job.client_id) ?? 'Client tidak tersedia', title: job.title,
-      badgeNumber: jobTasks.length, status: jobStatus?.name ?? 'Unknown', statusCode: jobStatus?.code ?? 'UNKNOWN',
-      statusColor: jobStatus?.color ?? '#64748B', internalServiceId: job.internal_service_id,
-      internalService: serviceNames.get(job.internal_service_id) ?? 'Service tidak tersedia', createdAt: job.created_at,
-      openCount: jobTasks.length - completedCount, completedCount, dueDate, dueLabel: due.label, dueTone: due.tone,
-      statuses: columns.filter((column) => column.job_id === job.id).map((column) => {
-        const status = taskStatusMap.get(column.task_status_id);
-        return { id: column.id, name: status?.name ?? 'Unknown', code: status?.code ?? 'UNKNOWN', color: status?.color ?? '#64748B' };
-      }),
-      tasks: jobTasks,
-    };
-  }).sort((left, right) => (left.dueDate ?? '9999-12-31').localeCompare(right.dueDate ?? '9999-12-31') || left.client.localeCompare(right.client));
+    })
+    .sort((left, right) => (left.dueDate ?? '9999-12-31').localeCompare(right.dueDate ?? '9999-12-31') || left.client.localeCompare(right.client));
 }

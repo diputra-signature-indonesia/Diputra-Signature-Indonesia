@@ -13,23 +13,31 @@ export async function getJobDetail(jobId: string) {
   if (jobError) throw new Error(`Unable to load Job: ${jobError.message}`);
   if (!job) return null;
 
-  const [allJobs, steps, remarks, tasks, profiles, status] = await Promise.all([
+  const [allJobs, steps, remarks, tasks, contributorsResult, profiles, status] = await Promise.all([
     getAllJobs(),
     supabase.from('job_steps').select('id,name,position,is_completed,version').eq('job_id', jobId).is('replaced_at', null).order('position'),
     supabase.from('job_updates').select('id,message,progress_date,created_at,created_by,performed_by,version').eq('job_id', jobId)
       .order('progress_date', { ascending: false }).order('created_at', { ascending: false }),
     supabase.from('tasks').select('assignee_id').eq('job_id', jobId).is('deleted_at', null),
+    supabase.from('job_contributors').select('profile_id,added_at').eq('job_id', jobId).order('added_at').order('profile_id'),
     supabase.rpc('list_assignable_profiles'),
     supabase.from('job_statuses').select('code').eq('id', job.status_id).single(),
   ]);
-  const error = [steps, remarks, tasks, profiles, status].find((result) => result.error)?.error;
+  const error = [steps, remarks, tasks, contributorsResult, profiles, status].find((result) => result.error)?.error;
   if (error) throw new Error(`Unable to load Job detail: ${error.message}`);
   const summary = allJobs.find((item) => item.id === jobId);
   if (!summary) return null;
 
   const names = new Map((profiles.data ?? []).map((profile) => [profile.id, profile.display_name]));
-  const contributors = Array.from(new Set([job.pic_id, ...(tasks.data ?? []).map((task) => task.assignee_id).filter((id): id is string => Boolean(id))]))
-    .map((id) => ({ id, name: names.get(id) ?? 'Pengguna tidak tersedia', role: id === job.pic_id ? 'PIC' : '' }));
+  const activeAssignees = new Set((tasks.data ?? []).map((task) => task.assignee_id).filter((id): id is string => Boolean(id)));
+  const contributors = (contributorsResult.data ?? [])
+    .map((contributor) => ({
+      id: contributor.profile_id,
+      name: names.get(contributor.profile_id) ?? 'Pengguna tidak tersedia',
+      role: contributor.profile_id === job.pic_id ? 'PIC' : 'Contributor',
+      canRemove: contributor.profile_id !== job.pic_id && !activeAssignees.has(contributor.profile_id),
+    }))
+    .sort((left, right) => Number(right.role === 'PIC') - Number(left.role === 'PIC'));
 
   return {
     job,

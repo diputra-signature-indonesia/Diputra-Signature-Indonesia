@@ -14,6 +14,7 @@ import {
   listDrivePermissions,
   trashDriveFile,
   updateDrivePermission,
+  type GoogleDrivePermissionRole,
 } from '@/lib/google-drive/client';
 import { getGoogleDriveConfig, GoogleDriveConfigurationError } from '@/lib/google-drive/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -22,10 +23,10 @@ import { revalidatePath } from 'next/cache';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const MUTABLE_ROLES = new Set(['reader', 'commenter', 'writer']);
+const MUTABLE_ROLES: ReadonlySet<string> = new Set<GoogleDrivePermissionRole>(['reader', 'commenter', 'writer', 'organizer']);
 
 type Result<T = undefined> = { ok: true; message: string; data: T } | { ok: false; message: string };
-type PermissionRole = 'reader' | 'commenter' | 'writer';
+type PermissionRole = GoogleDrivePermissionRole;
 
 export type JobFolderPermission = {
   id: string;
@@ -75,22 +76,28 @@ async function requireManager(jobId: string) {
 }
 
 function folderName(title: string, jobId: string) {
-  const clean = title.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
+  const clean = title
+    .replace(/[\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return `${clean || 'Job'} (${jobId.slice(0, 8)})`.slice(0, 240);
 }
 
 async function ensureFolder(jobId: string) {
   const context = await requireManager(jobId);
   if (!context.ok) return context;
-  const current = await context.supabase.from('job_drive_folders')
+  const current = await context.supabase
+    .from('job_drive_folders')
     .select('id,google_folder_id,google_drive_id,folder_name,web_view_url,connection_status')
-    .eq('job_id', jobId).is('archived_at', null).maybeSingle();
+    .eq('job_id', jobId)
+    .is('archived_at', null)
+    .maybeSingle();
   if (current.error) return { ok: false, result: fail('Mapping folder Job gagal dibaca.') } as const;
   if (current.data?.connection_status === 'READY') return { ...context, folder: current.data } as const;
 
   try {
     const config = getGoogleDriveConfig();
-    const driveFolder = await findJobFolder(jobId) ?? await createJobFolder(jobId, folderName(context.job.title, jobId));
+    const driveFolder = (await findJobFolder(jobId)) ?? (await createJobFolder(jobId, folderName(context.job.title, jobId)));
     const webViewUrl = driveFolder.webViewLink ?? googleFolderUrl(driveFolder.id);
     const saved = await context.supabase.rpc('save_job_drive_folder', {
       p_job_id: jobId,

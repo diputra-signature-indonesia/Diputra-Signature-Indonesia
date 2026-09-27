@@ -11,10 +11,12 @@ import {
 } from '@/app/admin/public-services/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
+import { QuestionAnswerModal } from '@/components/admin-public-services/question-answer-modal';
 import { PUBLIC_SERVICE_IMAGE_ACCEPT, PUBLIC_SERVICE_SVG_ACCEPT } from '@/lib/public-service-storage';
 import type { AdminPublicServiceCategory, AdminPublicServiceDetail, AdminPublicServiceItem } from '@/lib/supabase/queries/public-service-management';
+import type { AdminQuestionAnswer } from '@/lib/supabase/queries/question-answer-management';
 import { deletePublicServiceAssetUrl, uploadPublicServiceImage, uploadPublicServiceSvg } from '@/lib/upload-public-service-asset';
-import { Eye, EyeOff, FileStack, ImagePlus, Pencil, Plus, Shapes, Trash2, Upload } from 'lucide-react';
+import { CircleHelp, Eye, EyeOff, FileStack, ImagePlus, Pencil, Plus, Shapes, Trash2, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition, type FormEvent } from 'react';
@@ -580,7 +582,7 @@ function DetailFormModal({
   );
 }
 
-export function PublicServicesWorkspace({ initialCategories }: { initialCategories: AdminPublicServiceCategory[] }) {
+export function PublicServicesWorkspace({ initialCategories, initialQuestionAnswers, canManageServices }: { initialCategories: AdminPublicServiceCategory[]; initialQuestionAnswers: AdminQuestionAnswer[]; canManageServices: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState(initialCategories[0]?.id ?? '');
@@ -589,6 +591,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [detailItem, setDetailItem] = useState<AdminPublicServiceItem | null>(null);
   const [detailEditor, setDetailEditor] = useState<DetailEditor | null>(null);
+  const [qnaOpen, setQnaOpen] = useState(false);
 
   const selected = initialCategories.find((category) => category.id === selectedId) ?? initialCategories[0] ?? null;
   const nextCategoryOrder = Math.max(-10, ...initialCategories.map((category) => Number(category.sort_order ?? 0))) + 10;
@@ -701,7 +704,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
               <p className="text-[11px] font-semibold tracking-[0.14em] text-[#9AA4B4] uppercase">Select Service</p>
               <p className="mt-1 text-xs leading-5 text-[#707988]">Choose client-page content.</p>
             </div>
-            <button
+            {canManageServices ? <button
               type="button"
               onClick={() => setCategoryEditor({ mode: 'add' })}
               disabled={isPending}
@@ -710,7 +713,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#9F1010] text-white hover:bg-[#7E0C0C] disabled:opacity-50"
             >
               <Plus className="size-4" />
-            </button>
+            </button> : null}
           </div>
           <nav aria-label="Client Services" className="flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:gap-1 lg:px-3 lg:pb-6">
             {initialCategories.map((category) => {
@@ -721,6 +724,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                   type="button"
                   onClick={() => {
                     setSelectedId(category.id);
+                    setQnaOpen(false);
                     setNotice(null);
                   }}
                   className={`group flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-left transition lg:w-full lg:min-w-0 ${active ? 'bg-[#FDEBEB] text-[#8C1010]' : 'text-[#394150] hover:bg-white hover:text-[#8C1010]'}`}
@@ -748,7 +752,8 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                   <p className="mt-1 text-xs leading-5 text-[#707988]">Manage Sub-services and optional nested details.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
+                  <button type="button" onClick={() => setQnaOpen(true)} disabled={isPending} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] px-3.5 text-xs font-semibold text-[#586273] hover:bg-[#F8F9FA]"><CircleHelp className="size-4" />Manage Q&A</button>
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => setCategoryEditor({ mode: 'edit', category: selected })}
                     disabled={isPending}
@@ -756,8 +761,8 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                   >
                     <Pencil className="size-4" />
                     Edit Service
-                  </button>
-                  <button
+                  </button> : null}
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => remove('category', selected)}
                     disabled={isPending}
@@ -765,8 +770,8 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                   >
                     <Trash2 className="size-4" />
                     Delete
-                  </button>
-                  <button
+                  </button> : null}
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => setItemEditor({ mode: 'add' })}
                     disabled={isPending}
@@ -774,7 +779,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                   >
                     <Plus className="size-4" />
                     Add Sub-service
-                  </button>
+                  </button> : null}
                 </div>
               </header>
               <div className="overflow-x-auto p-4 sm:p-6">
@@ -815,7 +820,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
-                            <button
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => setDetailItem(item)}
                               title="Manage details"
@@ -823,23 +828,23 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#245293] hover:bg-[#F0F5FF]"
                             >
                               <FileStack className="size-4" />
-                            </button>
-                            <button
+                            </button> : null}
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => setItemEditor({ mode: 'edit', item })}
                               title="Edit Sub-service"
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#667181] hover:bg-[#F2F4F7]"
                             >
                               <Pencil className="size-4" />
-                            </button>
-                            <button
+                            </button> : null}
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => remove('item', item)}
                               title="Delete Sub-service"
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#A51919] hover:bg-[#FFF0F0]"
                             >
                               <Trash2 className="size-4" />
-                            </button>
+                            </button> : null}
                           </div>
                         </td>
                       </tr>
@@ -860,14 +865,14 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
               <Shapes className="size-10 text-[#A5ADB8]" />
               <h2 className="mt-4 text-lg font-semibold">No Client Services yet</h2>
               <p className="mt-1 text-sm text-[#7B8491]">Create the first Service to begin managing public content.</p>
-              <button
+              {canManageServices ? <button
                 type="button"
                 onClick={() => setCategoryEditor({ mode: 'add' })}
                 className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white"
               >
                 <Plus className="size-4" />
                 Add Service
-              </button>
+              </button> : null}
             </div>
           )}
         </div>
@@ -963,6 +968,7 @@ export function PublicServicesWorkspace({ initialCategories }: { initialCategori
           onSave={saveDetail}
         />
       ) : null}
+      {selected ? <QuestionAnswerModal open={qnaOpen} onClose={() => setQnaOpen(false)} service={{ id: selected.id, title: selected.title ?? selected.slug }} initialItems={initialQuestionAnswers} /> : null}
       {isPending ? <AdminPendingOverlay label="Saving Client Services..." /> : null}
     </main>
   );

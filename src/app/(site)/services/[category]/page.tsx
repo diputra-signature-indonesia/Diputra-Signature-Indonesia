@@ -1,4 +1,4 @@
-import { getPublishedBlogPosts, getServiceCategories, getServiceCategoryPageData } from '@/lib/supabase/queries';
+import { getPublishedBlogPosts, getPublishedQuestionAnswers, getServiceCategories, getServiceCategoryPageData } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
 
-  const [servicePageData, blogPosts, serviceCategories] = await Promise.all([getServiceCategoryPageData(category), getPublishedBlogPosts(3), getServiceCategories()]);
+  const [servicePageData, blogPosts, serviceCategories, questionAnswers] = await Promise.all([getServiceCategoryPageData(category), getPublishedBlogPosts(3), getServiceCategories(), getPublishedQuestionAnswers(category)]);
 
   if (!servicePageData) notFound();
 
@@ -56,7 +56,7 @@ export default async function ServicesCategoryPage({ params }: { params: Promise
         services={servicesItems}
       />
       <CtaSection heading="Request a Consultation" description="Start Your Legal Process Today" />
-      <QnaSection />
+      <QnaSection items={questionAnswers} />
       <div className="pb-13">
         <ServicesSection services={serviceCategories} excludeSlug={category} />
       </div>

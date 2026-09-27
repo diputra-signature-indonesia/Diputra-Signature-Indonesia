@@ -39,6 +39,8 @@ export type GoogleDrivePermission = {
   permissionDetails?: Array<{ inherited?: boolean; inheritedFrom?: string; permissionType?: string; role?: string }>;
 };
 
+export type GoogleDrivePermissionRole = 'reader' | 'commenter' | 'writer' | 'organizer';
+
 async function driveFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const token = await getGoogleDriveAccessToken();
   const response = await fetch(url, {
@@ -215,7 +217,7 @@ export async function listDrivePermissions(folderId: string) {
   return result.permissions ?? [];
 }
 
-export async function createDrivePermission(folderId: string, emailAddress: string, role: 'reader' | 'commenter' | 'writer') {
+export async function createDrivePermission(folderId: string, emailAddress: string, role: GoogleDrivePermissionRole) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', sendNotificationEmail: 'true', fields: 'id' });
   return driveFetch<{ id: string }>(`${DRIVE_API}/files/${encodeURIComponent(folderId)}/permissions?${params}`, {
     method: 'POST',
@@ -224,7 +226,7 @@ export async function createDrivePermission(folderId: string, emailAddress: stri
   });
 }
 
-export async function updateDrivePermission(folderId: string, permissionId: string, role: 'reader' | 'commenter' | 'writer') {
+export async function updateDrivePermission(folderId: string, permissionId: string, role: GoogleDrivePermissionRole) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,role' });
   return driveFetch<{ id: string; role: string }>(`${DRIVE_API}/files/${encodeURIComponent(folderId)}/permissions/${encodeURIComponent(permissionId)}?${params}`, {
     method: 'PATCH',

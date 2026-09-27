@@ -1,7 +1,8 @@
 import type { MyTaskJob } from '@/types/admin-my-tasks';
-import { ChevronRight, EllipsisVertical } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { MyTaskStatusBadge } from './my-task-status-badge';
+import { TaskRowActions } from './task-row-actions';
 
 export type TaskStatusFilter = 'All' | string;
 
@@ -15,9 +16,7 @@ type ClientTasksCardProps = {
 export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange }: ClientTasksCardProps) {
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const queryMatchesJob = `${job.title} ${job.client} ${job.internalService}`.toLocaleLowerCase().includes(normalizedQuery);
-  const searchedTasks = !normalizedQuery || queryMatchesJob
-    ? job.tasks
-    : job.tasks.filter((task) => task.detail.toLocaleLowerCase().includes(normalizedQuery));
+  const searchedTasks = !normalizedQuery || queryMatchesJob ? job.tasks : job.tasks.filter((task) => task.detail.toLocaleLowerCase().includes(normalizedQuery));
   const visibleTasks = activeStatus === 'All' ? searchedTasks : searchedTasks.filter((task) => task.statusId === activeStatus);
 
   return (
@@ -60,27 +59,29 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
       <div className="mt-5 overflow-hidden rounded-xl border border-[#DEE2E7]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px] border-collapse text-left">
-            <thead className="bg-white text-xs font-semibold uppercase tracking-[0.04em] text-[#756664]">
+            <thead className="bg-white text-xs font-semibold tracking-[0.04em] text-[#756664] uppercase">
               <tr>
                 <th className="w-[58%] px-6 py-4">Task Detail</th>
                 <th className="px-4 py-4">Deadline</th>
                 <th className="px-4 py-4">Status</th>
-                <th className="w-12 px-3 py-4"><span className="sr-only">Action</span></th>
+                <th className="w-12 px-3 py-4">
+                  <span className="sr-only">Action</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {visibleTasks.map((task) => (
                 <tr key={task.id} className="border-t border-[#E7E9ED] text-sm text-[#3D3D3D] transition hover:bg-[#FCFCFD]">
-                  <td className="px-6 py-5 font-semibold leading-4">{task.detail}</td>
-                  <td className="whitespace-nowrap px-4 py-5 text-xs">
+                  <td className="px-6 py-5 leading-4 font-semibold">{task.detail}</td>
+                  <td className="px-4 py-5 text-xs whitespace-nowrap">
                     <p>{task.deadline}</p>
                     <p className={`mt-1 text-[10px] ${task.deadlineNote === 'Completed' ? 'text-emerald-600' : 'text-red-500'}`}>({task.deadlineNote})</p>
                   </td>
-                  <td className="px-4 py-5"><MyTaskStatusBadge status={task.status} code={task.statusCode} /></td>
+                  <td className="px-4 py-5">
+                    <MyTaskStatusBadge status={task.status} code={task.statusCode} />
+                  </td>
                   <td className="px-3 py-5 text-center">
-                    <Link href={`/admin/all-jobs/${job.id}?tab=assignment&task=${task.id}`} aria-label={`Open ${task.detail} in Task Assignment`} className="inline-flex rounded-md p-1.5 text-[#8C716D] transition hover:bg-gray-100 hover:text-[#202938]">
-                      <EllipsisVertical aria-hidden="true" className="size-4" />
-                    </Link>
+                    <TaskRowActions job={job} task={task} />
                   </td>
                 </tr>
               ))}
@@ -88,7 +89,7 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
           </table>
         </div>
 
-        {visibleTasks.length === 0 ? <p className="border-t border-[#E7E9ED] px-6 py-12 text-center text-sm text-[#8A94A3]">Tidak ada task dengan status ini.</p> : null}
+        {visibleTasks.length === 0 ? <p className="border-t border-[#E7E9ED] px-6 py-12 text-center text-sm text-[#8A94A3]">{job.tasks.length === 0 ? 'Anda terdaftar sebagai contributor, tetapi belum memiliki task pada Job ini.' : 'Tidak ada task dengan status ini.'}</p> : null}
       </div>
     </section>
   );

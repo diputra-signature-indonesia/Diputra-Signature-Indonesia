@@ -11,4 +11,5 @@ export const PUBLIC_CACHE_TAGS = {
   reviews: 'public-reviews',
   services: 'public-services',
   team: 'public-team',
+  questionAnswers: 'public-question-answers',
 } as const;
