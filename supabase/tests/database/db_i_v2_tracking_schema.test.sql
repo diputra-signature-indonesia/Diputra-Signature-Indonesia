@@ -209,13 +209,14 @@ select extensions.lives_ok(
   $$ select public.complete_job_step((select id from public.job_steps where job_id=current_setting('test.v2_job_id')::uuid and replaced_at is null and position=1),3) $$,
   'reverted current step can be completed again'
 );
+select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);
 select extensions.lives_ok(
-  $$ select public.archive_job(current_setting('test.v2_job_id')::uuid,7) $$,
-  'PIC can archive their active Job'
+  $$ select public.trash_job(current_setting('test.v2_job_id')::uuid,7,(select title from public.jobs where id=current_setting('test.v2_job_id')::uuid)) $$,
+  'admin can move an active Job to Trash with exact title confirmation'
 );
 select extensions.throws_ok(
   $$ select public.change_job_status(current_setting('test.v2_job_id')::uuid,8,'ON_HOLD','archived') $$,
-  '55000','Archived Job is read-only.','archived Job status cannot change'
+  '42501','Job management is not allowed.','trashed Job status cannot change'
 );
 select extensions.throws_ok(
   $$
@@ -224,15 +225,15 @@ select extensions.throws_ok(
       (select jsonb_agg(jsonb_build_object('task_status_id',task_status_id) order by column_order) from public.job_task_statuses where job_id=current_setting('test.v2_job_id')::uuid)
     )
   $$,
-  '55000','Archived Job is read-only.','archived Job board cannot change'
+  '42501','Board configuration is not allowed.','trashed Job board cannot change'
 );
 select extensions.throws_ok(
   $$ select public.update_job(current_setting('test.v2_job_id')::uuid,8,'92000000-0000-4000-8000-000000000004','forged archived edit','92000000-0000-4000-8000-000000000003','21000000-0000-4000-8000-000000000001',null,null,null,null) $$,
-  '55000','Archived Job is read-only.','archived Job details cannot change'
+  '42501','Job management is not allowed.','trashed Job details cannot change'
 );
 select extensions.throws_ok(
   $$ select public.revert_last_job_step((select id from public.job_steps where job_id=current_setting('test.v2_job_id')::uuid and replaced_at is null and position=1),4) $$,
-  '55000','Archived Job is read-only.','archived Job workflow cannot be reverted'
+  '42501','Step management is not allowed.','trashed Job workflow cannot be reverted'
 );
 
 select set_config('request.jwt.claim.sub','91000000-0000-4000-8000-000000000001',true);

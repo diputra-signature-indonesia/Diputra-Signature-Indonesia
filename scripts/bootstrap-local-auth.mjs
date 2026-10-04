@@ -16,12 +16,6 @@ const accounts = [
   { email: 'authenticated-no-profile@example.test', role: null, isActive: false },
 ];
 
-const teamAssignments = [
-  { email: 'super-admin-active@example.test', teamMemberId: 'a4994681-e61f-4027-bea5-fae1378fb460' },
-  { email: 'admin-active@example.test', teamMemberId: '59f61be2-752b-4254-9bac-6c7438bbc682' },
-  { email: 'staff-active@example.test', teamMemberId: '4d3f8bd3-54a3-4810-9118-b70c55c54f42' },
-];
-
 function parseSupabaseStatus(output) {
   return Object.fromEntries(
     output
@@ -109,11 +103,9 @@ async function main() {
   });
 
   const existingUsers = await listAllUsers(supabase);
-  const usersByEmail = new Map();
 
   for (const account of accounts) {
     const user = await ensureAuthUser(supabase, existingUsers, account);
-    usersByEmail.set(account.email, user);
 
     if (account.role) {
       const { error } = await supabase.from('profiles').upsert(
@@ -131,14 +123,6 @@ async function main() {
       const { error } = await supabase.from('profiles').delete().eq('id', user.id);
       if (error) throw error;
     }
-  }
-
-  for (const assignment of teamAssignments) {
-    const user = usersByEmail.get(assignment.email);
-    if (!user) throw new Error(`Missing local Auth fixture ${assignment.email}.`);
-
-    const { error } = await supabase.from('team_members').update({ profile_id: user.id }).eq('id', assignment.teamMemberId);
-    if (error) throw error;
   }
 
   const authClient = createClient(supabaseUrl, publicKey, {
