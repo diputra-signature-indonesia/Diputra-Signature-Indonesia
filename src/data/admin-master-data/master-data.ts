@@ -1,4 +1,4 @@
-export type MasterDataCategoryId = 'priorities' | 'service-categories' | 'internal-services' | 'job-statuses' | 'task-statuses' | 'job-titles' | 'workflow-templates';
+export type MasterDataCategoryId = 'priorities' | 'internal-service-categories' | 'internal-services' | 'job-statuses' | 'task-statuses' | 'job-titles' | 'workflow-templates';
 
 export type MasterDataIconName = 'priority' | 'category' | 'service' | 'job-status' | 'task-status' | 'job-title' | 'workflow';
 
@@ -15,6 +15,8 @@ export type MasterDataRow = {
   isActive: boolean;
   isSystem?: boolean;
   workflowTemplateId?: string | null;
+  internalCategoryId?: string | null;
+  referenceCount?: number;
   cells: MasterDataCell[];
 };
 
@@ -40,11 +42,12 @@ export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
     columns: ['Priority', 'Code', 'Color', 'Rank', 'Status'],
   },
   {
-    id: 'service-categories',
-    label: 'Service Categories',
-    description: 'View service categories displayed on the landing and client pages.',
+    id: 'internal-service-categories',
+    label: 'Internal Service Categories',
+    description: 'Group internal services and define consistent code prefixes. Used categories cannot be edited or deleted.',
+    addLabel: 'Add Category',
     icon: 'category',
-    columns: ['Category', 'Slug', 'Type', 'Published'],
+    columns: ['Category', 'Code Prefix', 'Internal Services'],
   },
   {
     id: 'internal-services',
@@ -52,7 +55,7 @@ export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
     description: 'Maintain the admin service catalogue and assign its workflow template.',
     addLabel: 'Add Service',
     icon: 'service',
-    columns: ['Service', 'Code', 'Workflow', 'Status'],
+    columns: ['Service', 'Code', 'Category', 'Workflow', 'Status'],
   },
   {
     id: 'job-statuses',

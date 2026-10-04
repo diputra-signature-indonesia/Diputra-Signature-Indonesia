@@ -329,8 +329,57 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_service_categories: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_service_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_service_categories_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_services: {
         Row: {
+          category_id: string | null
           code: string
           created_at: string
           created_by: string | null
@@ -344,6 +393,7 @@ export type Database = {
           workflow_template_id: string | null
         }
         Insert: {
+          category_id?: string | null
           code: string
           created_at?: string
           created_by?: string | null
@@ -357,6 +407,7 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Update: {
+          category_id?: string | null
           code?: string
           created_at?: string
           created_by?: string | null
@@ -370,6 +421,13 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "internal_services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "internal_service_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "internal_services_created_by_fkey"
             columns: ["created_by"]
@@ -475,6 +533,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "job_updates"
             referencedColumns: ["job_id", "id"]
+          },
+        ]
+      }
+      job_contributors: {
+        Row: {
+          added_at: string
+          added_by: string
+          job_id: string
+          profile_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          job_id: string
+          profile_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          job_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_contributors_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contributors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1294,36 +1402,75 @@ export type Database = {
         Row: {
           answer: string
           created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           is_visible: boolean
           question: string
           services_categories_id: string | null
+          sort_order: number
           updated_at: string | null
+          updated_by: string | null
+          version: number
         }
         Insert: {
           answer: string
           created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_visible?: boolean
           question: string
           services_categories_id?: string | null
+          sort_order?: number
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Update: {
           answer?: string
           created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_visible?: boolean
           question?: string
           services_categories_id?: string | null
+          sort_order?: number
           updated_at?: string | null
+          updated_by?: string | null
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "question_answer_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answer_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "question_answer_services_categories_id_fkey"
             columns: ["services_categories_id"]
             isOneToOne: false
             referencedRelation: "services_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_answer_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2490,6 +2637,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_job_contributor: {
+        Args: { p_job_id: string; p_profile_id: string }
+        Returns: undefined
+      }
       approve_admin_access_request: {
         Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
         Returns: undefined
@@ -2638,6 +2789,18 @@ export type Database = {
         Returns: string
       }
       current_role: { Args: never; Returns: string }
+      delete_internal_service_category: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
+      delete_job_permanently: {
+        Args: {
+          p_confirmation: string
+          p_expected_version: number
+          p_job_id: string
+        }
+        Returns: string
+      }
       delete_job_update: {
         Args: { p_expected_version: number; p_update_id: string }
         Returns: undefined
@@ -2654,6 +2817,14 @@ export type Database = {
         Args: { p_expected_version: number; p_id: string }
         Returns: undefined
       }
+      delete_question_answer: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
+      delete_rejected_admin_access_request: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       delete_task: {
         Args: { p_expected_version: number; p_task_id: string }
         Returns: undefined
@@ -2662,6 +2833,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["admin_access_request_status"]
       }
+      internal_service_catalogue_counts: { Args: never; Returns: Json }
       is_active_super_admin: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_admin_role: { Args: never; Returns: boolean }
@@ -2680,6 +2852,14 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+        }[]
+      }
+      list_internal_service_usage: {
+        Args: never
+        Returns: {
+          id: string
+          job_count: number
+          sop_count: number
         }[]
       }
       list_job_activity: {
@@ -2705,6 +2885,27 @@ export type Database = {
           email: string
           full_name: string
           requested_at: string
+          user_id: string
+        }[]
+      }
+      list_question_answer_categories: {
+        Args: never
+        Returns: {
+          id: string
+          is_published: boolean
+          slug: string
+          title: string
+        }[]
+      }
+      list_rejected_admin_access_requests: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          rejection_reason: string
+          requested_at: string
+          reviewed_at: string
           user_id: string
         }[]
       }
@@ -2753,13 +2954,26 @@ export type Database = {
         }
         Returns: number
       }
+      purge_expired_job: { Args: { p_job_id: string }; Returns: string }
       reject_admin_access_request: {
         Args: { p_rejection_reason?: string; p_user_id: string }
+        Returns: undefined
+      }
+      remove_internal_service: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: string
+      }
+      remove_job_contributor: {
+        Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
       }
       reopen_job: {
         Args: { p_expected_version: number; p_job_id: string; p_reason: string }
         Returns: number
+      }
+      reorder_question_answers: {
+        Args: { p_ordered_ids: string[]; p_services_categories_id: string }
+        Returns: undefined
       }
       restore_blog_post: {
         Args: { p_expected_version: number; p_post_id: string }
@@ -2773,6 +2987,10 @@ export type Database = {
         }
         Returns: number
       }
+      restore_job: {
+        Args: { p_expected_version: number; p_job_id: string }
+        Returns: number
+      }
       restore_profile: { Args: { p_profile_id: string }; Returns: undefined }
       revert_last_job_step: {
         Args: { p_expected_version: number; p_job_step_id: string }
@@ -2781,6 +2999,19 @@ export type Database = {
       revoke_review_request: {
         Args: { p_request_id: string }
         Returns: undefined
+      }
+      save_categorized_internal_service: {
+        Args: {
+          p_category_id: string
+          p_code_suffix: string
+          p_expected_version: number
+          p_id: string
+          p_is_active?: boolean
+          p_name: string
+          p_summary?: string
+          p_workflow_template_id?: string
+        }
+        Returns: string
       }
       save_internal_service: {
         Args: {
@@ -2791,6 +3022,15 @@ export type Database = {
           p_name: string
           p_summary?: string
           p_workflow_template_id?: string
+        }
+        Returns: string
+      }
+      save_internal_service_category: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_id: string
+          p_name: string
         }
         Returns: string
       }
@@ -2905,6 +3145,18 @@ export type Database = {
         }
         Returns: string
       }
+      save_question_answer: {
+        Args: {
+          p_answer: string
+          p_expected_version: number
+          p_id: string
+          p_is_visible?: boolean
+          p_question: string
+          p_services_categories_id?: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
       save_sop: {
         Args: {
           p_description: string
@@ -2982,6 +3234,24 @@ export type Database = {
         }
         Returns: string
       }
+      search_internal_services: {
+        Args: {
+          p_category_id?: string
+          p_page?: number
+          p_search?: string
+          p_uncategorized?: boolean
+        }
+        Returns: Json
+      }
+      search_job_access_profiles: {
+        Args: { p_job_id: string; p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          email: string
+          id: string
+        }[]
+      }
       set_blog_post_featured: {
         Args: {
           p_expected_version: number
@@ -3040,6 +3310,14 @@ export type Database = {
         Returns: string
       }
       sync_own_profile_identity: { Args: never; Returns: undefined }
+      trash_job: {
+        Args: {
+          p_confirmation: string
+          p_expected_version: number
+          p_job_id: string
+        }
+        Returns: number
+      }
       update_blog_post: {
         Args: {
           p_category?: string

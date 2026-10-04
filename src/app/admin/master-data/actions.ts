@@ -18,7 +18,7 @@ export type SaveMasterDataInput = {
 };
 
 export type ArchiveMasterDataInput = {
-  categoryId: Exclude<MasterDataCategoryId, 'service-categories'>;
+  categoryId: MasterDataCategoryId;
   id: string;
   expectedVersion: number;
 };
@@ -39,19 +39,21 @@ function normalizeValues(values: MasterDataFormValues): MasterDataFormValues {
     color: values.color.trim().toUpperCase(),
     summary: values.summary.trim(),
     workflowTemplateId: values.workflowTemplateId?.trim() || '',
+    internalCategoryId: values.internalCategoryId?.trim() || '',
     steps: values.steps.map((step) => ({ ...step, name: step.name.trim() })),
   };
 }
 
 function validateSaveInput(input: SaveMasterDataInput): string | null {
   const { categoryId, id, expectedVersion, values } = input;
-  const maxCodeLength = categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 50 : 80;
+  const maxCodeLength = categoryId === 'internal-service-categories' ? 30 : categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 50 : 80;
   const maxNameLength = categoryId === 'priorities' || categoryId === 'job-statuses' || categoryId === 'task-statuses' ? 100 : categoryId === 'job-titles' ? 120 : 160;
 
   if (id && (!UUID_PATTERN.test(id) || !Number.isInteger(expectedVersion) || (expectedVersion ?? 0) < 1)) {
     return 'Data yang akan diperbarui tidak valid. Muat ulang halaman lalu coba lagi.';
   }
-  if (!CODE_PATTERN.test(values.code) || values.code.length > maxCodeLength) {
+  const codePattern = categoryId === 'internal-services' ? /^[A-Z0-9]+(_[A-Z0-9]+)*$/ : categoryId === 'internal-service-categories' ? /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/ : CODE_PATTERN;
+  if (!codePattern.test(values.code) || values.code.length > maxCodeLength) {
     return `Code wajib berupa huruf kapital, angka, atau underscore dengan panjang maksimal ${maxCodeLength} karakter.`;
   }
   if (!values.name || values.name.length > maxNameLength) {
@@ -69,6 +71,9 @@ function validateSaveInput(input: SaveMasterDataInput): string | null {
   if (categoryId === 'internal-services' && values.workflowTemplateId && !UUID_PATTERN.test(values.workflowTemplateId)) {
     return 'Workflow template yang dipilih tidak valid.';
   }
+  if (categoryId === 'internal-services' && ((!id && !values.internalCategoryId) || (values.internalCategoryId && !UUID_PATTERN.test(values.internalCategoryId)))) {
+    return 'Pilih kategori Internal Service yang valid.';
+  }
 
   if (categoryId === 'workflow-templates') {
     if (values.steps.length < 1 || values.steps.length > 100 || values.steps.some((step) => !step.name || step.name.length > 160)) {
@@ -80,13 +85,18 @@ function validateSaveInput(input: SaveMasterDataInput): string | null {
 }
 
 function actionError(error: { code?: string; message: string }): MasterDataActionResult {
+  if (error.code === '23503' && error.message.startsWith('Category is used'))
+    return { ok: false, message: 'Kategori masih digunakan oleh Internal Service (termasuk yang inactive) dan tidak dapat diedit atau dihapus.' };
   if (error.code === '42501') return { ok: false, message: 'Hanya admin atau super admin aktif yang dapat mengubah Master Data.' };
-  if (error.code === '23505') return { ok: false, message: 'Code tersebut sudah digunakan. Gunakan code lain.' };
+  if (error.code === '23505') return { ok: false, message: 'Code atau nama tersebut sudah digunakan. Gunakan nilai lain.' };
   if (error.code === '40001') return { ok: false, message: 'Data sudah diubah oleh pengguna lain. Muat ulang halaman lalu coba kembali.' };
   if (error.code === '23503') return { ok: false, message: 'Data masih digunakan oleh data aktif lain dan belum dapat dinonaktifkan.' };
   if (error.code === '55000' && error.message.includes('immutable')) {
     return { ok: false, message: 'Workflow yang sudah digunakan oleh Job tidak dapat diubah. Buat workflow baru untuk susunan step yang berbeda.' };
   }
+  if (error.code === '55000' && error.message.includes('suffix')) return { ok: false, message: 'Akhiran kode Service tidak dapat diubah setelah dibuat.' };
+  if (error.code === '22023' && /service|category/i.test(error.message))
+    return { ok: false, message: 'Periksa kategori dan kode. Awalan kategori maksimal 30 karakter dan kode lengkap maksimal 80 karakter; gunakan huruf kapital, angka, dan underscore antar kata.' };
   if (error.code === '55000') return { ok: false, message: 'Operasi ini tidak diperbolehkan untuk data sistem atau kondisi data saat ini.' };
   if (error.code === 'P0002') return { ok: false, message: 'Data tidak ditemukan. Muat ulang halaman lalu coba kembali.' };
 
@@ -144,11 +154,19 @@ export async function saveMasterDataAction(rawInput: SaveMasterDataInput): Promi
       p_sort_order: values.sortOrder,
       p_is_active: values.isActive,
     } as never));
-  } else if (categoryId === 'internal-services') {
-    ({ error } = await supabase.rpc('save_internal_service', {
+  } else if (categoryId === 'internal-service-categories') {
+    ({ error } = await supabase.rpc('save_internal_service_category', {
       p_id: id ?? null,
       p_expected_version: expectedVersion ?? null,
       p_code: values.code,
+      p_name: values.name,
+    } as never));
+  } else if (categoryId === 'internal-services') {
+    ({ error } = await supabase.rpc('save_categorized_internal_service', {
+      p_id: id ?? null,
+      p_expected_version: expectedVersion ?? null,
+      p_category_id: values.internalCategoryId || null,
+      p_code_suffix: values.code,
       p_name: values.name,
       p_summary: values.summary || null,
       p_workflow_template_id: values.workflowTemplateId || null,
@@ -170,6 +188,10 @@ export async function saveMasterDataAction(rawInput: SaveMasterDataInput): Promi
   if (error) return actionError(error);
 
   revalidatePath('/admin/master-data');
+  if (categoryId === 'internal-services' || categoryId === 'internal-service-categories') {
+    revalidatePath('/admin/all-jobs');
+    revalidatePath('/admin/sop');
+  }
   if (categoryId === 'job-titles') {
     revalidatePath('/about');
     updateTag(PUBLIC_CACHE_TAGS.team);
@@ -184,9 +206,21 @@ export async function archiveMasterDataAction(input: ArchiveMasterDataInput): Pr
     return { ok: false, message: 'Data yang akan dinonaktifkan tidak valid.' };
   }
 
-  const entityByCategory: Record<ArchiveMasterDataInput['categoryId'], string> = {
+  if (input.categoryId === 'internal-service-categories' || input.categoryId === 'internal-services') {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } =
+      input.categoryId === 'internal-service-categories'
+        ? await supabase.rpc('delete_internal_service_category', { p_id: input.id, p_expected_version: input.expectedVersion })
+        : await supabase.rpc('remove_internal_service', { p_id: input.id, p_expected_version: input.expectedVersion });
+    if (error) return actionError(error);
+    revalidatePath('/admin/master-data');
+    revalidatePath('/admin/all-jobs');
+    revalidatePath('/admin/sop');
+    return { ok: true, message: data === 'deactivated' ? 'Service sudah digunakan: dinonaktifkan, histori Job/SOP tetap dipertahankan.' : 'Data yang belum digunakan berhasil dihapus permanen.' };
+  }
+
+  const entityByCategory: Record<Exclude<ArchiveMasterDataInput['categoryId'], 'internal-service-categories' | 'internal-services'>, string> = {
     priorities: 'PRIORITY',
-    'internal-services': 'INTERNAL_SERVICE',
     'job-statuses': 'JOB_STATUS',
     'task-statuses': 'TASK_STATUS',
     'job-titles': 'JOB_TITLE',

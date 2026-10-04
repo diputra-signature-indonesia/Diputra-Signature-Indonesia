@@ -32,8 +32,8 @@ select extensions.is((select count(*)::integer from public.job_statuses where is
 select extensions.is((select count(*)::integer from public.task_statuses where is_system),5,'five Task statuses are seeded independently');
 select extensions.is((select count(*)::integer from public.workflow_templates where code in('GENERAL','VISA')),2,'two initial workflows are seeded');
 select extensions.has_table('public','services_categories','landing/client Service Categories remain on the existing public content table');
-select extensions.hasnt_table('public','internal_service_categories','no internal category bridge table exists');
-select extensions.hasnt_column('public','internal_services','category_id','Internal Services are independent from landing/client categories');
+select extensions.has_table('public','internal_service_categories','internal catalogue categories are separate from landing/client Service Categories');
+select extensions.has_column('public','internal_services','category_id','Internal Services link only to their dedicated internal categories');
 select extensions.hasnt_column('public','jobs','category_id','Jobs use Internal Service directly instead of a separate category');
 select extensions.hasnt_column('public','internal_services','sort_order','Internal Services do not use manual display order');
 

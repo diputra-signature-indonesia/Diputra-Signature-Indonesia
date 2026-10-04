@@ -22,39 +22,34 @@ function ensureResult<T>(label: string, result: { data: T | null; error: { messa
 export async function getMasterDataCategories(): Promise<MasterDataCategory[]> {
   const supabase = await createSupabaseServerClient();
 
-  const [priorityResult, publicCategoryResult, serviceResult, jobStatusResult, taskStatusResult, jobTitleResult, workflowResult, stepResult] = await Promise.all([
+  const [priorityResult, jobStatusResult, taskStatusResult, jobTitleResult, workflowResult, stepResult, internalCategoryResult, catalogueCountResult] = await Promise.all([
     supabase.from('priorities').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
-    supabase.from('services_categories').select('id, title, short_description, slug, type, is_published, sort_order').order('sort_order').order('title'),
-    supabase.from('internal_services').select('id, code, name, summary, workflow_template_id, is_active, version').order('name'),
     supabase.from('job_statuses').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
     supabase.from('task_statuses').select('id, code, name, color, sort_order, is_active, is_system, version').order('sort_order').order('name'),
     supabase.from('job_titles').select('id, code, name, sort_order, is_active, version').order('sort_order').order('name'),
     supabase.from('workflow_templates').select('id, code, name, description, is_active, version').order('name'),
     supabase.from('workflow_template_steps').select('id, workflow_template_id, name, position').order('position'),
+    supabase.from('internal_service_categories').select('id,code,name,version').order('name').order('id'),
+    supabase.rpc('internal_service_catalogue_counts'),
   ]);
 
   const priorities = ensureResult('priorities', priorityResult);
-  const publicCategories = ensureResult('service categories', publicCategoryResult);
-  const services = ensureResult('internal services', serviceResult);
   const jobStatuses = ensureResult('Job statuses', jobStatusResult);
   const taskStatuses = ensureResult('Task statuses', taskStatusResult);
   const jobTitles = ensureResult('Job titles', jobTitleResult);
   const workflows = ensureResult('workflow templates', workflowResult);
   const steps = ensureResult('workflow steps', stepResult);
+  const internalCategories = ensureResult('internal service categories', internalCategoryResult);
+  const catalogueCounts = ensureResult('internal service counts', catalogueCountResult) as { categories: Record<string, number>; workflows: Record<string, number> };
+  const serviceCountByCategory = new Map(Object.entries(catalogueCounts.categories));
 
-  const workflowById = new Map(workflows.map((workflow) => [workflow.id, workflow]));
   const stepNamesByWorkflow = new Map<string, string[]>();
-  const serviceCountByWorkflow = new Map<string, number>();
+  const serviceCountByWorkflow = new Map(Object.entries(catalogueCounts.workflows));
 
   for (const step of steps) {
     const current = stepNamesByWorkflow.get(step.workflow_template_id) ?? [];
     current.push(step.name);
     stepNamesByWorkflow.set(step.workflow_template_id, current);
-  }
-
-  for (const service of services) {
-    if (!service.workflow_template_id) continue;
-    serviceCountByWorkflow.set(service.workflow_template_id, (serviceCountByWorkflow.get(service.workflow_template_id) ?? 0) + 1);
   }
 
   const rowsByCategory: Record<MasterDataCategory['id'], MasterDataRow[]> = {
@@ -72,39 +67,20 @@ export async function getMasterDataCategories(): Promise<MasterDataCategory[]> {
         activeBadge(priority.is_active),
       ],
     })),
-    'service-categories': publicCategories.map((category) => ({
+    'internal-service-categories': internalCategories.map((category) => ({
       id: category.id,
-      version: 1,
-      isActive: Boolean(category.is_published),
+      code: category.code,
+      version: category.version,
+      isActive: true,
+      referenceCount: serviceCountByCategory.get(category.id) ?? 0,
       cells: [
-        { type: 'text', value: category.title?.trim() || category.slug, secondary: category.short_description ?? undefined },
-        { type: 'text', value: category.slug, mono: true },
-        { type: 'badge', value: category.type === 'primary' ? 'Primary' : 'Secondary', tone: category.type === 'primary' ? 'blue' : 'purple' },
-        category.is_published ? { type: 'badge', value: 'Published', tone: 'green' } : { type: 'badge', value: 'Draft', tone: 'gray' },
+        { type: 'text', value: category.name },
+        { type: 'text', value: category.code, mono: true },
+        { type: 'text', value: String(serviceCountByCategory.get(category.id) ?? 0) },
       ],
     })),
-    'internal-services': services.map((service) => {
-      const workflow = service.workflow_template_id ? workflowById.get(service.workflow_template_id) : undefined;
-      const stepCount = service.workflow_template_id ? (stepNamesByWorkflow.get(service.workflow_template_id)?.length ?? 0) : 0;
-
-      return {
-        id: service.id,
-        code: service.code,
-        version: service.version,
-        isActive: service.is_active,
-        workflowTemplateId: service.workflow_template_id,
-        cells: [
-          { type: 'text', value: service.name, secondary: service.summary ?? undefined },
-          { type: 'text', value: service.code, mono: true },
-          {
-            type: 'text',
-            value: workflow?.name ?? 'Not assigned',
-            secondary: workflow ? `${stepCount} ordered ${stepCount === 1 ? 'step' : 'steps'}` : 'Required before use',
-          },
-          activeBadge(service.is_active),
-        ],
-      };
-    }),
+    // Service rows are requested separately through server-side pagination.
+    'internal-services': [],
     'job-statuses': jobStatuses.map((status) => ({
       id: status.id,
       code: status.code,

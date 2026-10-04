@@ -1,5 +1,5 @@
 import type { MasterDataCategory, MasterDataCell, MasterDataRow } from '@/data/admin-master-data/master-data';
-import { Archive, ArrowUpDown, ListTree, LockKeyhole, Pencil, Workflow } from 'lucide-react';
+import { Archive, ArrowUpDown, ListTree, LockKeyhole, Pencil, Trash2, Workflow } from 'lucide-react';
 
 const badgeStyles: Record<Extract<MasterDataCell, { type: 'badge' }>['tone'], string> = {
   red: 'border-[#F3B9B9] bg-[#FFF0F0] text-[#B51414]',
@@ -53,6 +53,7 @@ type MasterDataTableProps = {
   category: MasterDataCategory;
   canManage: boolean;
   pendingRowId?: string | null;
+  emptyMessage?: string;
   onEdit?: (row: MasterDataRow) => void;
   onArchive?: (row: MasterDataRow) => void;
 };
@@ -62,9 +63,7 @@ function rowLabel(row: MasterDataRow) {
   return firstCell?.type === 'text' ? firstCell.value : 'item';
 }
 
-export function MasterDataTable({ category, canManage, pendingRowId, onEdit, onArchive }: MasterDataTableProps) {
-  const readOnlyCategory = category.id === 'service-categories';
-
+export function MasterDataTable({ category, canManage, pendingRowId, emptyMessage = 'No data is available in this category yet.', onEdit, onArchive }: MasterDataTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#DEE2E7] bg-white">
       <div className="overflow-x-auto">
@@ -88,15 +87,18 @@ export function MasterDataTable({ category, canManage, pendingRowId, onEdit, onA
             {category.rows.length === 0 ? (
               <tr>
                 <td colSpan={category.columns.length + 1} className="px-6 py-14 text-center text-xs text-[#8A94A3]">
-                  No data is available in this category yet.
+                  {emptyMessage}
                 </td>
               </tr>
             ) : null}
             {category.rows.map((row) => {
               const label = rowLabel(row);
               const isPending = pendingRowId === row.id;
-              const editDisabled = readOnlyCategory || !canManage || !onEdit || isPending;
-              const archiveDisabled = readOnlyCategory || !canManage || !onArchive || row.isSystem || !row.isActive || isPending;
+              const usedCategory = category.id === 'internal-service-categories' && (row.referenceCount ?? 0) > 0;
+              const hardDelete = category.id === 'internal-service-categories' || (category.id === 'internal-services' && row.referenceCount === 0);
+              const editDisabled = !canManage || !onEdit || isPending || usedCategory;
+              const archiveDisabled = !canManage || !onArchive || row.isSystem || (!row.isActive && !hardDelete) || isPending || usedCategory;
+              const removeLabel = hardDelete ? 'Delete permanently' : 'Deactivate';
 
               return (
                 <tr key={row.id} className="border-b border-[#E7E9ED] transition last:border-b-0 hover:bg-[#FCFCFD]">
@@ -136,7 +138,7 @@ export function MasterDataTable({ category, canManage, pendingRowId, onEdit, onA
                         onClick={() => onEdit?.(row)}
                         disabled={editDisabled}
                         aria-label={`Edit ${label}`}
-                        title={readOnlyCategory ? 'Service Categories are read-only here' : canManage ? 'Edit' : 'Only admin and super admin can edit'}
+                        title={usedCategory ? 'Category is used by internal services (including inactive services)' : canManage ? 'Edit' : 'Only admin and super admin can edit'}
                         className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
                       >
                         <Pencil aria-hidden="true" className="size-4" strokeWidth={1.7} />
@@ -150,13 +152,19 @@ export function MasterDataTable({ category, canManage, pendingRowId, onEdit, onA
                           type="button"
                           onClick={() => onArchive?.(row)}
                           disabled={archiveDisabled}
-                          aria-label={`Deactivate ${label}`}
+                          aria-label={`${removeLabel} ${label}`}
                           title={
-                            readOnlyCategory ? 'Service Categories are read-only here' : !row.isActive ? 'Already inactive' : canManage ? 'Deactivate' : 'Only admin and super admin can deactivate'
+                            usedCategory
+                              ? 'Category is used by internal services (including inactive services)'
+                              : !row.isActive && !hardDelete
+                                ? 'Already inactive'
+                                : canManage
+                                  ? removeLabel
+                                  : 'Only admin and super admin can change Master Data'
                           }
                           className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FFF0F0] hover:text-[#C32929] focus-visible:ring-2 focus-visible:ring-[#C32929]/25 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
                         >
-                          <Archive aria-hidden="true" className="size-4" strokeWidth={1.7} />
+                          {hardDelete ? <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.7} /> : <Archive aria-hidden="true" className="size-4" strokeWidth={1.7} />}
                         </button>
                       )}
                     </div>
