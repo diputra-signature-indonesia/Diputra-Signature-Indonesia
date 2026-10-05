@@ -10,16 +10,19 @@ import {
   type SavePublicServiceItemInput,
 } from '@/app/admin/public-services/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import { QuestionAnswerModal } from '@/components/admin-public-services/question-answer-modal';
-import { PUBLIC_SERVICE_IMAGE_ACCEPT, PUBLIC_SERVICE_SVG_ACCEPT } from '@/lib/public-service-storage';
-import type { AdminPublicServiceCategory, AdminPublicServiceDetail, AdminPublicServiceItem } from '@/lib/supabase/queries/public-service-management';
 import type { AdminQuestionAnswer } from '@/lib/supabase/queries/question-answer-management';
+import { PUBLIC_SERVICE_IMAGE_ACCEPT, PUBLIC_SERVICE_SVG_ACCEPT } from '@/lib/public-service-storage';
+import type { AdminPublicServiceCategory, AdminPublicServiceDetail, AdminPublicServiceItem, AdminPublicServicePage } from '@/lib/supabase/queries/public-service-management';
 import { deletePublicServiceAssetUrl, uploadPublicServiceImage, uploadPublicServiceSvg } from '@/lib/upload-public-service-asset';
 import { CircleHelp, Eye, EyeOff, FileStack, ImagePlus, Pencil, Plus, Shapes, Trash2, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useTransition, type FormEvent } from 'react';
+import { useState, useTransition, type FormEvent } from 'react';
 
 type Notice = { tone: 'success' | 'error'; message: string };
 type CategoryEditor = { mode: 'add' | 'edit'; category?: AdminPublicServiceCategory };
@@ -582,23 +585,33 @@ function DetailFormModal({
   );
 }
 
-export function PublicServicesWorkspace({ initialCategories, initialQuestionAnswers, canManageServices }: { initialCategories: AdminPublicServiceCategory[]; initialQuestionAnswers: AdminQuestionAnswer[]; canManageServices: boolean }) {
+export function PublicServicesWorkspace({ initialPage, canManageServices }: { initialPage: AdminPublicServicePage; canManageServices: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [selectedId, setSelectedId] = useState(initialCategories[0]?.id ?? '');
+  const [selectedId, setSelectedId] = useState(initialPage.selected?.id ?? '');
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [itemPage, setItemPage] = useState(1);
+  const [detailPage, setDetailPage] = useState(1);
+  const [query, setQuery] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
   const [categoryEditor, setCategoryEditor] = useState<CategoryEditor | null>(null);
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [detailItem, setDetailItem] = useState<AdminPublicServiceItem | null>(null);
   const [detailEditor, setDetailEditor] = useState<DetailEditor | null>(null);
   const [qnaOpen, setQnaOpen] = useState(false);
+  const questionAnswers = useAdminPage<{ items: AdminQuestionAnswer[] }>(qnaOpen && selectedId ? `/api/admin/question-answers?${new URLSearchParams({ category: selectedId, revision: initialPage.revision })}` : null);
 
-  const selected = initialCategories.find((category) => category.id === selectedId) ?? initialCategories[0] ?? null;
-  const nextCategoryOrder = Math.max(-10, ...initialCategories.map((category) => Number(category.sort_order ?? 0))) + 10;
-  const nextItemOrder = selected ? Math.max(-10, ...selected.items.map((item) => Number(item.sort_order ?? 0))) + 10 : 0;
-  const nextDetailOrder = detailItem ? Math.max(-10, ...detailItem.details.map((detail) => Number(detail.sort_order ?? 0))) + 10 : 0;
-
-  const detailItemFresh = useMemo(() => selected?.items.find((item) => item.id === detailItem?.id) ?? detailItem, [selected, detailItem]);
+  const params = new URLSearchParams({ category: selectedId, categoryPage: String(categoryPage), itemPage: String(itemPage), detailPage: String(detailPage), query, revision: initialPage.revision });
+  if (detailItem) params.set('item', detailItem.id);
+  const result = useAdminPage<AdminPublicServicePage>(`/api/admin/public-services?${params}`, initialPage, 400);
+  const current = result.data ?? initialPage;
+  const initialCategories = current.categories;
+  const selected = !selectedId || current.selected?.id === selectedId ? current.selected : null;
+  const busy = isPending || result.loading || Boolean(result.error);
+  const nextCategoryOrder = current.nextCategoryOrder;
+  const nextItemOrder = current.nextItemOrder;
+  const nextDetailOrder = current.nextDetailOrder;
+  const detailItemFresh = detailItem ? { ...(current.selected?.items.find((item) => item.id === detailItem.id) ?? detailItem), details: result.loading || result.error ? [] : current.details } : null;
 
   const finish = (result: { ok: boolean; message: string }, close: () => void) => {
     setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
@@ -672,11 +685,11 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
       if (result.ok) {
         if (kind === 'category') {
           const category = record as AdminPublicServiceCategory;
-          const urls = [category.card_image, category.hero_image, ...category.items.map((item) => item.icon_key)];
-          await Promise.all(urls.map((url) => deletePublicServiceAssetUrl(url).catch(() => undefined)));
+          // Soft-archived content retains its assets; never clean up children
+          // from a partial page or download every page just to perform cleanup.
           setSelectedId(initialCategories.find((value) => value.id !== category.id)?.id ?? '');
         } else if (kind === 'item') {
-          await deletePublicServiceAssetUrl((record as AdminPublicServiceItem).icon_key).catch(() => undefined);
+          // Preserve the icon with the archived Sub-service history.
           if (detailItem?.id === record.id) setDetailItem(null);
         } else if (detailItem) {
           setDetailItem({ ...detailItem, details: detailItem.details.filter((detail) => detail.id !== record.id) });
@@ -688,7 +701,12 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
   };
 
   return (
-    <main className="p-4 pb-20 sm:p-5 lg:p-6" aria-busy={isPending}>
+    <main className="p-4 pb-20 sm:p-5 lg:p-6" aria-busy={isPending || result.loading}>
+      {result.loading || result.error ? (
+        <p role={result.error ? 'alert' : 'status'} className="mb-4 text-sm text-[#707988]">
+          {result.error ?? 'Loading Client Services...'}
+        </p>
+      ) : null}
       {notice ? (
         <div
           role="status"
@@ -715,6 +733,19 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
               <Plus className="size-4" />
             </button> : null}
           </div>
+          <div className="px-4 pb-3">
+            <AdminSearchField
+              label="Search Client Services"
+              compact
+              hideLabel
+              placeholder="Search Services..."
+              value={query}
+              onChange={(value) => {
+                setQuery(value);
+                setCategoryPage(1);
+              }}
+            />
+          </div>
           <nav aria-label="Client Services" className="flex gap-2 overflow-x-auto px-4 pb-4 lg:flex-col lg:gap-1 lg:px-3 lg:pb-6">
             {initialCategories.map((category) => {
               const active = category.id === selected?.id;
@@ -724,20 +755,24 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                   type="button"
                   onClick={() => {
                     setSelectedId(category.id);
-                    setQnaOpen(false);
+                    setItemPage(1);
+                    setDetailItem(null);
+                    setDetailPage(1);
                     setNotice(null);
+                    setQnaOpen(false);
                   }}
                   className={`group flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-left transition lg:w-full lg:min-w-0 ${active ? 'bg-[#FDEBEB] text-[#8C1010]' : 'text-[#394150] hover:bg-white hover:text-[#8C1010]'}`}
                 >
                   <Shapes className="size-[18px] shrink-0" strokeWidth={1.7} />
                   <span className="min-w-0 flex-1 text-xs font-semibold lg:truncate">{category.title ?? category.slug}</span>
                   <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${active ? 'bg-white text-[#8C1010]' : 'bg-[#F1F3F5] text-[#7A8492]'}`}>
-                    {category.items.length}
+                    {category.itemCount ?? category.items.length}
                   </span>
                 </button>
               );
             })}
           </nav>
+          <AllJobsPagination noun="services" disabled={busy} currentPage={current.categoryPage} pageSize={10} totalItems={current.categoryTotal} onPageChange={setCategoryPage} />
         </aside>
 
         <div className="min-w-0 bg-white">
@@ -756,7 +791,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                   {canManageServices ? <button
                     type="button"
                     onClick={() => setCategoryEditor({ mode: 'edit', category: selected })}
-                    disabled={isPending}
+                    disabled={busy}
                     className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] px-3.5 text-xs font-semibold text-[#586273] hover:bg-[#F8F9FA]"
                   >
                     <Pencil className="size-4" />
@@ -765,7 +800,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                   {canManageServices ? <button
                     type="button"
                     onClick={() => remove('category', selected)}
-                    disabled={isPending}
+                    disabled={busy}
                     className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#E1BEBE] px-3.5 text-xs font-semibold text-[#A51919] hover:bg-[#FFF7F7]"
                   >
                     <Trash2 className="size-4" />
@@ -774,7 +809,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                   {canManageServices ? <button
                     type="button"
                     onClick={() => setItemEditor({ mode: 'add' })}
-                    disabled={isPending}
+                    disabled={busy}
                     className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white hover:bg-[#7E0C0C]"
                   >
                     <Plus className="size-4" />
@@ -814,7 +849,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                         </td>
                         <td className="px-4 py-4 font-mono text-xs text-[#586273]">{item.slug}</td>
                         <td className="px-4 py-4 text-xs text-[#586273]">{item.cta_type === 'detail' ? 'Detail Page' : 'Contact Page'}</td>
-                        <td className="px-4 py-4 text-xs font-semibold text-[#586273]">{item.details.length}</td>
+                        <td className="px-4 py-4 text-xs font-semibold text-[#586273]">{item.detailCount ?? item.details.length}</td>
                         <td className="px-4 py-4">
                           <PublishedBadge published={item.is_published} />
                         </td>
@@ -822,7 +857,11 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                           <div className="flex justify-end gap-1">
                             {canManageServices ? <button
                               type="button"
-                              onClick={() => setDetailItem(item)}
+                              onClick={() => {
+                                setDetailItem(item);
+                                setDetailPage(1);
+                              }}
+                              disabled={busy}
                               title="Manage details"
                               aria-label={`Manage details for ${item.title}`}
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#245293] hover:bg-[#F0F5FF]"
@@ -832,6 +871,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                             {canManageServices ? <button
                               type="button"
                               onClick={() => setItemEditor({ mode: 'edit', item })}
+                              disabled={busy}
                               title="Edit Sub-service"
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#667181] hover:bg-[#F2F4F7]"
                             >
@@ -840,6 +880,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                             {canManageServices ? <button
                               type="button"
                               onClick={() => remove('item', item)}
+                              disabled={busy}
                               title="Delete Sub-service"
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#A51919] hover:bg-[#FFF0F0]"
                             >
@@ -858,12 +899,23 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                     <p className="mt-1 text-xs text-[#7B8491]">Add the first Sub-service for {selected.title ?? selected.slug}.</p>
                   </div>
                 ) : null}
+                <AllJobsPagination
+                  noun="sub-services"
+                  disabled={busy}
+                  currentPage={current.itemPage}
+                  pageSize={10}
+                  totalItems={current.itemTotal}
+                  onPageChange={(page) => {
+                    setItemPage(page);
+                    setDetailItem(null);
+                  }}
+                />
               </div>
             </>
           ) : (
             <div className="flex min-h-[650px] flex-col items-center justify-center px-6 text-center">
               <Shapes className="size-10 text-[#A5ADB8]" />
-              <h2 className="mt-4 text-lg font-semibold">No Client Services yet</h2>
+              <h2 className="mt-4 text-lg font-semibold">{result.loading ? 'Loading Client Services...' : (result.error ?? 'No Client Services yet')}</h2>
               <p className="mt-1 text-sm text-[#7B8491]">Create the first Service to begin managing public content.</p>
               {canManageServices ? <button
                 type="button"
@@ -909,7 +961,12 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
           size="xl"
         >
           <div className="mb-4 flex justify-end">
-            <button type="button" onClick={() => setDetailEditor({ mode: 'add' })} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setDetailEditor({ mode: 'add' })}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white"
+            >
               <Plus className="size-4" />
               Add Detail
             </button>
@@ -939,12 +996,18 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"
+                          disabled={busy}
                           onClick={() => setDetailEditor({ mode: 'edit', detail })}
                           className="inline-flex size-8 items-center justify-center rounded-md text-[#667181] hover:bg-[#F2F4F7]"
                         >
                           <Pencil className="size-4" />
                         </button>
-                        <button type="button" onClick={() => remove('detail', detail)} className="inline-flex size-8 items-center justify-center rounded-md text-[#A51919] hover:bg-[#FFF0F0]">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => remove('detail', detail)}
+                          className="inline-flex size-8 items-center justify-center rounded-md text-[#A51919] hover:bg-[#FFF0F0]"
+                        >
                           <Trash2 className="size-4" />
                         </button>
                       </div>
@@ -953,7 +1016,12 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
                 ))}
               </tbody>
             </table>
-            {detailItemFresh.details.length === 0 ? <div className="px-6 py-12 text-center text-sm text-[#7B8491]">No optional details have been added.</div> : null}
+            {detailItemFresh.details.length === 0 ? (
+              <div role="status" className="px-6 py-12 text-center text-sm text-[#7B8491]">
+                {result.loading ? 'Loading details...' : (result.error ?? 'No optional details have been added.')}
+              </div>
+            ) : null}
+            <AllJobsPagination noun="details" disabled={busy} currentPage={current.detailPage} pageSize={10} totalItems={current.detailTotal} onPageChange={setDetailPage} />
           </div>
         </AdminModal>
       ) : null}
@@ -968,7 +1036,7 @@ export function PublicServicesWorkspace({ initialCategories, initialQuestionAnsw
           onSave={saveDetail}
         />
       ) : null}
-      {selected ? <QuestionAnswerModal open={qnaOpen} onClose={() => setQnaOpen(false)} service={{ id: selected.id, title: selected.title ?? selected.slug }} initialItems={initialQuestionAnswers} /> : null}
+      {selected && qnaOpen ? <QuestionAnswerModal key={selected.id} open onClose={() => setQnaOpen(false)} service={{ id: selected.id, title: selected.title ?? selected.slug }} initialItems={questionAnswers.loading || questionAnswers.error ? [] : questionAnswers.data?.items ?? []} loading={questionAnswers.loading} error={questionAnswers.error} /> : null}
       {isPending ? <AdminPendingOverlay label="Saving Client Services..." /> : null}
     </main>
   );

@@ -28,7 +28,7 @@ export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
     redirect('/login');
   }
 
-  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active, deleted_at').eq('id', user.id).maybeSingle();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role, is_active, deleted_at, display_name, avatar_url').eq('id', user.id).maybeSingle();
 
   if (profileError) {
     throw new Error(`Unable to verify admin access: ${profileError.message}`);
@@ -43,8 +43,8 @@ export async function requireActiveAdmin(): Promise<ActiveAdminContext> {
   return {
     userId: user.id,
     role: profile.role,
-    displayName: metadataString(metadata, 'full_name') ?? metadataString(metadata, 'name'),
-    avatarUrl: metadataString(metadata, 'avatar_url') ?? metadataString(metadata, 'picture'),
+    displayName: profile.display_name?.trim() || metadataString(metadata, 'full_name') || metadataString(metadata, 'name'),
+    avatarUrl: profile.avatar_url || metadataString(metadata, 'avatar_url') || metadataString(metadata, 'picture'),
     email: user.email ?? null,
   };
 }

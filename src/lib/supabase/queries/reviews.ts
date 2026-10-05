@@ -40,27 +40,34 @@ export async function getReviewManagementData(filters: ReviewManagementFilters):
   if (filters.requestState === 'REVOKED') requestsQuery = requestsQuery.not('revoked_at', 'is', null);
   if (filters.requestState === 'EXPIRED') requestsQuery = requestsQuery.is('used_at', null).is('revoked_at', null).lte('expires_at', now);
 
-  const [reviewsResult, requestsResult, clientsResult, jobsResult, pendingResult, publishedResult, featuredResult, activeLinksResult] = await Promise.all([
+  const [reviewsResult, requestsResult, pendingResult, publishedResult, featuredResult, activeLinksResult] = await Promise.all([
     reviewsQuery
       .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1),
     requestsQuery.order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1),
-    supabase.rpc('list_active_clients_for_job'),
-    supabase.from('jobs').select('id,client_id,title').is('archived_at', null).order('title'),
     supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'PENDING').is('archived_at', null),
     supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'PUBLISHED').is('archived_at', null),
     supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'PUBLISHED').eq('is_featured', true).is('archived_at', null),
     supabase.from('review_requests').select('id', { count: 'exact', head: true }).is('used_at', null).is('revoked_at', null).is('archived_at', null).gt('expires_at', now),
   ]);
 
-  const error = [reviewsResult, requestsResult, clientsResult, jobsResult, pendingResult, publishedResult, featuredResult, activeLinksResult].find((result) => result.error)?.error;
+  const error = [reviewsResult, requestsResult, pendingResult, publishedResult, featuredResult, activeLinksResult].find((result) => result.error)?.error;
   if (error) throw new Error(`Unable to load Client Reviews: ${error.message}`);
 
   const reviewRequestIds = (reviewsResult.data ?? []).flatMap((review) => (review.review_request_id ? [review.review_request_id] : []));
   const reviewSnapshotsResult = reviewRequestIds.length ? await supabase.from('review_requests').select('id,client_name').in('id', reviewRequestIds) : { data: [], error: null };
   if (reviewSnapshotsResult.error) throw new Error(`Unable to load Review snapshots: ${reviewSnapshotsResult.error.message}`);
 
+  // Fixed, page-bounded label batches; no request for each review.
+  const rows = [...(reviewsResult.data ?? []), ...(requestsResult.data ?? [])];
+  const clientIds = [...new Set(rows.flatMap((row) => (row.client_id ? [row.client_id] : [])))];
+  const jobIds = [...new Set(rows.flatMap((row) => (row.job_id ? [row.job_id] : [])))];
+  const [clientsResult, jobsResult] = await Promise.all([
+    clientIds.length ? supabase.from('clients').select('id,name').in('id', clientIds) : Promise.resolve({ data: [], error: null }),
+    jobIds.length ? supabase.from('jobs').select('id,client_id,title').in('id', jobIds).is('archived_at', null) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (clientsResult.error || jobsResult.error) throw new Error('Unable to load Review labels.');
   const clientNames = new Map((clientsResult.data ?? []).map((client) => [client.id, client.name]));
   const jobTitles = new Map((jobsResult.data ?? []).map((job) => [job.id, job.title]));
   const reviewSnapshots = new Map((reviewSnapshotsResult.data ?? []).map((request) => [request.id, request.client_name]));
@@ -109,8 +116,8 @@ export async function getReviewManagementData(filters: ReviewManagementFilters):
       activeLinks: activeLinksResult.count ?? 0,
     },
     options: {
-      clients: clientsResult.data ?? [],
-      jobs: (jobsResult.data ?? []).map((job) => ({ id: job.id, clientId: job.client_id, title: job.title })),
+      clients: [],
+      jobs: [],
     },
   };
 }

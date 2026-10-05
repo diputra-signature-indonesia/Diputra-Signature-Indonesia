@@ -47,7 +47,7 @@ export function MasterDataCategoryList({ categories, selectedId, onSelect }: Mas
                   active ? 'bg-white text-[#8C1010]' : 'bg-[#F1F3F5] text-[#7A8492] group-hover:bg-[#FFF4F3]'
                 }`}
               >
-                {category.rows.length}
+                {category.totalCount ?? category.rows.length}
               </span>
             </button>
           );

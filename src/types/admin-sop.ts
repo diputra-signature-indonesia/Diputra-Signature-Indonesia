@@ -39,4 +39,5 @@ export type SopService = {
 export type SopWorkspaceData = {
   canManage: boolean;
   services: SopService[];
+  revision: string;
 };

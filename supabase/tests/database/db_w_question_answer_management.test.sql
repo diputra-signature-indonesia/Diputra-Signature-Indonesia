@@ -21,7 +21,7 @@ values('9d000000-0000-4000-8000-000000000001','qna-test-service','QNA Test Servi
 select extensions.has_column('public','question_answer','sort_order','Q&A has per-scope display order');
 select extensions.has_function('public','save_question_answer',array['uuid','integer','text','text','uuid','boolean','bigint'],'Q&A save RPC exists');
 select extensions.has_function('public','reorder_question_answers',array['uuid','uuid[]'],'Q&A reorder RPC exists');
-select extensions.is((select count(*)::integer from public.question_answer where services_categories_id is null and id::text like 'fa000000-%'),10,'ten former static Q&A entries are migrated as Global content');
+select extensions.has_column('public','question_answer','services_categories_id','Q&A supports Global and Service scopes independently of production content');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);

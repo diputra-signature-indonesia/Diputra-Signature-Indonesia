@@ -3,7 +3,7 @@
 import { configureTaskColumnsAction, deleteTaskAction, moveTaskAction, saveTaskAction } from '@/app/admin/all-jobs/[jobId]/task-actions';
 import { AdminFilterPanel, AdminSelectField } from '@/components/layout-admin/admin-filter-panel';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import { ProfileCombobox, type ProfileComboboxOption } from '@/components/layout-admin/profile-combobox';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
 import type { LiveTaskAssignment } from '@/lib/supabase/queries/task-assignment';
 import { ArrowDown, ArrowUp, CalendarDays, LoaderCircle, Settings2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -183,10 +183,6 @@ export function LiveTaskAssignmentContent({ data, initialTaskId }: { data: LiveT
   }
 
   const missingStatuses = data.availableStatuses.filter((status) => !columnIds.includes(status.id));
-  const currentAssignee = editing?.assignee_id && !data.profiles.some((profile) => profile.id === editing.assignee_id) ? editing : null;
-  const assigneeProfiles: ProfileComboboxOption[] = currentAssignee
-    ? [{ id: currentAssignee.assignee_id!, display_name: `${currentAssignee.assigneeName} (current)`, avatar_url: null }, ...data.profiles]
-    : data.profiles;
   const currentPriority = editing?.priority_id && !data.priorities.some((priority) => priority.id === editing.priority_id) ? editing : null;
 
   return (
@@ -324,17 +320,14 @@ export function LiveTaskAssignmentContent({ data, initialTaskId }: { data: LiveT
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="task-assignee" className="mb-1 block text-xs font-semibold">
-                Assignee
-              </label>
-              <ProfileCombobox
-                id="task-assignee"
+              <AdminRemoteSelect
+                kind="profiles"
+                label="Assignee"
+                size="md"
                 value={form.assigneeId}
-                options={assigneeProfiles}
-                onChange={(assigneeId) => setForm({ ...form, assigneeId })}
+                initialLabel={editing?.assigneeName}
                 disabled={!editing?.canEdit || !data.canManage}
-                placeholder="Search assignee..."
-                emptyLabel="Unassigned"
+                onChange={(value) => setForm({ ...form, assigneeId: value })}
               />
               {!data.canManage && editing?.canEdit ? <p className="mt-1 text-[11px] text-[#68717E]">Hanya PIC atau admin yang dapat mengganti assignee.</p> : null}
             </div>

@@ -16,7 +16,9 @@ export default async function AdminAccessRequestsPage() {
       <UserManagementWorkspace
         currentUserId={context.userId}
         profiles={data.profiles}
-        trashedProfiles={data.trashedProfiles}
+        initialTotal={data.total}
+        initialRevision={data.revision}
+        initialTrashedProfileCount={data.trashedProfileCount}
         initialRequests={data.initialRequests}
         initialPendingRequestCount={data.pendingRequestCount}
         initialRejectedRequests={data.initialRejectedRequests}

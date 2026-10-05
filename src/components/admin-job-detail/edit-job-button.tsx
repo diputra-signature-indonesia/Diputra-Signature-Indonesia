@@ -1,9 +1,11 @@
 'use client';
 
 import { updateJobAction } from '@/app/admin/all-jobs/[jobId]/actions';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import { ProfileCombobox } from '@/components/layout-admin/profile-combobox';
 import type { AddJobOptions } from '@/lib/supabase/queries/add-job';
+import type { JobActionDetail } from '@/lib/supabase/queries/job-action-detail';
 import { Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type FormEvent } from 'react';
@@ -11,27 +13,7 @@ import { useState, useTransition, type FormEvent } from 'react';
 const fieldClass = 'h-10 w-full rounded-lg border border-[#D6DAE0] bg-white px-3 text-sm text-[#303846] outline-none focus:border-[#8C1010] focus:ring-2 focus:ring-[#8C1010]/10';
 const labelClass = 'mb-1.5 block text-xs font-semibold text-[#303846]';
 
-export type EditableJobDetail = {
-  job: {
-    id: string;
-    version: number;
-    client_id: string;
-    title: string;
-    internal_service_id: string;
-    priority_id: string;
-    pic_id: string;
-    description: string | null;
-    start_date: string | null;
-    estimated_end_date: string | null;
-  };
-  canManage: boolean;
-  canChangePic: boolean;
-  statusCode: string;
-  summary: { client: string; internalService: string; priority: string; pic: string };
-  steps: Array<{ name: string }>;
-};
-
-function initial(detail: EditableJobDetail) {
+function initial(detail: JobActionDetail) {
   return {
     clientId: detail.job.client_id,
     title: detail.job.title,
@@ -47,45 +29,35 @@ function initial(detail: EditableJobDetail) {
 export function EditJobButton({
   detail,
   options,
-  variant = 'primary',
-  open: controlledOpen,
-  onOpenChange,
+  modalOpen,
+  onClose,
+  onSaved,
   hideTrigger = false,
 }: {
-  detail: EditableJobDetail;
+  detail: JobActionDetail;
   options: AddJobOptions;
-  variant?: 'primary' | 'menu';
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  modalOpen?: boolean;
+  onClose?: () => void;
+  onSaved?: () => void;
   hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
-  const open = controlledOpen ?? internalOpen;
+  const open = modalOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    setInternalOpen(next);
+    if (!next) onClose?.();
+  };
   const [form, setForm] = useState(() => initial(detail));
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
+  const serviceLookup = useAdminPage<Array<{ value: string; workflowName: string; steps: string[] }>>(open && form.serviceId ? `/api/admin/lookups?kind=services&id=${form.serviceId}` : null);
+  const selectedService = serviceLookup.data?.find((item) => item.value === form.serviceId);
   const serviceChanged = form.serviceId !== detail.job.internal_service_id;
-  const clients = options.clients.some((item) => item.id === detail.job.client_id) ? options.clients : [{ id: detail.job.client_id, name: `${detail.summary.client} (current)` }, ...options.clients];
-  const services = options.services.some((item) => item.id === detail.job.internal_service_id)
-    ? options.services
-    : [
-        { id: detail.job.internal_service_id, name: `${detail.summary.internalService} (current)`, workflowName: 'Current snapshot', steps: detail.steps.map((step) => step.name) },
-        ...options.services,
-      ];
   const priorities = options.priorities.some((item) => item.id === detail.job.priority_id)
     ? options.priorities
     : [{ id: detail.job.priority_id, name: `${detail.summary.priority} (current)` }, ...options.priorities];
-  const profiles = options.profiles.some((item) => item.id === detail.job.pic_id)
-    ? options.profiles
-    : [{ id: detail.job.pic_id, display_name: `${detail.summary.pic} (current)`, avatar_url: '' }, ...options.profiles];
-  const selectedService = services.find((item) => item.id === form.serviceId);
-
-  function setOpen(nextOpen: boolean) {
-    if (controlledOpen === undefined) setInternalOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  }
 
   function setField<Key extends keyof ReturnType<typeof initial>>(key: Key, value: ReturnType<typeof initial>[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -95,6 +67,7 @@ export function EditJobButton({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isPending) return;
     if (serviceChanged && !confirmReset) {
       setError('Konfirmasi pengulangan workflow terlebih dahulu.');
       return;
@@ -108,6 +81,7 @@ export function EditJobButton({
           return;
         }
         setOpen(false);
+        onSaved?.();
         router.refresh();
       } catch {
         setError('Koneksi terputus. Muat ulang halaman sebelum mencoba lagi.');
@@ -126,14 +100,9 @@ export function EditJobButton({
             setError('');
             setOpen(true);
           }}
-          className={
-            variant === 'menu'
-              ? 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-medium text-[#344054] transition hover:bg-[#F6F7F9]'
-              : 'inline-flex h-8 items-center gap-2 rounded bg-[#9F1010] px-6 text-[11px] font-semibold text-white hover:bg-[#7E0C0C]'
-          }
+          className="inline-flex h-8 items-center gap-2 rounded bg-[#9F1010] px-6 text-[11px] font-semibold text-white hover:bg-[#7E0C0C]"
         >
-          <Pencil className="size-3.5" />
-          {variant === 'menu' ? 'Edit Job' : 'Edit Jobs'}
+          Edit Jobs <Pencil className="size-3.5" />
         </button>
       ) : null}
       <AdminModal
@@ -147,16 +116,7 @@ export function EditJobButton({
       >
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label htmlFor="edit-job-client" className={labelClass}>
-              Client *
-            </label>
-            <select id="edit-job-client" required className={fieldClass} value={form.clientId} onChange={(event) => setField('clientId', event.target.value)}>
-              {clients.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <AdminRemoteSelect size="md" kind="clients" label="Client *" value={form.clientId} initialLabel={detail.summary.client} onChange={(value) => setField('clientId', value)} />
           </div>
           <div>
             <label htmlFor="edit-job-title" className={labelClass}>
@@ -166,16 +126,14 @@ export function EditJobButton({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="edit-job-service" className={labelClass}>
-                Internal Service *
-              </label>
-              <select id="edit-job-service" required className={fieldClass} value={form.serviceId} onChange={(event) => setField('serviceId', event.target.value)}>
-                {services.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+              <AdminRemoteSelect
+                size="md"
+                kind="services"
+                label="Internal Service *"
+                value={form.serviceId}
+                initialLabel={detail.summary.internalService}
+                onChange={(value) => setField('serviceId', value)}
+              />
             </div>
             <div>
               <label htmlFor="edit-job-priority" className={labelClass}>
@@ -204,10 +162,7 @@ export function EditJobButton({
           ) : null}
           {detail.canChangePic ? (
             <div>
-              <label htmlFor="edit-job-pic" className={labelClass}>
-                PIC *
-              </label>
-              <ProfileCombobox id="edit-job-pic" value={form.picId} options={profiles} onChange={(profileId) => setField('picId', profileId)} placeholder="Search PIC..." />
+              <AdminRemoteSelect size="md" kind="profiles" label="PIC *" value={form.picId} initialLabel={detail.summary.pic} onChange={(value) => setField('picId', value)} />
             </div>
           ) : (
             <p className="text-xs text-[#68717E]">PIC: {detail.summary.pic}. Hanya admin yang dapat mengganti PIC.</p>
@@ -248,7 +203,11 @@ export function EditJobButton({
             <button type="button" disabled={isPending} onClick={() => setOpen(false)} className="rounded-lg px-4 py-2 text-sm font-medium text-[#4B5563] hover:bg-gray-100">
               Batal
             </button>
-            <button type="submit" disabled={isPending || (serviceChanged && !confirmReset)} className="rounded-lg bg-[#8C1010] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={isPending || !form.clientId || !form.serviceId || !form.picId || (serviceChanged && !confirmReset)}
+              className="rounded-lg bg-[#8C1010] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
               {isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
             </button>
           </div>

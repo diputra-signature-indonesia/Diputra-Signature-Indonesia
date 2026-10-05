@@ -1,23 +1,32 @@
+'use client';
+
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import type { MyTaskJob } from '@/types/admin-my-tasks';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { MyTaskStatusBadge } from './my-task-status-badge';
-import { TaskRowActions } from './task-row-actions';
+import { TaskRowActions, type MyTaskAction } from './task-row-actions';
+import { TaskActionModal } from './task-action-modal';
 
 export type TaskStatusFilter = 'All' | string;
 
 type ClientTasksCardProps = {
   job: MyTaskJob;
   searchQuery: string;
+  page: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onSaved: () => void;
   activeStatus: TaskStatusFilter;
   onStatusChange: (status: TaskStatusFilter) => void;
 };
 
-export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange }: ClientTasksCardProps) {
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const queryMatchesJob = `${job.title} ${job.client} ${job.internalService}`.toLocaleLowerCase().includes(normalizedQuery);
-  const searchedTasks = !normalizedQuery || queryMatchesJob ? job.tasks : job.tasks.filter((task) => task.detail.toLocaleLowerCase().includes(normalizedQuery));
-  const visibleTasks = activeStatus === 'All' ? searchedTasks : searchedTasks.filter((task) => task.statusId === activeStatus);
+export function ClientTasksCard({ job, activeStatus, onStatusChange, page, total, onPageChange, onSaved }: ClientTasksCardProps) {
+  const [selection, setSelection] = useState<{ taskId: string; mode: MyTaskAction } | null>(null);
+  const [notice, setNotice] = useState('');
+  const selectedTask = job.tasks.find((task) => task.id === selection?.taskId);
+  const visibleTasks = job.tasks;
 
   return (
     <section className="min-w-0 rounded-xl border border-[#DEE2E7] bg-white p-5 shadow-[0_2px_4px_rgba(15,23,42,0.05)]">
@@ -41,7 +50,7 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
           onClick={() => onStatusChange('All')}
           className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeStatus === 'All' ? 'border-[#2F2020] bg-[#2F2020] text-white' : 'border-[#E7BBB4] bg-[#FFF9F8] text-[#725650] hover:bg-[#FFF2F0]'}`}
         >
-          All ({searchedTasks.length})
+          All ({job.statuses.reduce((sum, status) => sum + (status.count ?? 0), 0)})
         </button>
         {job.statuses.map((status) => (
           <button
@@ -51,11 +60,16 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
             onClick={() => onStatusChange(status.id)}
             className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${activeStatus === status.id ? 'border-[#2F2020] bg-[#2F2020] text-white' : 'border-[#E7BBB4] bg-[#FFF9F8] text-[#725650] hover:bg-[#FFF2F0]'}`}
           >
-            {status.name} ({searchedTasks.filter((task) => task.statusId === status.id).length})
+            {status.name} ({status.count ?? 0})
           </button>
         ))}
       </div>
 
+      {notice ? (
+        <p role="status" className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {notice}
+        </p>
+      ) : null}
       <div className="mt-5 overflow-hidden rounded-xl border border-[#DEE2E7]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px] border-collapse text-left">
@@ -81,7 +95,14 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
                     <MyTaskStatusBadge status={task.status} code={task.statusCode} />
                   </td>
                   <td className="px-3 py-5 text-center">
-                    <TaskRowActions job={job} task={task} />
+                    <TaskRowActions
+                      title={task.detail}
+                      canChangeStatus={task.canChangeStatus}
+                      onAction={(mode) => {
+                        setNotice('');
+                        setSelection({ taskId: task.id, mode });
+                      }}
+                    />
                   </td>
                 </tr>
               ))}
@@ -89,8 +110,23 @@ export function ClientTasksCard({ job, searchQuery, activeStatus, onStatusChange
           </table>
         </div>
 
-        {visibleTasks.length === 0 ? <p className="border-t border-[#E7E9ED] px-6 py-12 text-center text-sm text-[#8A94A3]">{job.tasks.length === 0 ? 'Anda terdaftar sebagai contributor, tetapi belum memiliki task pada Job ini.' : 'Tidak ada task dengan status ini.'}</p> : null}
+        {visibleTasks.length === 0 ? <p className="border-t border-[#E7E9ED] px-6 py-12 text-center text-sm text-[#8A94A3]">Tidak ada task dengan status ini.</p> : null}
       </div>
+      <AllJobsPagination noun="tasks" currentPage={page} pageSize={10} totalItems={total} onPageChange={onPageChange} />
+      {selectedTask && selection ? (
+        <TaskActionModal
+          key={`${selectedTask.id}-${selection.mode}`}
+          job={job}
+          task={selectedTask}
+          mode={selection.mode}
+          onClose={() => setSelection(null)}
+          onChangeStatus={() => setSelection({ taskId: selectedTask.id, mode: 'status' })}
+          onSaved={() => {
+            setNotice('Status Task berhasil diperbarui.');
+            onSaved();
+          }}
+        />
+      ) : null}
     </section>
   );
 }

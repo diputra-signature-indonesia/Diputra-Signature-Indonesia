@@ -2,11 +2,12 @@
 
 import { archiveReviewAction, archiveReviewRequestAction, createReviewRequestAction, moderateReviewAction, revokeReviewRequestAction, type CreateReviewRequestInput } from '@/app/admin/reviews/action';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
 import { AdminPageHeader } from '@/components/layout-admin/admin-page-header';
 import type { ManagedReview, ManagedReviewRequest, ReviewManagementData, ReviewManagementFilters, ReviewModerationStatus, ReviewRequestState } from '@/types/admin-review';
 import { Archive, Ban, Check, ChevronLeft, ChevronRight, Clock3, Copy, Eye, Link2, LoaderCircle, MessageSquareText, Plus, Search, Send, Star } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useMemo, useState, useTransition, type ReactNode } from 'react';
+import { FormEvent, useState, useTransition, type ReactNode } from 'react';
 
 type Notice = { tone: 'success' | 'error'; message: string };
 type ConfirmAction = { kind: 'archive-review'; review: ManagedReview } | { kind: 'revoke-request'; request: ManagedReviewRequest } | { kind: 'archive-request'; request: ManagedReviewRequest };
@@ -62,7 +63,7 @@ export function ReviewManagementWorkspace({ data, filters, initialGenerateOpen }
   const [copied, setCopied] = useState(false);
 
   const isAdmin = data.actorRole === 'admin' || data.actorRole === 'super_admin';
-  const matchingJobs = useMemo(() => data.options.jobs.filter((job) => job.clientId === generateForm.clientId), [data.options.jobs, generateForm.clientId]);
+
   const total = filters.tab === 'reviews' ? data.reviewTotal : data.requestTotal;
   const totalPages = Math.max(1, Math.ceil(total / data.pageSize));
 
@@ -140,7 +141,7 @@ export function ReviewManagementWorkspace({ data, filters, initialGenerateOpen }
 
   function openGenerate() {
     setGenerateForm(emptyGenerateForm);
-    setClientMode(data.options.clients.length ? 'existing' : 'manual');
+    setClientMode('existing');
     setGeneratedUrl('');
     setCopied(false);
     setGenerateOpen(true);
@@ -422,44 +423,22 @@ export function ReviewManagementWorkspace({ data, filters, initialGenerateOpen }
             </div>
             {clientMode === 'existing' ? (
               <>
-                <div>
-                  <label htmlFor="review-client" className={labelClass}>
-                    Client <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    id="review-client"
-                    required
-                    className={fieldClass}
-                    value={generateForm.clientId ?? ''}
-                    onChange={(event) => setGenerateForm((current) => ({ ...current, clientId: event.target.value || null, jobId: null }))}
-                  >
-                    <option value="">Select Client</option>
-                    {data.options.clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="review-job" className={labelClass}>
-                    Job <span className="font-normal text-[#7B8491]">(optional)</span>
-                  </label>
-                  <select
-                    id="review-job"
-                    disabled={!generateForm.clientId}
-                    className={fieldClass}
-                    value={generateForm.jobId ?? ''}
-                    onChange={(event) => setGenerateForm((current) => ({ ...current, jobId: event.target.value || null }))}
-                  >
-                    <option value="">Not linked to a Job</option>
-                    {matchingJobs.map((job) => (
-                      <option key={job.id} value={job.id}>
-                        {job.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <AdminRemoteSelect
+                  size="md"
+                  label="Client *"
+                  kind="clients"
+                  value={generateForm.clientId ?? ''}
+                  onChange={(value) => setGenerateForm((current) => ({ ...current, clientId: value || null, jobId: null }))}
+                />
+                <AdminRemoteSelect
+                  size="md"
+                  label="Job (optional)"
+                  kind="jobs"
+                  parent={generateForm.clientId ?? undefined}
+                  disabled={!generateForm.clientId}
+                  value={generateForm.jobId ?? ''}
+                  onChange={(value) => setGenerateForm((current) => ({ ...current, jobId: value || null }))}
+                />
               </>
             ) : (
               <div>

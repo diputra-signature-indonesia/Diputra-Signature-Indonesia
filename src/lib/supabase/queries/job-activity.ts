@@ -168,12 +168,8 @@ export async function getJobActivityPage(jobId: string, before?: string | null, 
   await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
   const pageSize = Math.min(Math.max(limit, 1), 100);
-  const [activityResult, profilesResult] = await Promise.all([
-    supabase.rpc('list_job_activity', { p_job_id: jobId, p_limit: pageSize, p_before: before ?? undefined }),
-    supabase.rpc('list_assignable_profiles'),
-  ]);
+  const activityResult = await supabase.rpc('list_job_activity', { p_job_id: jobId, p_limit: pageSize, p_before: before ?? undefined });
   if (activityResult.error) throw new Error(`Unable to load Jobs Logging: ${activityResult.error.message}`);
-  if (profilesResult.error) throw new Error(`Unable to load activity users: ${profilesResult.error.message}`);
 
   const rawItems = (activityResult.data ?? []) as RawActivity[];
   const jobStatusIds = new Set<string>();
@@ -183,12 +179,15 @@ export async function getJobActivityPage(jobId: string, before?: string | null, 
   const clientIds = new Set<string>();
   const taskIds = new Set<string>();
   const stepIds = new Set<string>();
+  const profileIds = new Set<string>();
 
   for (const item of rawItems) {
+    profileIds.add(item.actor_id);
     if (item.task_id) taskIds.add(item.task_id);
     if (item.job_step_id) stepIds.add(item.job_step_id);
     const values = [record(item.old_values), record(item.new_values)];
     for (const value of values) {
+      for (const key of ['pic_id', 'assignee_id', 'profile_id', 'created_by', 'performed_by']) addId(profileIds, value[key]);
       for (const key of ['priority_id']) addId(priorityIds, value[key]);
       for (const key of ['service_id', 'internal_service_id']) addId(serviceIds, value[key]);
       addId(clientIds, value.client_id);
@@ -197,8 +196,7 @@ export async function getJobActivityPage(jobId: string, before?: string | null, 
     }
   }
 
-  const activeProfiles = profilesResult.data ?? [];
-  const [jobStatuses, taskStatusLinks, priorities, services, clients, tasks, steps] = await Promise.all([
+  const [jobStatuses, taskStatusLinks, priorities, services, clients, tasks, steps, profilesResult] = await Promise.all([
     jobStatusIds.size ? supabase.from('job_statuses').select('id,name').in('id', [...jobStatusIds]) : Promise.resolve({ data: [], error: null }),
     taskStatusIds.size ? supabase.from('job_task_statuses').select('id,task_status_id').in('id', [...taskStatusIds]) : Promise.resolve({ data: [], error: null }),
     priorityIds.size ? supabase.from('priorities').select('id,name').in('id', [...priorityIds]) : Promise.resolve({ data: [], error: null }),
@@ -206,8 +204,10 @@ export async function getJobActivityPage(jobId: string, before?: string | null, 
     clientIds.size ? supabase.from('clients').select('id,name').in('id', [...clientIds]) : Promise.resolve({ data: [], error: null }),
     taskIds.size ? supabase.from('tasks').select('id,title').in('id', [...taskIds]) : Promise.resolve({ data: [], error: null }),
     stepIds.size ? supabase.from('job_steps').select('id,name').in('id', [...stepIds]) : Promise.resolve({ data: [], error: null }),
+    profileIds.size ? supabase.rpc('list_assignable_profiles').in('id', [...profileIds]) : Promise.resolve({ data: [], error: null }),
   ]);
-  const queryError = [jobStatuses, taskStatusLinks, priorities, services, clients, tasks, steps].find((result) => result.error)?.error;
+  const activeProfiles = profilesResult.data ?? [];
+  const queryError = [jobStatuses, taskStatusLinks, priorities, services, clients, tasks, steps, profilesResult].find((result) => result.error)?.error;
   if (queryError) throw new Error(`Unable to enrich Jobs Logging: ${queryError.message}`);
 
   const masterTaskStatusIds = [...new Set((taskStatusLinks.data ?? []).map((status) => status.task_status_id))];

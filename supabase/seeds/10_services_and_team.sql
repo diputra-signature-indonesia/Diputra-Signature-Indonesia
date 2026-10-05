@@ -102,11 +102,10 @@ insert into public.team_members (
   id,
   profile_id,
   full_name,
-  job_title,
+  job_title_id,
   short_bio,
   avatar_url,
   is_visible,
-  display_order,
   updated_at,
   created_at,
   nickname
@@ -115,24 +114,23 @@ select
   seed.id,
   profile.id,
   seed.full_name,
-  seed.job_title,
+  title.id,
   seed.short_bio,
   seed.avatar_url,
-  seed.is_visible,
-  seed.display_order,
+  seed.is_visible and title.id is not null,
   seed.updated_at,
   seed.created_at,
   seed.nickname
 from team_member_seed as seed
 left join public.profiles as profile on profile.id = seed.profile_id
+left join public.job_titles as title on lower(btrim(title.name)) = lower(btrim(seed.job_title))
 on conflict (id) do update set
   profile_id = excluded.profile_id,
   full_name = excluded.full_name,
-  job_title = excluded.job_title,
+  job_title_id = excluded.job_title_id,
   short_bio = excluded.short_bio,
   avatar_url = excluded.avatar_url,
   is_visible = excluded.is_visible,
-  display_order = excluded.display_order,
   updated_at = excluded.updated_at,
   created_at = excluded.created_at,
   nickname = excluded.nickname;

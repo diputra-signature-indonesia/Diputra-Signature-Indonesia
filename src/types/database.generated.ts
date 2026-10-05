@@ -329,8 +329,57 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_service_categories: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_service_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_service_categories_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_services: {
         Row: {
+          category_id: string | null
           code: string
           created_at: string
           created_by: string | null
@@ -344,6 +393,7 @@ export type Database = {
           workflow_template_id: string | null
         }
         Insert: {
+          category_id?: string | null
           code: string
           created_at?: string
           created_by?: string | null
@@ -357,6 +407,7 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Update: {
+          category_id?: string | null
           code?: string
           created_at?: string
           created_by?: string | null
@@ -370,6 +421,13 @@ export type Database = {
           workflow_template_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "internal_services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "internal_service_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "internal_services_created_by_fkey"
             columns: ["created_by"]
@@ -2583,6 +2641,28 @@ export type Database = {
         Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
       }
+      admin_blog_categories: { Args: never; Returns: Json }
+      admin_master_counts: { Args: never; Returns: Json }
+      admin_master_page: {
+        Args: {
+          p_kind: string
+          p_page?: number
+          p_query?: string
+          p_trash?: boolean
+        }
+        Returns: Json
+      }
+      admin_public_service_page: {
+        Args: {
+          p_category?: string
+          p_category_page?: number
+          p_detail_page?: number
+          p_item?: string
+          p_item_page?: number
+          p_query?: string
+        }
+        Returns: Json
+      }
       approve_admin_access_request: {
         Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
         Returns: undefined
@@ -2731,6 +2811,10 @@ export type Database = {
         Returns: string
       }
       current_role: { Args: never; Returns: string }
+      delete_internal_service_category: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: undefined
+      }
       delete_job_permanently: {
         Args: {
           p_confirmation: string
@@ -2771,6 +2855,8 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["admin_access_request_status"]
       }
+      get_own_account_details: { Args: never; Returns: Json }
+      internal_service_catalogue_counts: { Args: never; Returns: Json }
       is_active_super_admin: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_admin_role: { Args: never; Returns: boolean }
@@ -2789,6 +2875,14 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+        }[]
+      }
+      list_internal_service_usage: {
+        Args: never
+        Returns: {
+          id: string
+          job_count: number
+          sop_count: number
         }[]
       }
       list_job_activity: {
@@ -2888,6 +2982,10 @@ export type Database = {
         Args: { p_rejection_reason?: string; p_user_id: string }
         Returns: undefined
       }
+      remove_internal_service: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: string
+      }
       remove_job_contributor: {
         Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
@@ -2925,6 +3023,19 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      save_categorized_internal_service: {
+        Args: {
+          p_category_id: string
+          p_code_suffix: string
+          p_expected_version: number
+          p_id: string
+          p_is_active?: boolean
+          p_name: string
+          p_summary?: string
+          p_workflow_template_id?: string
+        }
+        Returns: string
+      }
       save_internal_service: {
         Args: {
           p_code: string
@@ -2934,6 +3045,15 @@ export type Database = {
           p_name: string
           p_summary?: string
           p_workflow_template_id?: string
+        }
+        Returns: string
+      }
+      save_internal_service_category: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_id: string
+          p_name: string
         }
         Returns: string
       }
@@ -3137,6 +3257,35 @@ export type Database = {
         }
         Returns: string
       }
+      search_admin_dashboard: { Args: { p_filters?: Json }; Returns: Json }
+      search_admin_jobs: {
+        Args: {
+          p_client_id?: string
+          p_filters?: Json
+          p_job_id?: string
+          p_mine?: boolean
+          p_page?: number
+        }
+        Returns: Json
+      }
+      search_admin_lookup: {
+        Args: {
+          p_id?: string
+          p_kind: string
+          p_parent?: string
+          p_query?: string
+        }
+        Returns: Json
+      }
+      search_internal_services: {
+        Args: {
+          p_category_id?: string
+          p_page?: number
+          p_search?: string
+          p_uncategorized?: boolean
+        }
+        Returns: Json
+      }
       search_job_access_profiles: {
         Args: { p_job_id: string; p_limit?: number; p_search?: string }
         Returns: {
@@ -3145,6 +3294,28 @@ export type Database = {
           email: string
           id: string
         }[]
+      }
+      search_job_remarks: {
+        Args: { p_job_id: string; p_page?: number }
+        Returns: Json
+      }
+      search_managed_profiles: {
+        Args: { p_page?: number; p_query?: string }
+        Returns: Json
+      }
+      search_my_tasks: {
+        Args: {
+          p_filters?: Json
+          p_page?: number
+          p_selected_job?: string
+          p_task_page?: number
+          p_task_status?: string
+        }
+        Returns: Json
+      }
+      search_sop_services: {
+        Args: { p_page?: number; p_query?: string }
+        Returns: Json
       }
       set_blog_post_featured: {
         Args: {
@@ -3166,6 +3337,10 @@ export type Database = {
           p_is_active: boolean
         }
         Returns: number
+      }
+      set_own_display_name: {
+        Args: { p_display_name: string }
+        Returns: string
       }
       set_profile_active: {
         Args: { p_is_active: boolean; p_profile_id: string }

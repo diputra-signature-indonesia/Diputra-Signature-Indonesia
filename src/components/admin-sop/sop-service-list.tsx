@@ -1,19 +1,22 @@
 'use client';
 
+import { useState } from 'react';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import type { SopService } from '@/types/admin-sop';
-import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
 
-type SopServiceListProps = {
-  services: SopService[];
-  selectedId: string;
-  onSelect: (serviceId: string) => void;
-};
+type Service = { id: string; title: string; summary: string };
+type Page = { services: Service[]; total: number; page: number };
 
-function ServiceItem({ service, active, onSelect }: { service: SopService; active: boolean; onSelect: () => void }) {
+function ServiceItem({ service, active, onSelect }: { service: Service; active: boolean; onSelect: () => void }) {
   return (
-    <button type="button" onClick={onSelect} className={`flex w-full items-start gap-3 border-b border-[#E4E7EB] px-5 py-5 text-left transition ${active ? 'bg-[#FFF9F8]' : 'hover:bg-[#FAFBFC]'}`}>
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={active}
+      className={`flex w-full items-start gap-3 border-b border-[#E4E7EB] px-5 py-5 text-left transition ${active ? 'bg-[#FFF9F8]' : 'hover:bg-[#FAFBFC]'}`}
+    >
       <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${active ? 'bg-[#A61919]' : 'bg-[#E4C5C1]'}`} />
       <span className="min-w-0">
         <span className={`block text-sm leading-5 ${active ? 'font-bold text-[#9F1010]' : 'font-medium text-[#292323]'}`}>{service.title}</span>
@@ -23,70 +26,89 @@ function ServiceItem({ service, active, onSelect }: { service: SopService; activ
   );
 }
 
-export function SopServiceList({ services, selectedId, onSelect }: SopServiceListProps) {
+export function SopServiceList({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
   const [query, setQuery] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const [modalQuery, setModalQuery] = useState('');
-  const visibleServices = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return services;
-    return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
-  }, [query, services]);
-  const modalServices = useMemo(() => {
-    const normalizedQuery = modalQuery.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return services;
-    return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
-  }, [modalQuery, services]);
-
-  const selectService = (serviceId: string) => {
-    onSelect(serviceId);
-    setShowAll(false);
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
+  const preview = useAdminPage<Page>(`/api/admin/sop?${new URLSearchParams({ kind: 'list', query, page: '1' })}`, undefined, 400);
+  const result = useAdminPage<Page>(open ? `/api/admin/sop?${new URLSearchParams({ kind: 'list', query: modalQuery, page: String(page) })}` : null, undefined, 400);
+  const closeModal = () => {
+    setOpen(false);
     setModalQuery('');
+    setPage(1);
   };
-
+  const renderServices = (data: typeof preview, limit?: number, inModal = false) => (
+    <>
+      {data.loading ? (
+        <p role="status" className="px-5 py-10 text-center text-xs text-[#7B8491]">
+          Searching services...
+        </p>
+      ) : data.error ? (
+        <p role="alert" className="px-5 py-10 text-center text-xs text-[#A51919]">
+          {data.error}
+        </p>
+      ) : (
+        data.data?.services.slice(0, limit).map((service) => (
+          <ServiceItem
+            key={service.id}
+            service={service}
+            active={service.id === selectedId}
+            onSelect={() => {
+              onSelect(service.id);
+              if (inModal) closeModal();
+            }}
+          />
+        ))
+      )}
+      {!data.loading && !data.error && !data.data?.services.length ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
+    </>
+  );
   return (
     <>
       <aside className="overflow-hidden rounded-xl border border-[#D9DDE3] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.04)] xl:sticky xl:top-5">
         <header className="border-b border-[#E4E7EB] p-4">
           <h2 className="text-xl font-semibold text-[#292323]">Service List</h2>
           <p className="mt-1 text-xs text-[#685754]">Select a service to view its internal SOP.</p>
-          <label className="mt-2 flex h-9 items-center gap-2 rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 focus-within:border-[#A61919] focus-within:ring-2 focus-within:ring-[#A61919]/10">
-            <Search aria-hidden="true" className="size-4 shrink-0 text-[#8A94A3]" />
-            <span className="sr-only">Search internal services</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Internal service name..."
-              className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]"
-            />
-          </label>
+          <div className="mt-2">
+            <AdminSearchField label="Search internal services" hideLabel compact value={query} onChange={setQuery} placeholder="Internal service name..." />
+          </div>
         </header>
-
-        <div className="max-h-[480px] overflow-y-auto">
-          {visibleServices.slice(0, 5).map((service) => (
-            <ServiceItem key={service.id} service={service} active={service.id === selectedId} onSelect={() => onSelect(service.id)} />
-          ))}
-          {visibleServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
-        </div>
-
-        <button type="button" onClick={() => { setModalQuery(''); setShowAll(true); }} className="flex h-12 w-full items-center justify-center text-xs font-semibold tracking-[0.04em] text-[#760A0A] transition hover:bg-[#FFF9F8]">
+        <div className="max-h-[480px] overflow-y-auto">{renderServices(preview, 5)}</div>
+        <button
+          type="button"
+          onClick={() => {
+            setModalQuery('');
+            setPage(1);
+            setOpen(true);
+          }}
+          className="flex h-12 w-full items-center justify-center text-xs font-semibold tracking-[0.04em] text-[#760A0A] transition hover:bg-[#FFF9F8]"
+        >
           View All Services
         </button>
       </aside>
-
-      <AdminModal open={showAll} onClose={() => { setShowAll(false); setModalQuery(''); }} title="All Internal Services" description="Select a service to view and manage its SOP." size="lg">
-        <label className="mb-4 flex h-10 items-center gap-2 rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 focus-within:border-[#A61919] focus-within:ring-2 focus-within:ring-[#A61919]/10">
-          <Search aria-hidden="true" className="size-4 shrink-0 text-[#8A94A3]" />
-          <span className="sr-only">Search all internal services</span>
-          <input type="search" autoFocus value={modalQuery} onChange={(event) => setModalQuery(event.target.value)} placeholder="Search service name or description..." className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]" />
-        </label>
-        <div className="max-h-[480px] overflow-y-auto rounded-lg border border-[#E4E7EB]">
-          {modalServices.map((service) => (
-            <ServiceItem key={service.id} service={service} active={service.id === selectedId} onSelect={() => selectService(service.id)} />
-          ))}
-          {modalServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
+      <AdminModal open={open} onClose={closeModal} title="All Internal Services" description="Select a service to view and manage its SOP." size="lg">
+        <div className="mb-4">
+          <AdminSearchField
+            label="Search all internal services"
+            hideLabel
+            value={modalQuery}
+            onChange={(value) => {
+              setModalQuery(value);
+              setPage(1);
+            }}
+            placeholder="Search service name or code..."
+          />
         </div>
+        <div className="max-h-[480px] overflow-y-auto rounded-lg border border-[#E4E7EB]">{renderServices(result, undefined, true)}</div>
+        <AllJobsPagination
+          noun="services"
+          disabled={result.loading || Boolean(result.error)}
+          currentPage={result.data?.page ?? page}
+          pageSize={10}
+          totalItems={result.data?.total ?? 0}
+          onPageChange={setPage}
+        />
       </AdminModal>
     </>
   );

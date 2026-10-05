@@ -27,7 +27,7 @@ select set_config('request.jwt.claim.sub','99000000-0000-4000-8000-000000000001'
 
 select extensions.has_function('public','list_rejected_admin_access_requests',array['text','integer'],'rejected request list RPC exists');
 select extensions.has_function('public','delete_rejected_admin_access_request',array['uuid'],'rejected request delete RPC exists');
-select extensions.is((select count(*)::integer from public.list_rejected_admin_access_requests(null,10)),1,'super admin can list rejected requests');
+select extensions.is((select count(*)::integer from public.list_rejected_admin_access_requests(null,10) where user_id='99000000-0000-4000-8000-000000000003'),1,'super admin can list the rejected fixture alongside existing requests');
 select extensions.is((select count(*)::integer from public.list_rejected_admin_access_requests('Rejected User',10)),1,'rejected request search matches display name');
 
 select extensions.lives_ok(

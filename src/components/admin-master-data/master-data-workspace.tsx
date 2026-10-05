@@ -2,13 +2,21 @@
 
 import { archiveMasterDataAction, saveMasterDataAction } from '@/app/admin/master-data/actions';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
+import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
+import type { MasterPage } from '@/lib/supabase/queries/master-data';
 import type { MasterDataCategory, MasterDataCategoryId, MasterDataRow } from '@/data/admin-master-data/master-data';
-import { Archive, ArrowLeft, Plus } from 'lucide-react';
+import { Archive, ArrowLeft, LoaderCircle, Plus, Shapes } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { MasterDataCategoryList } from './master-data-category-list';
 import { MasterDataFormModal, type MasterDataFormCategoryId, type MasterDataFormValues } from './master-data-form-modal';
 import { MasterDataTable } from './master-data-table';
+import { MasterDataPagination } from './master-data-pagination';
+import { useInternalServiceSearch } from './use-internal-service-search';
 
 type FormModalState = {
   mode: 'add' | 'edit';
@@ -23,10 +31,6 @@ type MasterDataWorkspaceProps = {
   canManage: boolean;
 };
 
-function isFormCategory(categoryId: MasterDataCategoryId): categoryId is MasterDataFormCategoryId {
-  return ['priorities', 'internal-services', 'task-statuses', 'job-statuses', 'job-titles', 'workflow-templates'].includes(categoryId);
-}
-
 function rowLabel(row: MasterDataRow) {
   const firstCell = row.cells[0];
   return firstCell?.type === 'text' ? firstCell.value : 'this data';
@@ -40,25 +44,46 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
   const [modal, setModal] = useState<FormModalState | null>(null);
   const [pendingRowId, setPendingRowId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [serviceRefreshKey, setServiceRefreshKey] = useState(0);
+  const [removeModal, setRemoveModal] = useState<{ categoryId: 'internal-services' | 'internal-service-categories'; row: MasterDataRow } | null>(null);
 
   const selectedCategory = initialCategories.find((category) => category.id === selectedId) ?? initialCategories[0];
-  const workflowTemplates = initialCategories.find((category) => category.id === 'workflow-templates')?.rows ?? [];
-  const displayedCategory = selectedCategory.id === 'workflow-templates' ? { ...selectedCategory, rows: selectedCategory.rows.filter((row) => row.isActive !== showWorkflowTrash) } : selectedCategory;
+  const isInternalServices = selectedCategory.id === 'internal-services';
+  const serviceSearch = useInternalServiceSearch({ search, categoryId: categoryFilter, page }, isInternalServices, serviceRefreshKey);
+  const servicePage = serviceSearch.data;
+  const serviceBusy = serviceSearch.isLoading || Boolean(serviceSearch.error);
+  const otherSearch = useAdminPage<MasterPage>(
+    isInternalServices
+      ? null
+      : `/api/admin/master-data?${new URLSearchParams({ kind: selectedId, query: search, page: String(page), trash: String(showWorkflowTrash), revision: String(serviceRefreshKey) })}`,
+    undefined,
+    400
+  );
+  const otherBusy = otherSearch.loading || Boolean(otherSearch.error);
+  const displayedCategory = { ...selectedCategory, rows: isInternalServices ? (servicePage?.rows ?? []) : otherBusy ? [] : (otherSearch.data?.rows ?? []) };
+  const removeIsPermanent = removeModal?.categoryId === 'internal-service-categories' || removeModal?.row.referenceCount === 0;
 
   const selectCategory = (categoryId: MasterDataCategoryId) => {
     setSelectedId(categoryId);
     setShowWorkflowTrash(false);
+    setSearch('');
+    setPage(1);
+    if (categoryId === 'internal-services') setServiceRefreshKey((current) => current + 1);
     setNotice(null);
   };
 
   const openAddModal = () => {
-    if (!canManage || !isFormCategory(selectedCategory.id)) return;
+    if (!canManage) return;
     setNotice(null);
     setModal({ mode: 'add', categoryId: selectedCategory.id });
   };
 
   const openEditModal = (row: MasterDataRow) => {
-    if (!canManage || !isFormCategory(selectedCategory.id)) return;
+    if (!canManage) return;
+    if (selectedCategory.id === 'internal-service-categories' && (row.referenceCount ?? 0) > 0) return;
     setNotice(null);
     setModal({ mode: 'edit', categoryId: selectedCategory.id, row });
   };
@@ -77,16 +102,13 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
       setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
       if (result.ok) {
         setModal(null);
+        setServiceRefreshKey((current) => current + 1);
         router.refresh();
       }
     });
   };
 
-  const archiveRow = (row: MasterDataRow) => {
-    const categoryId = selectedCategory.id;
-    if (!canManage || categoryId === 'service-categories') return;
-    if (!window.confirm(`Deactivate ${rowLabel(row)}? Existing historical references will be preserved.`)) return;
-
+  const removeRow = (row: MasterDataRow, categoryId: MasterDataCategoryId) => {
     setPendingRowId(row.id);
     setNotice(null);
     startTransition(async () => {
@@ -97,8 +119,24 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
       });
       setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
       setPendingRowId(null);
-      if (result.ok) router.refresh();
+      if (result.ok) {
+        setRemoveModal(null);
+        setServiceRefreshKey((current) => current + 1);
+        router.refresh();
+      }
     });
+  };
+
+  const archiveRow = (row: MasterDataRow) => {
+    const categoryId = selectedCategory.id;
+    if (!canManage) return;
+    if (categoryId === 'internal-services' || categoryId === 'internal-service-categories') {
+      if (categoryId === 'internal-service-categories' && (row.referenceCount ?? 0) > 0) return;
+      setNotice(null);
+      setRemoveModal({ categoryId, row });
+      return;
+    }
+    if (window.confirm(`Deactivate ${rowLabel(row)}? Existing historical references will be preserved.`)) removeRow(row, categoryId);
   };
 
   return (
@@ -115,11 +153,24 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
               </h2>
               <p className="mt-1 text-xs leading-5 text-[#707988]">{selectedCategory.description}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {isInternalServices || selectedCategory.id === 'internal-service-categories' ? (
+                <button
+                  type="button"
+                  onClick={() => selectCategory(isInternalServices ? 'internal-service-categories' : 'internal-services')}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] bg-white px-3.5 text-xs font-semibold text-[#586273] transition hover:bg-[#FAFBFC] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
+                >
+                  {isInternalServices ? <Shapes aria-hidden="true" className="size-4" /> : <ArrowLeft aria-hidden="true" className="size-4" />}
+                  {isInternalServices ? 'Manage Categories' : 'View Services'}
+                </button>
+              ) : null}
               {selectedCategory.id === 'workflow-templates' ? (
                 <button
                   type="button"
-                  onClick={() => setShowWorkflowTrash((current) => !current)}
+                  onClick={() => {
+                    setShowWorkflowTrash((current) => !current);
+                    setPage(1);
+                  }}
                   className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] bg-white px-3.5 text-xs font-semibold text-[#586273] transition hover:border-[#C4C9D0] hover:bg-[#FAFBFC] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
                 >
                   {showWorkflowTrash ? <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.7} /> : <Archive aria-hidden="true" className="size-4" strokeWidth={1.7} />}
@@ -141,7 +192,78 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
             </div>
           </header>
 
-          <div className="p-4 sm:p-6">
+          <div className="@container p-4 sm:p-6">
+            {isInternalServices ? (
+              <div className="mb-5 grid items-end gap-3 rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4 @sm:grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[minmax(0,1fr)_240px_auto]">
+                <div className="min-w-0 @sm:col-span-2 @2xl:col-span-1">
+                  <AdminSearchField
+                    id="internal-service-search"
+                    label="Search Services"
+                    value={search}
+                    onChange={(value) => {
+                      setSearch(value);
+                      setPage(1);
+                    }}
+                    placeholder="Service name, code, or category..."
+                  />
+                </div>
+                <AdminRemoteSelect
+                  kind="internal_categories"
+                  label="Category"
+                  size="md"
+                  showDropdownIndicator
+                  value={categoryFilter}
+                  placeholder="All Categories"
+                  fixedOptions={[
+                    { value: '', label: 'All Categories' },
+                    { value: 'uncategorized', label: 'Uncategorized' },
+                  ]}
+                  onChange={(value) => {
+                    setCategoryFilter(value);
+                    setPage(1);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setCategoryFilter('');
+                    setPage(1);
+                  }}
+                  className="h-10 rounded-lg border border-[#D6DAE0] bg-white px-4 text-xs font-semibold text-[#586273] transition hover:bg-[#F1F3F5] focus-visible:ring-2 focus-visible:ring-[#8C1010]/25 focus-visible:outline-none"
+                >
+                  Reset
+                </button>
+              </div>
+            ) : null}
+            {!isInternalServices ? (
+              <div className="mb-5 rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4">
+                <AdminSearchField
+                  label={`Search ${selectedCategory.label}`}
+                  value={search}
+                  onChange={(value) => {
+                    setSearch(value);
+                    setPage(1);
+                  }}
+                  placeholder="Search name or code..."
+                />
+              </div>
+            ) : null}
+            {!isInternalServices && otherSearch.loading ? (
+              <p role="status" className="mb-3 text-xs">
+                Loading Master Data...
+              </p>
+            ) : null}
+            {!isInternalServices && otherSearch.error ? (
+              <p role="alert" className="mb-3 text-sm text-red-700">
+                {otherSearch.error}
+              </p>
+            ) : null}
+            {selectedCategory.id === 'internal-service-categories' ? (
+              <p className="mb-4 rounded-lg border border-[#D9DDE3] bg-[#F7F8FA] px-4 py-3 text-xs leading-5 text-[#667181]">
+                Categories are internal only, unrelated to Client Services. Edit and delete are locked whenever any service uses the category, including inactive services.
+              </p>
+            ) : null}
             {notice ? (
               <div
                 role="status"
@@ -155,13 +277,42 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
             {!canManage ? (
               <div className="mb-4 rounded-lg border border-[#D9DDE3] bg-[#F7F8FA] px-4 py-3 text-xs text-[#667181]">You have read-only access. Only admin and super admin can change Master Data.</div>
             ) : null}
-            <MasterDataTable
-              category={displayedCategory}
-              canManage={canManage}
-              pendingRowId={pendingRowId}
-              onEdit={isFormCategory(selectedCategory.id) ? openEditModal : undefined}
-              onArchive={selectedCategory.id === 'service-categories' ? undefined : archiveRow}
-            />
+            {isInternalServices && serviceSearch.isLoading ? (
+              <p role="status" className="mb-3 flex items-center gap-2 text-xs text-[#707988]">
+                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                Searching services...
+              </p>
+            ) : null}
+            {isInternalServices && serviceSearch.error ? (
+              <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[#F3B9B9] bg-[#FFF0F0] px-4 py-3 text-xs text-[#A51919]">
+                <p>{serviceSearch.error}</p>
+                <button type="button" onClick={() => setServiceRefreshKey((current) => current + 1)} className="shrink-0 font-semibold underline">
+                  Retry
+                </button>
+              </div>
+            ) : null}
+            <div aria-busy={isInternalServices && serviceSearch.isLoading} className={isInternalServices && serviceBusy ? 'opacity-50' : undefined}>
+              <MasterDataTable
+                category={displayedCategory}
+                emptyMessage={
+                  isInternalServices
+                    ? serviceSearch.isLoading
+                      ? 'Loading services...'
+                      : serviceSearch.error
+                        ? 'Services could not be loaded. Please retry.'
+                        : 'No services match the search and category.'
+                    : undefined
+                }
+                canManage={canManage && !isPending && (isInternalServices ? !serviceBusy : !otherBusy)}
+                pendingRowId={pendingRowId}
+                onEdit={openEditModal}
+                onArchive={archiveRow}
+              />
+            </div>
+            {isInternalServices && servicePage ? <MasterDataPagination {...servicePage} disabled={serviceBusy || isPending} onChange={setPage} /> : null}
+            {!isInternalServices && otherSearch.data ? (
+              <AllJobsPagination currentPage={otherSearch.data.page} pageSize={10} totalItems={otherSearch.data.total} noun="records" onPageChange={setPage} />
+            ) : null}
           </div>
         </div>
       </section>
@@ -173,11 +324,55 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
           mode={modal.mode}
           categoryId={modal.categoryId}
           row={modal.row}
-          workflowTemplates={workflowTemplates}
+          defaultInternalCategoryId={categoryFilter === 'uncategorized' ? '' : categoryFilter}
+          errorMessage={notice?.tone === 'error' ? notice.message : undefined}
           isSaving={isPending}
           onClose={() => setModal(null)}
           onSave={saveForm}
         />
+      ) : null}
+      {removeModal ? (
+        <AdminModal
+          open
+          size="sm"
+          onClose={isPending ? () => undefined : () => setRemoveModal(null)}
+          title={removeIsPermanent ? 'Delete permanently?' : 'Deactivate service?'}
+          description={rowLabel(removeModal.row)}
+          footer={
+            <>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setRemoveModal(null)}
+                className="h-9 rounded-lg px-4 text-xs font-semibold text-[#4F5968] hover:bg-[#ECEFF2] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => removeRow(removeModal.row, removeModal.categoryId)}
+                className="h-9 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white hover:bg-[#7E0C0C] disabled:opacity-50"
+              >
+                {isPending ? 'Updating...' : removeIsPermanent ? 'Delete permanently' : 'Deactivate'}
+              </button>
+            </>
+          }
+        >
+          {notice?.tone === 'error' ? (
+            <p role="alert" className="mb-3 text-xs text-[#A51919]">
+              {notice.message}
+            </p>
+          ) : null}
+          <p className="text-sm leading-6 text-[#586273]">
+            {removeIsPermanent
+              ? 'This record is unused and will be permanently deleted. This cannot be undone.'
+              : 'This service is referenced by Jobs or SOPs. It will be deactivated instead of deleted, preserving all historical references.'}
+          </p>
+          <p className="mt-3 text-xs leading-5 text-[#8A94A3]">
+            Usage is checked again before saving. If a service has become used, it will be deactivated; a category that has become used cannot be deleted.
+          </p>
+        </AdminModal>
       ) : null}
       {isPending ? <AdminPendingOverlay label={pendingRowId ? 'Updating Master Data...' : 'Saving Master Data...'} /> : null}
     </main>

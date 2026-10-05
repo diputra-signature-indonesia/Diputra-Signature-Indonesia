@@ -15,7 +15,10 @@ export type TeamJobTitleOption = Pick<Tables<'job_titles'>, 'id' | 'name' | 'sor
 
 export type UserManagementData = {
   profiles: ManagedProfile[];
-  trashedProfiles: ManagedProfile[];
+  total: number;
+  page: number;
+  revision: string;
+  trashedProfileCount: number;
   initialRequests: PendingAccessRequest[];
   pendingRequestCount: number;
   initialRejectedRequests: RejectedAccessRequest[];
@@ -25,42 +28,15 @@ export type UserManagementData = {
 
 export async function getUserManagementData(options: { includeAccessRequests: boolean }): Promise<UserManagementData> {
   const supabase = await createSupabaseServerClient();
-  const [profilesResult, trashedProfilesResult, teamResult, jobTitlesResult] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id,email,display_name,avatar_url,role,is_active,created_at,updated_at,deleted_at')
-      .is('deleted_at', null)
-      .order('display_name', { ascending: true, nullsFirst: false })
-      .order('email', { ascending: true }),
-    options.includeAccessRequests
-      ? supabase
-          .from('profiles')
-          .select('id,email,display_name,avatar_url,role,is_active,created_at,updated_at,deleted_at')
-          .not('deleted_at', 'is', null)
-          .order('deleted_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    supabase.from('team_members').select('id,profile_id,full_name,short_bio,avatar_url,is_visible,job_title_id'),
-    supabase.from('job_titles').select('id,name,sort_order,is_active').order('sort_order').order('name'),
-  ]);
+  const profilesPage = await getManagedProfilePage();
 
-  if (profilesResult.error) {
-    throw new Error(`Unable to load user profiles: ${profilesResult.error.message}`);
-  }
-  if (trashedProfilesResult.error) throw new Error(`Unable to load trashed user profiles: ${trashedProfilesResult.error.message}`);
-
-  if (teamResult.error) {
-    throw new Error(`Unable to load team profiles: ${teamResult.error.message}`);
-  }
-  if (jobTitlesResult.error) {
-    throw new Error(`Unable to load Job titles: ${jobTitlesResult.error.message}`);
-  }
-
-  const [requestsResult, requestCountResult, rejectedRequestsResult, rejectedRequestCountResult] = options.includeAccessRequests
+  const [requestsResult, requestCountResult, rejectedRequestsResult, rejectedRequestCountResult, trashCountResult] = options.includeAccessRequests
     ? await Promise.all([
         supabase.rpc('list_pending_admin_access_requests', { p_limit: 10 }),
         supabase.from('admin_access_requests').select('user_id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.rpc('list_rejected_admin_access_requests', { p_limit: 10 }),
         supabase.from('admin_access_requests').select('user_id', { count: 'exact', head: true }).eq('status', 'rejected'),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }).not('deleted_at', 'is', null),
       ])
     : [
         { data: [], error: null },
@@ -68,26 +44,44 @@ export async function getUserManagementData(options: { includeAccessRequests: bo
         { data: [], error: null },
         { count: 0, error: null },
       ];
+  const trashCount = trashCountResult ?? { count: 0, error: null };
 
   if (requestsResult.error) throw new Error(`Unable to load access requests: ${requestsResult.error.message}`);
   if (requestCountResult.error) throw new Error(`Unable to count access requests: ${requestCountResult.error.message}`);
   if (rejectedRequestsResult.error) throw new Error(`Unable to load rejected access requests: ${rejectedRequestsResult.error.message}`);
   if (rejectedRequestCountResult.error) throw new Error(`Unable to count rejected access requests: ${rejectedRequestCountResult.error.message}`);
-
-  const jobTitleById = new Map((jobTitlesResult.data ?? []).map((title) => [title.id, title.name]));
-  const teamByProfileId = new Map(
-    (teamResult.data ?? [])
-      .filter((member) => member.profile_id)
-      .map((member) => [member.profile_id as string, { ...member, jobTitleName: member.job_title_id ? (jobTitleById.get(member.job_title_id) ?? null) : null }])
-  );
+  if (trashCount.error) throw new Error(`Unable to count deleted users: ${trashCount.error.message}`);
 
   return {
-    profiles: (profilesResult.data ?? []).map((profile) => ({ ...profile, teamMember: teamByProfileId.get(profile.id) ?? null })),
-    trashedProfiles: (trashedProfilesResult.data ?? []).map((profile) => ({ ...profile, teamMember: teamByProfileId.get(profile.id) ?? null })),
+    ...profilesPage,
+    revision: String(Date.now()),
     initialRequests: requestsResult.data ?? [],
     pendingRequestCount: requestCountResult.count ?? 0,
     initialRejectedRequests: rejectedRequestsResult.data ?? [],
     rejectedRequestCount: rejectedRequestCountResult.count ?? 0,
-    jobTitles: jobTitlesResult.data ?? [],
+    trashedProfileCount: trashCount.count ?? 0,
+    jobTitles: [],
   };
+}
+
+export async function getTrashedProfilePage(page = 1, signal?: AbortSignal): Promise<{ profiles: ManagedProfile[]; total: number; page: number }> {
+  const supabase = await createSupabaseServerClient();
+  const request = supabase
+    .from('profiles')
+    .select('id,email,display_name,avatar_url,role,is_active,created_at,updated_at,deleted_at', { count: 'exact' })
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+    .order('id')
+    .range((page - 1) * 10, page * 10 - 1);
+  const { data, count, error } = await (signal ? request.abortSignal(signal) : request);
+  if (error) throw error;
+  return { profiles: (data ?? []).map((profile) => ({ ...profile, teamMember: null })), total: count ?? 0, page };
+}
+
+export async function getManagedProfilePage(query = '', page = 1, signal?: AbortSignal): Promise<{ profiles: ManagedProfile[]; total: number; page: number }> {
+  const supabase = await createSupabaseServerClient();
+  const request = supabase.rpc('search_managed_profiles', { p_query: query, p_page: page });
+  const { data, error } = await (signal ? request.abortSignal(signal) : request);
+  if (error) throw error;
+  return data as unknown as { profiles: ManagedProfile[]; total: number; page: number };
 }

@@ -207,6 +207,15 @@ export async function deleteDriveFilePermanently(fileId: string) {
   });
 }
 
+export async function restoreDriveFile(fileId: string) {
+  const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,trashed' });
+  return driveFetch<{ id: string; trashed: boolean }>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?${params}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: false }),
+  });
+}
+
 export async function listDrivePermissions(folderId: string) {
   const params = new URLSearchParams({
     supportsAllDrives: 'true',
