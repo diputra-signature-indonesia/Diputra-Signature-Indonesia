@@ -39,6 +39,8 @@ export type GoogleDrivePermission = {
   permissionDetails?: Array<{ inherited?: boolean; inheritedFrom?: string; permissionType?: string; role?: string }>;
 };
 
+export type GoogleDrivePermissionRole = 'reader' | 'commenter' | 'writer' | 'organizer';
+
 async function driveFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const token = await getGoogleDriveAccessToken();
   const response = await fetch(url, {
@@ -151,7 +153,15 @@ export async function getDriveFileContent(fileId: string) {
   return response;
 }
 
-export async function createResumableUpload(folderId: string, fileName: string, mimeType: string, sizeBytes: number) {
+export async function generateDriveFileId() {
+  const params = new URLSearchParams({ count: '1', space: 'drive', type: 'files' });
+  const result = await driveFetch<{ ids?: string[] }>(`${DRIVE_API}/files/generateIds?${params}`);
+  const fileId = result.ids?.[0]?.trim();
+  if (!fileId) throw new Error('Google Drive did not return a pre-generated file ID.');
+  return fileId;
+}
+
+export async function createResumableUpload(folderId: string, fileId: string, fileName: string, mimeType: string, sizeBytes: number) {
   const token = await getGoogleDriveAccessToken();
   const params = new URLSearchParams({
     uploadType: 'resumable',
@@ -166,7 +176,7 @@ export async function createResumableUpload(folderId: string, fileName: string, 
       'X-Upload-Content-Length': String(sizeBytes),
       'X-Upload-Content-Type': mimeType,
     },
-    body: JSON.stringify({ name: fileName, parents: [folderId], appProperties: { managedBy: 'diputra-admin' } }),
+    body: JSON.stringify({ id: fileId, name: fileName, parents: [folderId], appProperties: { managedBy: 'diputra-admin' } }),
     cache: 'no-store',
   });
   if (!response.ok) {
@@ -179,11 +189,21 @@ export async function createResumableUpload(folderId: string, fileName: string, 
 }
 
 export async function trashDriveFile(fileId: string) {
+  return setDriveFileTrashed(fileId, true);
+}
+
+export async function setDriveFileTrashed(fileId: string, trashed: boolean) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,trashed' });
   return driveFetch<{ id: string; trashed: boolean }>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?${params}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trashed: true }),
+    body: JSON.stringify({ trashed }),
+  });
+}
+
+export async function deleteDriveFilePermanently(fileId: string) {
+  return driveFetch<void>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, {
+    method: 'DELETE',
   });
 }
 
@@ -206,7 +226,7 @@ export async function listDrivePermissions(folderId: string) {
   return result.permissions ?? [];
 }
 
-export async function createDrivePermission(folderId: string, emailAddress: string, role: 'reader' | 'commenter' | 'writer') {
+export async function createDrivePermission(folderId: string, emailAddress: string, role: GoogleDrivePermissionRole) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', sendNotificationEmail: 'true', fields: 'id' });
   return driveFetch<{ id: string }>(`${DRIVE_API}/files/${encodeURIComponent(folderId)}/permissions?${params}`, {
     method: 'POST',
@@ -215,7 +235,7 @@ export async function createDrivePermission(folderId: string, emailAddress: stri
   });
 }
 
-export async function updateDrivePermission(folderId: string, permissionId: string, role: 'reader' | 'commenter' | 'writer') {
+export async function updateDrivePermission(folderId: string, permissionId: string, role: GoogleDrivePermissionRole) {
   const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,role' });
   return driveFetch<{ id: string; role: string }>(`${DRIVE_API}/files/${encodeURIComponent(folderId)}/permissions/${encodeURIComponent(permissionId)}?${params}`, {
     method: 'PATCH',

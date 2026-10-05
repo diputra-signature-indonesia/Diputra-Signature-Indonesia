@@ -13,7 +13,7 @@ export function LiveJobDetailContent({ detail }: { detail: LiveJobDetail }) {
       <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,2.08fr)_minmax(300px,1fr)]">
         <LiveRemarksCard detail={detail} />
         <div className="space-y-5">
-          <LiveContributorCard contributors={detail.contributors} />
+          <LiveContributorCard jobId={detail.job.id} contributors={detail.contributors} canManage={detail.canManage} />
           <LiveMoreFromClientCard jobId={detail.job.id} clientName={detail.summary.client} />
         </div>
       </section>

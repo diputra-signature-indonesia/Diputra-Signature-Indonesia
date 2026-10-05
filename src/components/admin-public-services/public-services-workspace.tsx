@@ -14,10 +14,12 @@ import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
 import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
+import { QuestionAnswerModal } from '@/components/admin-public-services/question-answer-modal';
+import type { AdminQuestionAnswer } from '@/lib/supabase/queries/question-answer-management';
 import { PUBLIC_SERVICE_IMAGE_ACCEPT, PUBLIC_SERVICE_SVG_ACCEPT } from '@/lib/public-service-storage';
 import type { AdminPublicServiceCategory, AdminPublicServiceDetail, AdminPublicServiceItem, AdminPublicServicePage } from '@/lib/supabase/queries/public-service-management';
 import { deletePublicServiceAssetUrl, uploadPublicServiceImage, uploadPublicServiceSvg } from '@/lib/upload-public-service-asset';
-import { Eye, EyeOff, FileStack, ImagePlus, Pencil, Plus, Shapes, Trash2, Upload } from 'lucide-react';
+import { CircleHelp, Eye, EyeOff, FileStack, ImagePlus, Pencil, Plus, Shapes, Trash2, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition, type FormEvent } from 'react';
@@ -583,7 +585,7 @@ function DetailFormModal({
   );
 }
 
-export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPublicServicePage }) {
+export function PublicServicesWorkspace({ initialPage, canManageServices }: { initialPage: AdminPublicServicePage; canManageServices: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState(initialPage.selected?.id ?? '');
@@ -596,6 +598,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
   const [detailItem, setDetailItem] = useState<AdminPublicServiceItem | null>(null);
   const [detailEditor, setDetailEditor] = useState<DetailEditor | null>(null);
+  const [qnaOpen, setQnaOpen] = useState(false);
+  const questionAnswers = useAdminPage<{ items: AdminQuestionAnswer[] }>(qnaOpen && selectedId ? `/api/admin/question-answers?${new URLSearchParams({ category: selectedId, revision: initialPage.revision })}` : null);
 
   const params = new URLSearchParams({ category: selectedId, categoryPage: String(categoryPage), itemPage: String(itemPage), detailPage: String(detailPage), query, revision: initialPage.revision });
   if (detailItem) params.set('item', detailItem.id);
@@ -718,7 +722,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
               <p className="text-[11px] font-semibold tracking-[0.14em] text-[#9AA4B4] uppercase">Select Service</p>
               <p className="mt-1 text-xs leading-5 text-[#707988]">Choose client-page content.</p>
             </div>
-            <button
+            {canManageServices ? <button
               type="button"
               onClick={() => setCategoryEditor({ mode: 'add' })}
               disabled={isPending}
@@ -727,7 +731,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#9F1010] text-white hover:bg-[#7E0C0C] disabled:opacity-50"
             >
               <Plus className="size-4" />
-            </button>
+            </button> : null}
           </div>
           <div className="px-4 pb-3">
             <AdminSearchField
@@ -755,6 +759,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                     setDetailItem(null);
                     setDetailPage(1);
                     setNotice(null);
+                    setQnaOpen(false);
                   }}
                   className={`group flex min-w-max items-center gap-3 rounded-lg px-3 py-2.5 text-left transition lg:w-full lg:min-w-0 ${active ? 'bg-[#FDEBEB] text-[#8C1010]' : 'text-[#394150] hover:bg-white hover:text-[#8C1010]'}`}
                 >
@@ -782,7 +787,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                   <p className="mt-1 text-xs leading-5 text-[#707988]">Manage Sub-services and optional nested details.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
+                  <button type="button" onClick={() => setQnaOpen(true)} disabled={isPending} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] px-3.5 text-xs font-semibold text-[#586273] hover:bg-[#F8F9FA]"><CircleHelp className="size-4" />Manage Q&A</button>
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => setCategoryEditor({ mode: 'edit', category: selected })}
                     disabled={busy}
@@ -790,8 +796,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                   >
                     <Pencil className="size-4" />
                     Edit Service
-                  </button>
-                  <button
+                  </button> : null}
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => remove('category', selected)}
                     disabled={busy}
@@ -799,8 +805,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                   >
                     <Trash2 className="size-4" />
                     Delete
-                  </button>
-                  <button
+                  </button> : null}
+                  {canManageServices ? <button
                     type="button"
                     onClick={() => setItemEditor({ mode: 'add' })}
                     disabled={busy}
@@ -808,7 +814,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                   >
                     <Plus className="size-4" />
                     Add Sub-service
-                  </button>
+                  </button> : null}
                 </div>
               </header>
               <div className="overflow-x-auto p-4 sm:p-6">
@@ -849,7 +855,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
-                            <button
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => {
                                 setDetailItem(item);
@@ -861,8 +867,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#245293] hover:bg-[#F0F5FF]"
                             >
                               <FileStack className="size-4" />
-                            </button>
-                            <button
+                            </button> : null}
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => setItemEditor({ mode: 'edit', item })}
                               disabled={busy}
@@ -870,8 +876,8 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#667181] hover:bg-[#F2F4F7]"
                             >
                               <Pencil className="size-4" />
-                            </button>
-                            <button
+                            </button> : null}
+                            {canManageServices ? <button
                               type="button"
                               onClick={() => remove('item', item)}
                               disabled={busy}
@@ -879,7 +885,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
                               className="inline-flex size-8 items-center justify-center rounded-md text-[#A51919] hover:bg-[#FFF0F0]"
                             >
                               <Trash2 className="size-4" />
-                            </button>
+                            </button> : null}
                           </div>
                         </td>
                       </tr>
@@ -911,14 +917,14 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
               <Shapes className="size-10 text-[#A5ADB8]" />
               <h2 className="mt-4 text-lg font-semibold">{result.loading ? 'Loading Client Services...' : (result.error ?? 'No Client Services yet')}</h2>
               <p className="mt-1 text-sm text-[#7B8491]">Create the first Service to begin managing public content.</p>
-              <button
+              {canManageServices ? <button
                 type="button"
                 onClick={() => setCategoryEditor({ mode: 'add' })}
                 className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-[#9F1010] px-4 text-xs font-semibold text-white"
               >
                 <Plus className="size-4" />
                 Add Service
-              </button>
+              </button> : null}
             </div>
           )}
         </div>
@@ -1030,6 +1036,7 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
           onSave={saveDetail}
         />
       ) : null}
+      {selected && qnaOpen ? <QuestionAnswerModal key={selected.id} open onClose={() => setQnaOpen(false)} service={{ id: selected.id, title: selected.title ?? selected.slug }} initialItems={questionAnswers.loading || questionAnswers.error ? [] : questionAnswers.data?.items ?? []} loading={questionAnswers.loading} error={questionAnswers.error} /> : null}
       {isPending ? <AdminPendingOverlay label="Saving Client Services..." /> : null}
     </main>
   );

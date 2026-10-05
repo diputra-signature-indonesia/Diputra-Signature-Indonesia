@@ -18,8 +18,11 @@ export default async function AdminAccessRequestsPage() {
         profiles={data.profiles}
         initialTotal={data.total}
         initialRevision={data.revision}
+        initialTrashedProfileCount={data.trashedProfileCount}
         initialRequests={data.initialRequests}
         initialPendingRequestCount={data.pendingRequestCount}
+        initialRejectedRequests={data.initialRejectedRequests}
+        initialRejectedRequestCount={data.rejectedRequestCount}
         jobTitles={data.jobTitles}
         canManageUsers={canManageUsers}
       />

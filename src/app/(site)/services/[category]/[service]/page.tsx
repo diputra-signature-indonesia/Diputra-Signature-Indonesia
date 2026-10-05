@@ -1,4 +1,4 @@
-import { getPublishedBlogPosts, getServiceCategories, getServiceDetailPageData } from '@/lib/supabase/queries';
+import { getPublishedBlogPosts, getPublishedQuestionAnswers, getServiceCategories, getServiceDetailPageData } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ServicesDetailsPage({ params }: { params: Promise<{ category: string; service: string }> }) {
   const { category, service } = await params;
 
-  const [servicesDetail, blogPosts, serviceCategories] = await Promise.all([getServiceDetailPageData(category, service), getPublishedBlogPosts(3), getServiceCategories()]);
+  const [servicesDetail, blogPosts, serviceCategories, questionAnswers] = await Promise.all([getServiceDetailPageData(category, service), getPublishedBlogPosts(3), getServiceCategories(), getPublishedQuestionAnswers(category)]);
 
   if (!servicesDetail) notFound();
 
@@ -40,7 +40,7 @@ export default async function ServicesDetailsPage({ params }: { params: Promise<
     <MotionProvider>
       <DetailServiceSection serviceTitle={servicesDetail.item.title ?? ''} serviceDescription={servicesDetail.item.description ?? ''} servicesDetail={servicesDetail.details} />
       <CtaSection heading="Didn’t find what you need?" description="Some legal and corporate matters require personalized guidance." />
-      <QnaSection />
+      <QnaSection items={questionAnswers} />
       <div className="pb-13">
         <ServicesSection services={serviceCategories} excludeSlug={category} />
       </div>

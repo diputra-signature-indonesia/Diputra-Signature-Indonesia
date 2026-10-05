@@ -3,12 +3,13 @@
 import { requireActiveAdmin, requireActiveSuperAdmin } from '@/lib/auth/admin-access';
 import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { PendingAccessRequest } from '@/lib/supabase/queries/user-management';
+import type { PendingAccessRequest, RejectedAccessRequest } from '@/lib/supabase/queries/user-management';
 import { ASSIGNABLE_ADMIN_ROLES, type UserRole } from '@/types/auth-role';
 import { revalidatePath, updateTag } from 'next/cache';
 
 export type UserManagementActionResult = { ok: true; message: string } | { ok: false; message: string };
 export type SearchAccessRequestsResult = { ok: true; requests: PendingAccessRequest[] } | { ok: false; message: string };
+export type SearchRejectedAccessRequestsResult = { ok: true; requests: RejectedAccessRequest[] } | { ok: false; message: string };
 export type SaveTeamMemberInput = {
   profileId: string;
   fullName: string;
@@ -104,6 +105,21 @@ export async function searchPendingAccessRequestsAction(search: string): Promise
   return { ok: true, requests: data ?? [] };
 }
 
+export async function searchRejectedAccessRequestsAction(search: string): Promise<SearchRejectedAccessRequestsResult> {
+  await requireActiveSuperAdmin();
+  const normalizedSearch = search.trim();
+  if (normalizedSearch.length > 160) return { ok: false, message: 'Pencarian maksimal 160 karakter.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('list_rejected_admin_access_requests', {
+    p_search: normalizedSearch || undefined,
+    p_limit: 10,
+  });
+
+  if (error) return { ok: false, message: 'Daftar request yang ditolak tidak dapat dimuat.' };
+  return { ok: true, requests: data ?? [] };
+}
+
 export async function approveAccessRequestAction(userId: string, role: string): Promise<UserManagementActionResult> {
   await requireActiveSuperAdmin();
   if (!UUID_PATTERN.test(userId) || !isAssignableRole(role)) {
@@ -174,4 +190,30 @@ export async function softDeleteProfileAction(profileId: string): Promise<UserMa
 
   refreshUserManagement();
   return { ok: true, message: 'Pengguna dihapus dari daftar aktif. Histori terkait tetap tersimpan.' };
+}
+
+export async function restoreProfileAction(profileId: string): Promise<UserManagementActionResult> {
+  await requireActiveSuperAdmin();
+  if (!UUID_PATTERN.test(profileId)) return { ok: false, message: 'Pengguna tidak valid.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc('restore_profile', { p_profile_id: profileId });
+  if (error) return { ok: false, message: mutationError(error.message, 'Pengguna gagal dipulihkan.') };
+
+  refreshUserManagement();
+  return { ok: true, message: 'Pengguna dipulihkan sebagai akun inactive. Aktifkan kembali jika akses dashboard perlu diberikan.' };
+}
+
+export async function deleteRejectedAccessRequestAction(userId: string): Promise<UserManagementActionResult> {
+  await requireActiveSuperAdmin();
+  if (!UUID_PATTERN.test(userId)) return { ok: false, message: 'Request tidak valid.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc('delete_rejected_admin_access_request', { p_user_id: userId });
+  if (error) {
+    return { ok: false, message: error.code === 'P0002' ? 'Request sudah berubah atau tidak ditemukan.' : 'Request yang ditolak gagal dihapus.' };
+  }
+
+  refreshUserManagement();
+  return { ok: true, message: 'Request yang ditolak telah dihapus. User dapat login kembali dengan akun yang sama.' };
 }

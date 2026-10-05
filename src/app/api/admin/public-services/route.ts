@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getPublicServiceManagementData } from '@/lib/supabase/queries/public-service-management';
+import { getPublicServiceManagementData, getStaffPublicServiceManagementData } from '@/lib/supabase/queries/public-service-management';
 import { NextResponse } from 'next/server';
 const headers = { 'Cache-Control': 'private, no-store' };
 export async function GET(request: Request) {
@@ -8,6 +8,8 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ message: 'Please sign in again.' }, { status: 401, headers });
+  const { data: profile } = await supabase.from('profiles').select('role,is_active,deleted_at').eq('id', user.id).maybeSingle();
+  if (!profile?.is_active || profile.deleted_at) return NextResponse.json({ message: 'Admin access required.' }, { status: 403, headers });
   const p = new URL(request.url).searchParams;
   const page = (key: string) => Number(p.get(key) ?? 1);
   const id = (key: string) => p.get(key) || undefined;
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'Invalid search.' }, { status: 400, headers });
   try {
     return NextResponse.json(
-      await getPublicServiceManagementData(
+      await (profile.role === 'staff' ? getStaffPublicServiceManagementData : getPublicServiceManagementData)(
         {
           categoryId: id('category'),
           itemId: id('item'),

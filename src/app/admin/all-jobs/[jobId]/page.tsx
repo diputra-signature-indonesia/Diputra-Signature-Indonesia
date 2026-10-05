@@ -1,5 +1,6 @@
 import { JobDetailContent } from '@/components/admin-job-detail/job-detail-content';
 import { JobDocumentsPanel, type DemoJobDocument } from '@/components/admin-job-detail/job-documents-panel';
+import { JobActivityLog } from '@/components/admin-job-detail/job-activity-log';
 import { EditJobButton } from '@/components/admin-job-detail/edit-job-button';
 import { LiveJobDetailContent } from '@/components/admin-job-detail/live-job-detail-content';
 import { LiveTaskAssignmentContent } from '@/components/admin-job-detail/live-task-assignment-content';
@@ -12,6 +13,7 @@ import { jobDetail } from '@/data/admin-job-detail/job-detail-dummy-data';
 import { getAddJobOptions } from '@/lib/supabase/queries/add-job';
 import { getJobDetail } from '@/lib/supabase/queries/job-detail';
 import { getJobDocuments } from '@/lib/supabase/queries/job-documents';
+import { getJobActivityPage } from '@/lib/supabase/queries/job-activity';
 import { getTaskAssignment } from '@/lib/supabase/queries/task-assignment';
 import { LoaderCircle, Pencil } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -28,6 +30,11 @@ async function TaskAssignmentSection({ jobId, taskId }: { jobId: string; taskId?
 async function JobDocumentsSection({ jobId, canManage }: { jobId: string; canManage: boolean }) {
   const data = await getJobDocuments(jobId);
   return <JobDocumentsPanel jobId={jobId} data={data} canManage={canManage} />;
+}
+
+async function JobActivitySection({ jobId }: { jobId: string }) {
+  const initialPage = await getJobActivityPage(jobId);
+  return <JobActivityLog jobId={jobId} initialPage={initialPage} />;
 }
 
 const demoDocuments: DemoJobDocument[] = [
@@ -100,7 +107,7 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
             <JobDocumentsSection jobId={jobId} canManage={detail.canManage} />
           </Suspense>
         ) : null}
-        {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
+        {activeTab === 'logging' ? <Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Loading Job Activity"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><JobActivitySection jobId={jobId} /></Suspense> : null}
       </div>
     );
   }

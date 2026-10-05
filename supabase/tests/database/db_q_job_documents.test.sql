@@ -23,13 +23,13 @@ select extensions.ok(
 
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname='public' and tablename='job_drive_folders' and cmd='SELECT'),
-  1,
-  'Job Drive folders expose one authenticated read policy'
+  2,
+  'Job Drive folders expose active-staff and archived-admin read policies'
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname='public' and tablename='job_documents' and cmd='SELECT'),
-  1,
-  'Job documents expose one authenticated read policy'
+  2,
+  'Job documents expose active-staff and archived-admin read policies'
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname='public' and tablename in ('job_drive_folders','job_documents') and cmd <> 'SELECT'),

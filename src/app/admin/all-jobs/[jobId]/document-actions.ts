@@ -7,12 +7,14 @@ import {
   createResumableUpload,
   deleteDrivePermission,
   findJobFolder,
+  generateDriveFileId,
   getDriveFile,
   GoogleDriveApiError,
   googleFolderUrl,
   listDrivePermissions,
   trashDriveFile,
   updateDrivePermission,
+  type GoogleDrivePermissionRole,
 } from '@/lib/google-drive/client';
 import { getGoogleDriveConfig, GoogleDriveConfigurationError } from '@/lib/google-drive/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -21,10 +23,10 @@ import { revalidatePath } from 'next/cache';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const MUTABLE_ROLES = new Set(['reader', 'commenter', 'writer']);
+const MUTABLE_ROLES: ReadonlySet<string> = new Set<GoogleDrivePermissionRole>(['reader', 'commenter', 'writer', 'organizer']);
 
 type Result<T = undefined> = { ok: true; message: string; data: T } | { ok: false; message: string };
-type PermissionRole = 'reader' | 'commenter' | 'writer';
+type PermissionRole = GoogleDrivePermissionRole;
 
 export type JobFolderPermission = {
   id: string;
@@ -35,6 +37,13 @@ export type JobFolderPermission = {
   photoLink: string | null;
   inherited: boolean;
   canModify: boolean;
+};
+
+export type JobAccessUserOption = {
+  id: string;
+  displayName: string;
+  email: string;
+  avatarUrl: string | null;
 };
 
 function fail(message: string): { ok: false; message: string } {
@@ -67,22 +76,28 @@ async function requireManager(jobId: string) {
 }
 
 function folderName(title: string, jobId: string) {
-  const clean = title.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
+  const clean = title
+    .replace(/[\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return `${clean || 'Job'} (${jobId.slice(0, 8)})`.slice(0, 240);
 }
 
 async function ensureFolder(jobId: string) {
   const context = await requireManager(jobId);
   if (!context.ok) return context;
-  const current = await context.supabase.from('job_drive_folders')
+  const current = await context.supabase
+    .from('job_drive_folders')
     .select('id,google_folder_id,google_drive_id,folder_name,web_view_url,connection_status')
-    .eq('job_id', jobId).is('archived_at', null).maybeSingle();
+    .eq('job_id', jobId)
+    .is('archived_at', null)
+    .maybeSingle();
   if (current.error) return { ok: false, result: fail('Mapping folder Job gagal dibaca.') } as const;
   if (current.data?.connection_status === 'READY') return { ...context, folder: current.data } as const;
 
   try {
     const config = getGoogleDriveConfig();
-    const driveFolder = await findJobFolder(jobId) ?? await createJobFolder(jobId, folderName(context.job.title, jobId));
+    const driveFolder = (await findJobFolder(jobId)) ?? (await createJobFolder(jobId, folderName(context.job.title, jobId)));
     const webViewUrl = driveFolder.webViewLink ?? googleFolderUrl(driveFolder.id);
     const saved = await context.supabase.rpc('save_job_drive_folder', {
       p_job_id: jobId,
@@ -120,7 +135,7 @@ export async function prepareJobDocumentUploadAction(input: {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
-}): Promise<Result<{ uploadUrl: string; folderId: string; maxUploadBytes: number }>> {
+}): Promise<Result<{ uploadUrl: string; googleFileId: string; folderId: string; maxUploadBytes: number }>> {
   const name = input.fileName.replace(/[\u0000-\u001f]/g, ' ').trim();
   const mimeType = input.mimeType.trim() || 'application/octet-stream';
   if (!UUID.test(input.jobId) || !name || name.length > 500 || !Number.isSafeInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > MAX_UPLOAD_BYTES) {
@@ -129,8 +144,9 @@ export async function prepareJobDocumentUploadAction(input: {
   const result = await ensureFolder(input.jobId);
   if (!result.ok) return result.result;
   try {
-    const uploadUrl = await createResumableUpload(result.folder.google_folder_id, name, mimeType, input.sizeBytes);
-    return { ok: true, message: 'Sesi upload siap.', data: { uploadUrl, folderId: result.folder.google_folder_id, maxUploadBytes: MAX_UPLOAD_BYTES } };
+    const googleFileId = await generateDriveFileId();
+    const uploadUrl = await createResumableUpload(result.folder.google_folder_id, googleFileId, name, mimeType, input.sizeBytes);
+    return { ok: true, message: 'Sesi upload siap.', data: { uploadUrl, googleFileId, folderId: result.folder.google_folder_id, maxUploadBytes: MAX_UPLOAD_BYTES } };
   } catch (error) {
     return driveFailure(error, 'Sesi upload Google Drive gagal dibuat.');
   }
@@ -163,6 +179,7 @@ export async function finalizeJobDocumentUploadAction(input: { jobId: string; go
     refresh(input.jobId);
     return { ok: true, message: 'Dokumen berhasil diunggah.', data: { documentId: saved.data } };
   } catch (error) {
+    if (error instanceof GoogleDriveApiError && error.status === 404) return fail('Upload belum tersimpan di Google Drive. Periksa koneksi dan coba kembali.');
     return driveFailure(error, 'Upload selesai, tetapi metadata file gagal diverifikasi.');
   }
 }
@@ -217,6 +234,31 @@ export async function listJobFolderPermissionsAction(jobId: string): Promise<Res
   } catch (error) {
     return driveFailure(error, 'Daftar akses Google Drive gagal dimuat.');
   }
+}
+
+export async function searchJobAccessUsersAction(input: { jobId: string; query?: string }): Promise<Result<{ users: JobAccessUserOption[] }>> {
+  if (!UUID.test(input.jobId)) return fail('Job tidak valid.');
+  const search = input.query?.trim().slice(0, 100) ?? '';
+  const context = await requireManager(input.jobId);
+  if (!context.ok) return context.result;
+  const result = await context.supabase.rpc('search_job_access_profiles', {
+    p_job_id: input.jobId,
+    p_search: search,
+    p_limit: 10,
+  });
+  if (result.error) return fail('Daftar user gagal dimuat.');
+  return {
+    ok: true,
+    message: 'Daftar user berhasil dimuat.',
+    data: {
+      users: (result.data ?? []).map((profile) => ({
+        id: profile.id,
+        displayName: profile.display_name,
+        email: profile.email,
+        avatarUrl: profile.avatar_url,
+      })),
+    },
+  };
 }
 
 export async function addJobFolderPermissionAction(input: { jobId: string; email: string; role: PermissionRole }): Promise<Result> {

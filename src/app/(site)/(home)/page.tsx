@@ -1,4 +1,4 @@
-import { getPublishedBlogPosts, getServiceCategories, getVisibleStories } from '@/lib/supabase/queries';
+import { getPublishedBlogPosts, getPublishedQuestionAnswers, getServiceCategories, getVisibleStories } from '@/lib/supabase/queries';
 import type { Metadata } from 'next';
 
 import { AboutSection } from '@/components/layout/home-about-section';
@@ -6,6 +6,7 @@ import { HeroSection } from '@/components/layout/home-hero-section';
 import { BlogSection } from '@/components/layout/section-blog';
 import { ContactSection } from '@/components/layout/section-contact';
 import { ReviewSection } from '@/components/layout/section-review';
+import { QnaSection } from '@/components/layout/section-qna';
 import { ServicesSection } from '@/components/layout/section-services';
 import { MotionProvider } from '@/components/motion';
 
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [categoryService, blogPosts, review] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories()]);
+  const [categoryService, blogPosts, review, questionAnswers] = await Promise.all([getServiceCategories(), getPublishedBlogPosts(3), getVisibleStories(), getPublishedQuestionAnswers()]);
   return (
     <MotionProvider>
       <div className="relative mx-auto max-w-[1440px] overflow-x-hidden">
@@ -49,6 +50,7 @@ export default async function HomePage() {
           <div className="via-brand-white to-brand-white pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-white/0" />
           <ReviewSection testimonials={review} />
         </div>
+        <QnaSection items={questionAnswers} />
         <div className="mt-30 max-md:mb-10">
           <BlogSection blogPosts={blogPosts} />
         </div>

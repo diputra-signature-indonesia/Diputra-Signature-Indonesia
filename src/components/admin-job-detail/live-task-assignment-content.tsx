@@ -183,7 +183,6 @@ export function LiveTaskAssignmentContent({ data, initialTaskId }: { data: LiveT
   }
 
   const missingStatuses = data.availableStatuses.filter((status) => !columnIds.includes(status.id));
-
   const currentPriority = editing?.priority_id && !data.priorities.some((priority) => priority.id === editing.priority_id) ? editing : null;
 
   return (
