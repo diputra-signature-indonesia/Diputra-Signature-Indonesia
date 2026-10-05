@@ -14,8 +14,7 @@ type JobListCardProps = {
 export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSelect }: JobListCardProps) {
   const openTotal = jobs.reduce((sum, job) => sum + job.openCount, 0);
   const completedTotal = jobs.reduce((sum, job) => sum + job.completedCount, 0);
-  const normalizedQuery = query.trim().toLowerCase();
-  const visibleJobs = normalizedQuery ? jobs.filter((job) => `${job.client} ${job.title} ${job.internalService}`.toLowerCase().includes(normalizedQuery)) : jobs;
+  const visibleJobs = jobs;
 
   return (
     <aside className="flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl border border-[#DEE2E7] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.05)] xl:max-h-[735px]">
@@ -28,16 +27,19 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
           <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#788495]" />
           <input
             type="search"
+            maxLength={160}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Job title, client name, or service..."
-            className="h-9 w-full rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] pr-3 pl-9 text-xs text-[#303846] outline-none transition placeholder:text-[#747D8C] focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10"
+            className="h-9 w-full rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] pr-3 pl-9 text-xs text-[#303846] transition outline-none placeholder:text-[#747D8C] focus:border-[#A61919] focus:ring-2 focus:ring-[#A61919]/10"
           />
         </label>
 
         <div className="mt-2 rounded-lg border border-[#DEE2E7] px-3 py-2.5">
-          <p className="text-xs font-semibold text-[#725650]">My Task Overview</p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.04em] text-[#756664]">{openTotal} open · {completedTotal} completed</p>
+          <p className="text-xs font-semibold text-[#725650]">Tasks on this page</p>
+          <p className="mt-1 text-[10px] tracking-[0.04em] text-[#756664] uppercase">
+            {openTotal} open · {completedTotal} completed
+          </p>
         </div>
       </div>
 
@@ -58,12 +60,16 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
               <p className="mt-0.5 truncate text-xs text-[#756664]">{job.title}</p>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <MyTaskStatusBadge status={job.status} code={job.statusCode} />
-                <span className={`flex items-center gap-1 whitespace-nowrap text-[11px] ${job.dueTone === 'urgent' ? 'font-medium text-red-600' : job.dueTone === 'warning' ? 'font-medium text-amber-700' : 'text-[#2A2020]'}`}>
+                <span
+                  className={`flex items-center gap-1 text-[11px] whitespace-nowrap ${job.dueTone === 'urgent' ? 'font-medium text-red-600' : job.dueTone === 'warning' ? 'font-medium text-amber-700' : 'text-[#2A2020]'}`}
+                >
                   <DueIcon aria-hidden="true" className="size-3" />
                   {job.dueLabel}
                 </span>
               </div>
-              <p className="mt-3 text-[10px] uppercase tracking-[0.04em] text-[#756664]">{job.openCount} open · {job.completedCount} completed</p>
+              <p className="mt-3 text-[10px] tracking-[0.04em] text-[#756664] uppercase">
+                {job.openCount} open · {job.completedCount} completed
+              </p>
             </button>
           );
         })}

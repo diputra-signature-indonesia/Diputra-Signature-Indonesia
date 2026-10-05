@@ -9,6 +9,9 @@ import {
   softDeleteProfileAction,
   updateProfileRoleAction,
 } from '@/app/admin/access-requests/actions';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import type { ManagedProfile, PendingAccessRequest, TeamJobTitleOption } from '@/lib/supabase/queries/user-management';
@@ -26,6 +29,8 @@ type Confirmation = { type: 'activate' | 'deactivate' | 'delete'; profile: Manag
 type UserManagementWorkspaceProps = {
   currentUserId: string;
   profiles: ManagedProfile[];
+  initialTotal: number;
+  initialRevision: string;
   initialRequests: PendingAccessRequest[];
   initialPendingRequestCount: number;
   jobTitles: TeamJobTitleOption[];
@@ -61,8 +66,24 @@ function formatRequestDate(value: string) {
   }).format(new Date(value));
 }
 
-export function UserManagementWorkspace({ currentUserId, profiles, initialRequests, initialPendingRequestCount, jobTitles, canManageUsers }: UserManagementWorkspaceProps) {
+export function UserManagementWorkspace({
+  currentUserId,
+  profiles: initialProfiles,
+  initialTotal,
+  initialRevision,
+  initialRequests,
+  initialPendingRequestCount,
+  canManageUsers,
+}: UserManagementWorkspaceProps) {
   const router = useRouter();
+  const [userQuery, setUserQuery] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const users = useAdminPage<{ profiles: ManagedProfile[]; total: number; page: number }>(
+    `/api/admin/users?${new URLSearchParams({ query: userQuery, page: String(userPage), revision: initialRevision })}`,
+    { profiles: initialProfiles, total: initialTotal, page: 1 },
+    400
+  );
+  const profiles = users.data?.profiles ?? initialProfiles;
   const [isPending, startTransition] = useTransition();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -93,9 +114,12 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
     setTeamAvatarPreview('');
   };
 
-  useEffect(() => () => {
-    if (teamAvatarObjectUrlRef.current) URL.revokeObjectURL(teamAvatarObjectUrlRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (teamAvatarObjectUrlRef.current) URL.revokeObjectURL(teamAvatarObjectUrlRef.current);
+    },
+    []
+  );
 
   const finishMutation = (result: { ok: boolean; message: string }, onSuccess?: () => void) => {
     setNotice({ tone: result.ok ? 'success' : 'error', message: result.message });
@@ -278,6 +302,33 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
           ) : null}
         </header>
 
+        <div className="border-b p-4">
+          <label className="mb-1 block text-xs font-semibold" htmlFor="user-search">
+            Search Users
+          </label>
+          <input
+            id="user-search"
+            type="search"
+            maxLength={160}
+            value={userQuery}
+            onChange={(event) => {
+              setUserQuery(event.target.value);
+              setUserPage(1);
+            }}
+            placeholder="Name or email..."
+            className="h-10 w-full rounded-lg border px-3 text-sm"
+          />
+          {users.loading ? (
+            <p role="status" className="mt-2 text-xs">
+              Loading users...
+            </p>
+          ) : null}
+          {users.error ? (
+            <p role="alert" className="mt-2 text-xs text-red-700">
+              {users.error}
+            </p>
+          ) : null}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1040px] border-collapse text-left">
             <thead className="bg-[#F8F9FA] text-[11px] font-semibold tracking-[0.04em] text-[#737B87] uppercase">
@@ -385,6 +436,7 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
         </div>
 
         {profiles.length === 0 ? <div className="px-6 py-16 text-center text-sm text-[#7B8491]">No approved users found.</div> : null}
+        <AllJobsPagination noun="users" currentPage={users.data?.page ?? userPage} pageSize={10} totalItems={users.data?.total ?? initialTotal} onPageChange={setUserPage} />
       </section>
 
       {canManageUsers ? (
@@ -644,38 +696,24 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
             <label htmlFor="team-job-title" className="text-xs font-semibold text-[#303846]">
               Job Title {teamIsVisible ? <span className="text-[#C32929]">*</span> : null}
             </label>
-            <select
-              id="team-job-title"
+            <AdminRemoteSelect
+              kind="job_titles"
+              label="Select Job Title"
               value={teamJobTitleId}
-              onChange={(event) => setTeamJobTitleId(event.target.value)}
-              className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] bg-white px-3 text-sm outline-none focus:border-[#9F1010] focus:ring-2 focus:ring-[#9F1010]/10"
-            >
-              <option value="">Select Job Title</option>
-              {jobTitles
-                .filter((title) => title.is_active || title.id === teamJobTitleId)
-                .map((title) => (
-                  <option key={title.id} value={title.id}>
-                    {title.name}
-                  </option>
-                ))}
-            </select>
+              initialLabel={teamEditing?.teamMember?.jobTitleName ?? undefined}
+              onChange={(value) => setTeamJobTitleId(value)}
+            />
             <p className="mt-1 text-[10px] text-[#7B8491]">Job Titles and their public order are managed in Master Data.</p>
           </div>
           <div>
             <span className="text-xs font-semibold text-[#303846]">Public Photo</span>
             <div className="mt-1.5 rounded-xl border border-[#D9DDE3] bg-[#FAFBFC] p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <Avatar
-                  src={teamAvatarPreview || teamAvatarUrl || undefined}
-                  alt={teamFullName || 'Team member'}
-                  sx={{ width: 96, height: 96, fontSize: 24, bgcolor: '#A6192E', flexShrink: 0 }}
-                >
+                <Avatar src={teamAvatarPreview || teamAvatarUrl || undefined} alt={teamFullName || 'Team member'} sx={{ width: 96, height: 96, fontSize: 24, bgcolor: '#A6192E', flexShrink: 0 }}>
                   {(teamFullName || 'T').trim().charAt(0).toUpperCase()}
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-[#303846]">
-                    {teamAvatarFile ? teamAvatarFile.name : teamAvatarUrl ? 'Current public photo' : 'No photo selected'}
-                  </p>
+                  <p className="text-xs font-semibold text-[#303846]">{teamAvatarFile ? teamAvatarFile.name : teamAvatarUrl ? 'Current public photo' : 'No photo selected'}</p>
                   <p className="mt-1 text-[10px] leading-4 text-[#7B8491]">JPEG, PNG, atau WebP. Maksimal {TEAM_PROFILE_MAX_LABEL}.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#9F1010] bg-white px-3 text-xs font-semibold text-[#9F1010] transition hover:bg-[#FFF5F5]">
@@ -696,7 +734,10 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
                       <button
                         type="button"
                         disabled={isPending}
-                        onClick={() => { clearTeamAvatarFile(); setTeamAvatarUrl(''); }}
+                        onClick={() => {
+                          clearTeamAvatarFile();
+                          setTeamAvatarUrl('');
+                        }}
                         className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D9DDE3] bg-white px-3 text-xs font-semibold text-[#586273] transition hover:border-[#E0A5A5] hover:text-[#9F1010]"
                       >
                         <Trash2 aria-hidden="true" className="size-4" />
@@ -715,7 +756,10 @@ export function UserManagementWorkspace({ currentUserId, profiles, initialReques
                   id="team-avatar-url"
                   type="url"
                   value={teamAvatarUrl}
-                  onChange={(event) => { clearTeamAvatarFile(); setTeamAvatarUrl(event.target.value); }}
+                  onChange={(event) => {
+                    clearTeamAvatarFile();
+                    setTeamAvatarUrl(event.target.value);
+                  }}
                   maxLength={2048}
                   placeholder="https://..."
                   className="mt-1.5 h-10 w-full rounded-lg border border-[#D9DDE3] bg-white px-3 text-sm outline-none focus:border-[#9F1010] focus:ring-2 focus:ring-[#9F1010]/10"

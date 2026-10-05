@@ -1,6 +1,8 @@
 'use client';
 
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { type MasterDataCategoryId, type MasterDataRow } from '@/data/admin-master-data/master-data';
 import { useId, useState, type FormEvent } from 'react';
 import { WorkflowStepsEditor, type WorkflowStepFormValue } from './workflow-steps-editor';
@@ -80,7 +82,7 @@ function initialValues(categoryId: MasterDataFormCategoryId, row?: MasterDataRow
   }
 
   if (categoryId === 'internal-services') {
-    const prefix = internalCategories.find((category) => category.id === row?.internalCategoryId)?.code;
+    const prefix = row?.internalCategoryCode ?? internalCategories.find((category) => category.id === row?.internalCategoryId)?.code;
     return {
       code: prefix ? (row?.code ?? '').slice(prefix.length + 1) : (row?.code ?? ''),
       name: textValue(row, 0),
@@ -130,7 +132,6 @@ export function MasterDataFormModal({
   mode,
   categoryId,
   row,
-  workflowTemplates = [],
   internalCategories = [],
   defaultInternalCategoryId = '',
   errorMessage,
@@ -149,8 +150,11 @@ export function MasterDataFormModal({
   const isWorkflowTemplate = categoryId === 'workflow-templates';
   const isJobTitle = categoryId === 'job-titles';
   const isInternalCategory = categoryId === 'internal-service-categories';
-  const selectedInternalCategory = internalCategories.find((category) => category.id === values.internalCategoryId);
-  const codePrefix = selectedInternalCategory?.code ?? '';
+  const categoryLookup = useAdminPage<{ value: string; label: string; code: string }[]>(
+    isInternalService && values.internalCategoryId ? `/api/admin/lookups?kind=internal_categories&id=${values.internalCategoryId}` : null
+  );
+  const codePrefix =
+    categoryLookup.data?.find((item) => item.value === values.internalCategoryId)?.code ?? (values.internalCategoryId === row?.internalCategoryId ? (row?.internalCategoryCode ?? '') : '');
   const fullCode = isInternalService && codePrefix ? codePrefix + '_' + values.code : values.code;
 
   const updateValue = <Key extends keyof MasterDataFormValues>(key: Key, value: MasterDataFormValues[Key]) => {
@@ -165,6 +169,7 @@ export function MasterDataFormModal({
     event.preventDefault();
     const steps = values.steps.map((step) => ({ ...step, name: step.name.trim() }));
     if (isWorkflowTemplate && (steps.length === 0 || steps.some((step) => !step.name))) return;
+    if (isInternalService && (mode === 'add' || row?.internalCategoryId) && (!values.internalCategoryId || !codePrefix || categoryLookup.loading || categoryLookup.error)) return;
 
     onSave({ ...values, code: values.code.trim(), name: values.name.trim(), summary: values.summary.trim(), steps });
   };
@@ -220,7 +225,10 @@ export function MasterDataFormModal({
           <button
             type="submit"
             form={formId}
-            disabled={isSaving || (isInternalService && mode === 'add' && !values.internalCategoryId)}
+            disabled={
+              isSaving ||
+              (isInternalService && (mode === 'add' || Boolean(row?.internalCategoryId)) && (!values.internalCategoryId || !codePrefix || categoryLookup.loading || Boolean(categoryLookup.error)))
+            }
             className="h-9 rounded-lg bg-[#8C1010] px-5 text-xs font-semibold text-white transition hover:bg-[#710C0C] focus-visible:ring-2 focus-visible:ring-[#8C1010]/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? 'Saving...' : mode === 'add' ? 'Save Data' : 'Save Changes'}
@@ -240,28 +248,15 @@ export function MasterDataFormModal({
               <label htmlFor={formId + '-category'} className="mb-1.5 block text-xs font-semibold text-[#303846]">
                 Internal Category {mode === 'add' || row?.internalCategoryId ? <RequiredMark /> : null}
               </label>
-              <select
-                id={formId + '-category'}
-                required={mode === 'add' || Boolean(row?.internalCategoryId)}
-                autoFocus={mode === 'add'}
+              <AdminRemoteSelect
+                kind="internal_categories"
+                label="Category"
                 value={values.internalCategoryId}
-                onChange={(event) => updateValue('internalCategoryId', event.target.value)}
-                className={fieldClassName}
-              >
-                <option value="" disabled={mode === 'add' || Boolean(row?.internalCategoryId)}>
-                  {mode === 'edit' && !row?.internalCategoryId ? 'Uncategorized (existing service)' : 'Select category'}
-                </option>
-                {internalCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {textValue(category, 0)} ({category.code})
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1.5 text-[10px] leading-4 text-[#8A94A3]">
-                {internalCategories.length
-                  ? 'Category sets the code prefix automatically. This is separate from Client Services.'
-                  : 'Create an internal category using Manage Categories before adding a service.'}
-              </p>
+                initialLabel={textValue(row, 2)}
+                disabled={isSaving}
+                onChange={(value) => updateValue('internalCategoryId', value)}
+              />
+              <p className="mt-1.5 text-[10px] leading-4 text-[#8A94A3]">Category sets the code prefix automatically. This is separate from Client Services.</p>
             </div>
           ) : null}
           <div>
@@ -321,16 +316,14 @@ export function MasterDataFormModal({
                 <label htmlFor={`${formId}-workflow`} className="mb-1.5 block text-xs font-semibold text-[#303846]">
                   Workflow Template
                 </label>
-                <select id={`${formId}-workflow`} value={values.workflowTemplateId} onChange={(event) => updateValue('workflowTemplateId', event.target.value)} className={fieldClassName}>
-                  <option value="">Not assigned</option>
-                  {workflowTemplates
-                    .filter((workflow) => workflow.isActive || workflow.id === values.workflowTemplateId)
-                    .map((workflow) => (
-                      <option key={workflow.id} value={workflow.id}>
-                        {textValue(workflow, 0)}
-                      </option>
-                    ))}
-                </select>
+                <AdminRemoteSelect
+                  kind="workflows"
+                  label="Workflow"
+                  value={values.workflowTemplateId}
+                  initialLabel={textValue(row, 3)}
+                  disabled={isSaving}
+                  onChange={(value) => updateValue('workflowTemplateId', value)}
+                />
               </div>
               <div>
                 <label htmlFor={`${formId}-summary`} className="mb-1.5 block text-xs font-semibold text-[#303846]">

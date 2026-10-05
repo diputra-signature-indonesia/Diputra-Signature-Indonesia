@@ -16,6 +16,8 @@ export default async function AdminAccessRequestsPage() {
       <UserManagementWorkspace
         currentUserId={context.userId}
         profiles={data.profiles}
+        initialTotal={data.total}
+        initialRevision={data.revision}
         initialRequests={data.initialRequests}
         initialPendingRequestCount={data.pendingRequestCount}
         jobTitles={data.jobTitles}

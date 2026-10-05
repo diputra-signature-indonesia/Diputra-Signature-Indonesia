@@ -1,0 +1,25 @@
+import type { AllJob } from '@/data/admin-all-jobs/all-jobs-dummy-data';
+export type AdminJobPage = { jobs: AllJob[]; total: number; page: number; revision?: string };
+export type AdminJobRecord = {
+  id: string;
+  client_id: string;
+  pic_id: string;
+  title: string;
+  client_name: string;
+  service_name: string;
+  pic_name: string;
+  status_name: string;
+  status_code: string;
+  status_color: string;
+  priority_name: string;
+  priority_color: string;
+  estimated_end_date: string | null;
+  start_date: string | null;
+  created_at: string;
+  estimated_duration_days: number | null;
+  progress_percentage: number;
+  current_step_name: string | null;
+  latest_message: string | null;
+  latest_date: string | null;
+  latest_author: string | null;
+};

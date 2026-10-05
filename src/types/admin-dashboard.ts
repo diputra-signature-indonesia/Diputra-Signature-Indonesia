@@ -70,6 +70,10 @@ export type DashboardFilterOptions = {
 };
 
 export type DashboardData = {
-  tasks: DashboardTaskRecord[];
+  metrics: DashboardMetric[];
+  taskLoads: PicTaskLoad[];
+  internalServices: TaskInternalServiceSummary[];
+  attentionTasks: AttentionTask[];
+  revision: string;
   filterOptions: DashboardFilterOptions;
 };

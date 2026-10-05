@@ -2641,6 +2641,28 @@ export type Database = {
         Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
       }
+      admin_blog_categories: { Args: never; Returns: Json }
+      admin_master_counts: { Args: never; Returns: Json }
+      admin_master_page: {
+        Args: {
+          p_kind: string
+          p_page?: number
+          p_query?: string
+          p_trash?: boolean
+        }
+        Returns: Json
+      }
+      admin_public_service_page: {
+        Args: {
+          p_category?: string
+          p_category_page?: number
+          p_detail_page?: number
+          p_item?: string
+          p_item_page?: number
+          p_query?: string
+        }
+        Returns: Json
+      }
       approve_admin_access_request: {
         Args: { p_role: Database["public"]["Enums"]["role"]; p_user_id: string }
         Returns: undefined
@@ -3234,6 +3256,26 @@ export type Database = {
         }
         Returns: string
       }
+      search_admin_dashboard: { Args: { p_filters?: Json }; Returns: Json }
+      search_admin_jobs: {
+        Args: {
+          p_client_id?: string
+          p_filters?: Json
+          p_job_id?: string
+          p_mine?: boolean
+          p_page?: number
+        }
+        Returns: Json
+      }
+      search_admin_lookup: {
+        Args: {
+          p_id?: string
+          p_kind: string
+          p_parent?: string
+          p_query?: string
+        }
+        Returns: Json
+      }
       search_internal_services: {
         Args: {
           p_category_id?: string
@@ -3251,6 +3293,28 @@ export type Database = {
           email: string
           id: string
         }[]
+      }
+      search_job_remarks: {
+        Args: { p_job_id: string; p_page?: number }
+        Returns: Json
+      }
+      search_managed_profiles: {
+        Args: { p_page?: number; p_query?: string }
+        Returns: Json
+      }
+      search_my_tasks: {
+        Args: {
+          p_filters?: Json
+          p_page?: number
+          p_selected_job?: string
+          p_task_page?: number
+          p_task_status?: string
+        }
+        Returns: Json
+      }
+      search_sop_services: {
+        Args: { p_page?: number; p_query?: string }
+        Returns: Json
       }
       set_blog_post_featured: {
         Args: {

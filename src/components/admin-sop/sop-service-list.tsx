@@ -1,92 +1,70 @@
 'use client';
-
+import { useState } from 'react';
+import { useAdminPage } from '@/components/layout-admin/use-admin-page';
+import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
-import type { SopService } from '@/types/admin-sop';
-import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
-
-type SopServiceListProps = {
-  services: SopService[];
-  selectedId: string;
-  onSelect: (serviceId: string) => void;
-};
-
-function ServiceItem({ service, active, onSelect }: { service: SopService; active: boolean; onSelect: () => void }) {
-  return (
-    <button type="button" onClick={onSelect} className={`flex w-full items-start gap-3 border-b border-[#E4E7EB] px-5 py-5 text-left transition ${active ? 'bg-[#FFF9F8]' : 'hover:bg-[#FAFBFC]'}`}>
-      <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${active ? 'bg-[#A61919]' : 'bg-[#E4C5C1]'}`} />
-      <span className="min-w-0">
-        <span className={`block text-sm leading-5 ${active ? 'font-bold text-[#9F1010]' : 'font-medium text-[#292323]'}`}>{service.title}</span>
-        <span className="mt-1 block text-[11px] leading-4 text-[#685754]">{service.summary}</span>
-      </span>
-    </button>
-  );
-}
-
-export function SopServiceList({ services, selectedId, onSelect }: SopServiceListProps) {
+type Service = { id: string; title: string; summary: string };
+type Page = { services: Service[]; total: number; page: number };
+export function SopServiceList({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
   const [query, setQuery] = useState('');
-  const [showAll, setShowAll] = useState(false);
-  const [modalQuery, setModalQuery] = useState('');
-  const visibleServices = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return services;
-    return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
-  }, [query, services]);
-  const modalServices = useMemo(() => {
-    const normalizedQuery = modalQuery.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return services;
-    return services.filter((service) => `${service.title} ${service.summary}`.toLocaleLowerCase().includes(normalizedQuery));
-  }, [modalQuery, services]);
-
-  const selectService = (serviceId: string) => {
-    onSelect(serviceId);
-    setShowAll(false);
-    setModalQuery('');
-  };
-
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
+  const result = useAdminPage<Page>(`/api/admin/sop?${new URLSearchParams({ kind: 'list', query, page: String(page) })}`, undefined, 400);
+  const list = (
+    <>
+      <input
+        type="search"
+        maxLength={160}
+        aria-label="Search internal SOP services"
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setPage(1);
+        }}
+        placeholder="Search service name or code..."
+        className="m-4 h-10 w-[calc(100%-2rem)] rounded-lg border px-3 text-xs"
+      />
+      <div className="max-h-[480px] overflow-y-auto border-t">
+        {result.loading ? (
+          <p role="status" className="p-5 text-xs">
+            Searching...
+          </p>
+        ) : result.error ? (
+          <p role="alert" className="p-5 text-xs text-red-700">
+            {result.error}
+          </p>
+        ) : (
+          result.data?.services.map((service) => (
+            <button
+              key={service.id}
+              type="button"
+              onClick={() => {
+                onSelect(service.id);
+                setOpen(false);
+              }}
+              className={`block w-full border-b p-4 text-left ${service.id === selectedId ? 'bg-[#FFF9F8] text-[#9F1010]' : 'hover:bg-gray-50'}`}
+            >
+              <span className="block text-sm font-semibold">{service.title}</span>
+              <span className="mt-1 block text-xs text-gray-500">{service.summary}</span>
+            </button>
+          ))
+        )}
+        {!result.loading && !result.data?.services.length ? <p className="p-5 text-xs text-gray-500">No services found.</p> : null}
+      </div>
+      <AllJobsPagination currentPage={result.data?.page ?? page} pageSize={10} totalItems={result.data?.total ?? 0} onPageChange={setPage} />
+    </>
+  );
   return (
     <>
-      <aside className="overflow-hidden rounded-xl border border-[#D9DDE3] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.04)] xl:sticky xl:top-5">
-        <header className="border-b border-[#E4E7EB] p-4">
-          <h2 className="text-xl font-semibold text-[#292323]">Service List</h2>
-          <p className="mt-1 text-xs text-[#685754]">Select a service to view its internal SOP.</p>
-          <label className="mt-2 flex h-9 items-center gap-2 rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 focus-within:border-[#A61919] focus-within:ring-2 focus-within:ring-[#A61919]/10">
-            <Search aria-hidden="true" className="size-4 shrink-0 text-[#8A94A3]" />
-            <span className="sr-only">Search internal services</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Internal service name..."
-              className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]"
-            />
-          </label>
-        </header>
-
-        <div className="max-h-[480px] overflow-y-auto">
-          {visibleServices.slice(0, 5).map((service) => (
-            <ServiceItem key={service.id} service={service} active={service.id === selectedId} onSelect={() => onSelect(service.id)} />
-          ))}
-          {visibleServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
-        </div>
-
-        <button type="button" onClick={() => { setModalQuery(''); setShowAll(true); }} className="flex h-12 w-full items-center justify-center text-xs font-semibold tracking-[0.04em] text-[#760A0A] transition hover:bg-[#FFF9F8]">
+      <aside className="overflow-hidden rounded-xl border bg-white shadow-sm xl:sticky xl:top-5">
+        <h2 className="px-4 pt-4 text-xl font-semibold">Service List</h2>
+        {!open ? list : null}
+        <button type="button" onClick={() => setOpen(true)} className="h-12 w-full border-t text-xs font-semibold text-[#760A0A]">
           View All Services
         </button>
       </aside>
-
-      <AdminModal open={showAll} onClose={() => { setShowAll(false); setModalQuery(''); }} title="All Internal Services" description="Select a service to view and manage its SOP." size="lg">
-        <label className="mb-4 flex h-10 items-center gap-2 rounded-lg border border-[#DEE2E7] bg-[#F5F6F8] px-3 focus-within:border-[#A61919] focus-within:ring-2 focus-within:ring-[#A61919]/10">
-          <Search aria-hidden="true" className="size-4 shrink-0 text-[#8A94A3]" />
-          <span className="sr-only">Search all internal services</span>
-          <input type="search" autoFocus value={modalQuery} onChange={(event) => setModalQuery(event.target.value)} placeholder="Search service name or description..." className="min-w-0 flex-1 bg-transparent text-xs text-[#303846] outline-none placeholder:text-[#747D8C]" />
-        </label>
-        <div className="max-h-[480px] overflow-y-auto rounded-lg border border-[#E4E7EB]">
-          {modalServices.map((service) => (
-            <ServiceItem key={service.id} service={service} active={service.id === selectedId} onSelect={() => selectService(service.id)} />
-          ))}
-          {modalServices.length === 0 ? <p className="px-5 py-10 text-center text-sm text-[#7B8491]">No services found.</p> : null}
-        </div>
+      <AdminModal open={open} onClose={() => setOpen(false)} title="All Internal Services" description="Search and choose a service to manage its SOP." size="lg">
+        {open ? list : null}
       </AdminModal>
     </>
   );

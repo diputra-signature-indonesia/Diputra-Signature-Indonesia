@@ -4,30 +4,42 @@ import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { SopFile, SopWorkspaceData } from '@/types/admin-sop';
 
-export async function getSopWorkspaceData(): Promise<SopWorkspaceData> {
+export async function getSopWorkspaceData(serviceId?: string): Promise<SopWorkspaceData> {
   const actor = await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
   const canManage = actor.role === 'admin' || actor.role === 'super_admin';
 
-  const [servicesResult, sopsResult] = await Promise.all([
-    supabase.from('internal_services').select('id,name,summary').eq('is_active', true).order('name'),
-    supabase.from('sops').select('id,internal_service_id,description,version'),
-  ]);
+  const serviceQuery = supabase.from('internal_services').select('id,name,summary').eq('is_active', true).order('name').order('id').limit(1);
+  const servicesResult = await (serviceId ? serviceQuery.eq('id', serviceId) : serviceQuery);
+  const selectedId = servicesResult.data?.[0]?.id;
+  const sopsResult = selectedId ? await supabase.from('sops').select('id,internal_service_id,description,version').eq('internal_service_id', selectedId) : { data: [], error: null };
   if (servicesResult.error) throw new Error(`Unable to load SOP services: ${servicesResult.error.message}`);
   if (sopsResult.error) throw new Error(`Unable to load SOP records: ${sopsResult.error.message}`);
 
   const sops = sopsResult.data ?? [];
   const sopIds = sops.map((sop) => sop.id);
-  const [filesResult, pricesResult] = sopIds.length ? await Promise.all([
-    supabase.from('sop_files')
-      .select('id,sop_id,file_type,title,original_filename,storage_provider,mime_type,size_bytes,sort_order,uploaded_at,version,web_view_url')
-      .in('sop_id', sopIds).eq('upload_status', 'READY').is('deleted_at', null).order('sort_order').order('id'),
-    supabase.from('sop_price_items')
-      .select('id,sop_id,item_name,amount,notes,sort_order').in('sop_id', sopIds).order('sort_order').order('id'),
-  ]) : [{ data: [], error: null }, { data: [], error: null }];
+  const [filesResult, pricesResult] = sopIds.length
+    ? await Promise.all([
+        supabase
+          .from('sop_files')
+          .select('id,sop_id,file_type,title,original_filename,storage_provider,mime_type,size_bytes,sort_order,uploaded_at,version,web_view_url', { count: 'exact' })
+          .in('sop_id', sopIds)
+          .eq('upload_status', 'READY')
+          .is('deleted_at', null)
+          .order('sort_order')
+          .order('id'),
+        supabase.from('sop_price_items').select('id,sop_id,item_name,amount,notes,sort_order', { count: 'exact' }).in('sop_id', sopIds).order('sort_order').order('id'),
+      ])
+    : [
+        { data: [], error: null, count: 0 },
+        { data: [], error: null, count: 0 },
+      ];
   if (filesResult.error) throw new Error(`Unable to load SOP files: ${filesResult.error.message}`);
   if (pricesResult.error) throw new Error(`Unable to load SOP prices: ${pricesResult.error.message}`);
 
+  // Never permit a bulk price editor to save an incomplete REST result.
+  if ((filesResult.count ?? 0) > (filesResult.data?.length ?? 0) || (pricesResult.count ?? 0) > (pricesResult.data?.length ?? 0))
+    throw new Error('SOP content exceeds the available page size. No incomplete editor will be shown.');
   const files = (filesResult.data ?? []).map((file): SopFile & { sopId: string } => {
     return {
       id: file.id,
@@ -52,27 +64,30 @@ export async function getSopWorkspaceData(): Promise<SopWorkspaceData> {
 
   return {
     canManage,
+    revision: String(Date.now()),
     services: (servicesResult.data ?? []).map((service) => {
       const sop = sopByService.get(service.id);
-      const sopFiles = sop ? filesBySop.get(sop.id) ?? [] : [];
+      const sopFiles = sop ? (filesBySop.get(sop.id) ?? []) : [];
       return {
         id: service.id,
         title: service.name,
         summary: service.summary ?? 'Internal service procedure.',
-        sop: sop ? {
-          id: sop.id,
-          description: sop.description,
-          version: sop.version,
-          flow: sopFiles.find((file) => file.fileType === 'FLOW') ?? null,
-          requirementFiles: sopFiles.filter((file) => file.fileType === 'REQUIREMENT'),
-          priceItems: (pricesBySop.get(sop.id) ?? []).map((item) => ({
-            id: item.id,
-            itemName: item.item_name,
-            amount: Number(item.amount),
-            notes: item.notes,
-            sortOrder: item.sort_order,
-          })),
-        } : null,
+        sop: sop
+          ? {
+              id: sop.id,
+              description: sop.description,
+              version: sop.version,
+              flow: sopFiles.find((file) => file.fileType === 'FLOW') ?? null,
+              requirementFiles: sopFiles.filter((file) => file.fileType === 'REQUIREMENT'),
+              priceItems: (pricesBySop.get(sop.id) ?? []).map((item) => ({
+                id: item.id,
+                itemName: item.item_name,
+                amount: Number(item.amount),
+                notes: item.notes,
+                sortOrder: item.sort_order,
+              })),
+            }
+          : null,
       };
     }),
   };

@@ -31,8 +31,24 @@ async function JobDocumentsSection({ jobId, canManage }: { jobId: string; canMan
 }
 
 const demoDocuments: DemoJobDocument[] = [
-  { id: 'document-demo-1', file_name: 'Company Registration (dummy).pdf', mime_type: 'application/pdf', file_size_bytes: 2457600, web_view_url: null, uploaded_at: '2026-09-20T08:00:00+08:00', sync_status: 'READY' },
-  { id: 'document-demo-2', file_name: 'Client Supporting Document (dummy).pdf', mime_type: 'application/pdf', file_size_bytes: 1179648, web_view_url: null, uploaded_at: '2026-09-18T10:30:00+08:00', sync_status: 'READY' },
+  {
+    id: 'document-demo-1',
+    file_name: 'Company Registration (dummy).pdf',
+    mime_type: 'application/pdf',
+    file_size_bytes: 2457600,
+    web_view_url: null,
+    uploaded_at: '2026-09-20T08:00:00+08:00',
+    sync_status: 'READY',
+  },
+  {
+    id: 'document-demo-2',
+    file_name: 'Client Supporting Document (dummy).pdf',
+    mime_type: 'application/pdf',
+    file_size_bytes: 1179648,
+    web_view_url: null,
+    uploaded_at: '2026-09-18T10:30:00+08:00',
+    sync_status: 'READY',
+  },
 ];
 
 export default async function AdminJobDetailPage({ params, searchParams }: { params: Promise<{ jobId: string }>; searchParams: Promise<{ tab?: string; task?: string }> }) {
@@ -41,24 +57,55 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
   const activeTab: JobDetailTab = tab === 'assignment' || tab === 'documents' || tab === 'logging' ? tab : 'detail';
 
   if (UUID_PATTERN.test(jobId)) {
-    const detail = await getJobDetail(jobId);
+    const detail = await getJobDetail(jobId, activeTab === 'detail');
     if (!detail) notFound();
     const editOptions = detail.canManage && detail.statusCode !== 'COMPLETED' ? await getAddJobOptions() : null;
     const lastUpdated = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date(detail.job.updated_at));
 
     return (
       <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
-        <AdminPageHeader title={detail.job.title} description={<><span>{detail.summary.client} · {detail.summary.internalService}</span><span className="ml-3 text-[#8A94A3]">Last updated {lastUpdated}</span></>} action={editOptions ? <EditJobButton detail={detail} options={editOptions} /> : null} />
+        <AdminPageHeader
+          title={detail.job.title}
+          description={
+            <>
+              <span>
+                {detail.summary.client} · {detail.summary.internalService}
+              </span>
+              <span className="ml-3 text-[#8A94A3]">Last updated {lastUpdated}</span>
+            </>
+          }
+          action={editOptions ? <EditJobButton detail={detail} options={editOptions} /> : null}
+        />
         <JobDetailTabs jobId={jobId} activeTab={activeTab} />
         {activeTab === 'detail' ? <LiveJobDetailContent detail={detail} /> : null}
-        {activeTab === 'assignment' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Task Assignment"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><TaskAssignmentSection jobId={jobId} taskId={task && UUID_PATTERN.test(task) ? task : undefined} /></Suspense> : null}
-        {activeTab === 'documents' ? <Suspense fallback={<div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Job Documents"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><JobDocumentsSection jobId={jobId} canManage={detail.canManage} /></Suspense> : null}
+        {activeTab === 'assignment' ? (
+          <Suspense
+            fallback={
+              <div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Task Assignment">
+                <LoaderCircle className="size-7 animate-spin text-[#8C1010]" />
+              </div>
+            }
+          >
+            <TaskAssignmentSection jobId={jobId} taskId={task && UUID_PATTERN.test(task) ? task : undefined} />
+          </Suspense>
+        ) : null}
+        {activeTab === 'documents' ? (
+          <Suspense
+            fallback={
+              <div className="flex min-h-[calc(100vh-176px)] items-center justify-center bg-[#F8F9FA]/75" role="status" aria-label="Loading Job Documents">
+                <LoaderCircle className="size-7 animate-spin text-[#8C1010]" />
+              </div>
+            }
+          >
+            <JobDocumentsSection jobId={jobId} canManage={detail.canManage} />
+          </Suspense>
+        ) : null}
         {activeTab === 'logging' ? <JobTabPlaceholder tab="logging" /> : null}
       </div>
     );
   }
   const dummyJob = allJobsDummy.find((item) => item.id === jobId);
-  if (!dummyJob || process.env.NODE_ENV === 'production' && process.env.SHOW_DEMO_JOBS !== 'true') notFound();
+  if (!dummyJob || (process.env.NODE_ENV === 'production' && process.env.SHOW_DEMO_JOBS !== 'true')) notFound();
 
   return (
     <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
@@ -71,14 +118,21 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
           </>
         }
         action={
-          <button type="button" disabled title="Data contoh tidak dapat diedit" className="inline-flex h-8 cursor-not-allowed items-center gap-2 rounded bg-[#9F1010] px-6 text-[11px] font-semibold text-white opacity-50">
+          <button
+            type="button"
+            disabled
+            title="Data contoh tidak dapat diedit"
+            className="inline-flex h-8 cursor-not-allowed items-center gap-2 rounded bg-[#9F1010] px-6 text-[11px] font-semibold text-white opacity-50"
+          >
             Edit Jobs
             <Pencil aria-hidden="true" className="size-3.5" />
           </button>
         }
       />
       <JobDetailTabs jobId={jobId} activeTab={activeTab} />
-      <p className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 sm:mx-5 lg:mx-6">Halaman ini menggunakan data contoh; isi detail belum disambungkan dengan baris dummy yang dipilih.</p>
+      <p className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900 sm:mx-5 lg:mx-6">
+        Halaman ini menggunakan data contoh; isi detail belum disambungkan dengan baris dummy yang dipilih.
+      </p>
       {activeTab === 'detail' ? <JobDetailContent /> : null}
       {activeTab === 'assignment' ? <TaskAssignmentContent /> : null}
       {activeTab === 'documents' ? <JobDocumentsPanel canManage={false} demoDocuments={demoDocuments} /> : null}

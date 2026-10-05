@@ -1,9 +1,17 @@
 'use client';
 
 import type { AllJob, AllJobPriority, AllJobStatus } from '@/data/admin-all-jobs/all-jobs-dummy-data';
-import { ChevronDown, ChevronRight, EllipsisVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, ListChecks, LoaderCircle, Pencil, Trash2 } from 'lucide-react';
+import { loadJobActionDetail } from '@/app/admin/all-jobs/row-actions';
+import { EditJobButton } from '@/components/admin-job-detail/edit-job-button';
+import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminRowActions } from '@/components/layout-admin/admin-row-actions';
+import { jobActionPermissions } from '@/lib/admin-all-jobs/action-permissions';
+import type { AddJobOptions } from '@/lib/supabase/queries/add-job';
+import type { JobActionDetail } from '@/lib/supabase/queries/job-action-detail';
+import { JobActionModal } from './job-action-modal';
 import Link from 'next/link';
-import { Fragment, useState, type MouseEvent } from 'react';
+import { Fragment, useState, useTransition, type MouseEvent } from 'react';
 import { AllJobsPagination } from './all-jobs-pagination';
 import { AllJobsTableLoading } from './all-jobs-table-loading';
 
@@ -25,7 +33,10 @@ const priorityStyles: Record<string, string> = {
 
 function StatusBadge({ status, color }: { status: AllJobStatus; color?: string }) {
   return (
-    <span style={color ? { color, borderColor: color, backgroundColor: `${color}15` } : undefined} className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : statusStyles[status] ?? 'border-gray-300 bg-gray-50 text-gray-700'}`}>
+    <span
+      style={color ? { color, borderColor: color, backgroundColor: `${color}15` } : undefined}
+      className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : (statusStyles[status] ?? 'border-gray-300 bg-gray-50 text-gray-700')}`}
+    >
       <span className="size-1.5 rounded-full bg-current" />
       {status}
     </span>
@@ -34,7 +45,10 @@ function StatusBadge({ status, color }: { status: AllJobStatus; color?: string }
 
 function PriorityBadge({ priority, color }: { priority: AllJobPriority; color?: string }) {
   return (
-    <span style={color ? { color, backgroundColor: `${color}20` } : undefined} className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : priorityStyles[priority] ?? 'bg-gray-100 text-gray-700'}`}>
+    <span
+      style={color ? { color, backgroundColor: `${color}20` } : undefined}
+      className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[9px] font-semibold uppercase ${color ? '' : (priorityStyles[priority] ?? 'bg-gray-100 text-gray-700')}`}
+    >
       <span className="size-1.5 rounded-full bg-current" />
       {priority}
     </span>
@@ -45,6 +59,11 @@ type AllJobsTableProps = {
   jobs: AllJob[];
   groupBy: string;
   isLoading: boolean;
+  options: AddJobOptions;
+  page: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onSaved: () => void;
 };
 
 function groupValue(job: AllJob, groupBy: string) {
@@ -56,15 +75,45 @@ function groupValue(job: AllJob, groupBy: string) {
   return '';
 }
 
-export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+export function AllJobsTable({ jobs, groupBy, isLoading, options, page, total, onPageChange, onSaved }: AllJobsTableProps) {
   const [expandedJobId, setExpandedJobId] = useState<string | null>(jobs[0]?.id ?? null);
+  const [selection, setSelection] = useState<{ detail: JobActionDetail; mode: 'edit' | 'status' | 'trash' } | null>(null);
+  const [loadingJob, setLoadingJob] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ message: string; warning: boolean } | null>(null);
+  const [pending, startTransition] = useTransition();
+  function openAction(job: AllJob, mode: 'edit' | 'status' | 'trash') {
+    if (pending || job.isDummy) return;
+    setNotice(null);
+    setLoadingJob(job.title);
+    startTransition(async () => {
+      try {
+        const result = await loadJobActionDetail(job.id);
+        if (!result.ok) {
+          setNotice({ message: result.message, warning: true });
+          return;
+        }
+        if (mode !== 'trash' && result.data.statusCode === 'COMPLETED') {
+          setNotice({ message: 'Job sudah selesai. Buka detail Job untuk melakukan reopen terlebih dahulu.', warning: true });
+          return;
+        }
+        setSelection({ detail: result.data, mode });
+      } catch {
+        setNotice({ message: 'Data Job gagal dimuat. Silakan coba lagi.', warning: true });
+      } finally {
+        setLoadingJob(null);
+      }
+    });
+  }
+  const saved = (message: string, warning = false) => {
+    setNotice({ message, warning });
+    onSaved();
+  };
 
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleJobs = jobs.slice(pageStart, pageStart + PAGE_SIZE);
+  const effectivePage = page;
+  const visibleJobs = jobs;
 
   const changePage = (page: number) => {
-    setCurrentPage(page);
+    onPageChange(page);
     setExpandedJobId(null);
   };
 
@@ -86,9 +135,14 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#DEE2E7] bg-white shadow-[0_2px_4px_rgba(15,23,42,0.05)]">
+      {notice ? (
+        <p role={notice.warning ? 'alert' : 'status'} className={`m-4 rounded-lg p-3 text-sm ${notice.warning ? 'bg-amber-50 text-amber-900' : 'bg-emerald-50 text-emerald-700'}`}>
+          {notice.message}
+        </p>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1100px] border-collapse text-left">
-          <thead className="bg-white text-xs font-semibold uppercase tracking-[0.04em] text-[#756664]">
+          <thead className="bg-white text-xs font-semibold tracking-[0.04em] text-[#756664] uppercase">
             <tr>
               <th className="w-[30%] px-4 py-4 pl-11">Job Details</th>
               <th className="px-3 py-4">PIC</th>
@@ -97,12 +151,15 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
               <th className="px-3 py-4">Deadline</th>
               <th className="px-3 py-4">Status</th>
               <th className="px-3 py-4">Priority</th>
-              <th className="w-12 px-3 py-4"><span className="sr-only">Action</span></th>
+              <th className="w-12 px-3 py-4">
+                <span className="sr-only">Action</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {visibleJobs.map((job, index) => {
               const expanded = expandedJobId === job.id;
+              const permissions = jobActionPermissions({ role: options.actor.role, actorId: options.actor.id, picId: job.picId, statusCode: job.statusCode, isDummy: job.isDummy });
               const detailsId = `details-${job.id}`;
               const showGroupHeading = groupBy !== 'None' && (index === 0 || groupValue(visibleJobs[index - 1], groupBy) !== groupValue(job, groupBy));
 
@@ -110,16 +167,13 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                 <Fragment key={job.id}>
                   {showGroupHeading ? (
                     <tr className="border-t border-[#D9DCE1] bg-[#EEEEEF]">
-                      <th colSpan={8} scope="rowgroup" className="px-10 py-3 text-left text-xs font-semibold uppercase tracking-[0.03em] text-[#A94141]">
+                      <th colSpan={8} scope="rowgroup" className="px-10 py-3 text-left text-xs font-semibold tracking-[0.03em] text-[#A94141] uppercase">
                         {groupValue(job, groupBy)}
                       </th>
                     </tr>
                   ) : null}
 
-                  <tr
-                    onClick={(event) => handleRowClick(event, job.id)}
-                    className="cursor-pointer select-text border-t border-[#E7E9ED] text-xs text-[#3D3D3D] transition hover:bg-[#FCFCFD]"
-                  >
+                  <tr onClick={(event) => handleRowClick(event, job.id)} className="cursor-pointer border-t border-[#E7E9ED] text-xs text-[#3D3D3D] transition select-text hover:bg-[#FCFCFD]">
                     <td className="px-3 py-4">
                       <div className="flex items-center gap-3">
                         <button
@@ -137,7 +191,7 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                             <span className="truncate">{job.title}</span>
                             <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
                           </Link>
-                          <p className="mt-0.5 truncate text-[10px] uppercase text-[#4F4F4F]">{job.client}</p>
+                          <p className="mt-0.5 truncate text-[10px] text-[#4F4F4F] uppercase">{job.client}</p>
                         </div>
                       </div>
                     </td>
@@ -149,21 +203,53 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                     </td>
                     <td className="px-3 py-4">{job.internalService}</td>
                     <td className="px-3 py-4">
-                      <p className="mb-1.5 text-[10px]">{job.stage} {job.progress}%</p>
+                      <p className="mb-1.5 text-[10px]">
+                        {job.stage} {job.progress}%
+                      </p>
                       <div className="h-1.5 w-full max-w-28 overflow-hidden rounded-full bg-[#E1E3E6]">
                         <div className="h-full rounded-full bg-[#B44343]" style={{ width: `${job.progress}%` }} />
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <p>{job.deadline}</p>
-                      <p className={`mt-1 text-[10px] ${job.deadlineNote === 'Completed' ? 'text-emerald-600' : job.deadlineNote.startsWith('Overdue') ? 'text-red-500' : 'text-[#68717E]'}`}>({job.deadlineNote})</p>
+                      <p className={`mt-1 text-[10px] ${job.deadlineNote === 'Completed' ? 'text-emerald-600' : job.deadlineNote.startsWith('Overdue') ? 'text-red-500' : 'text-[#68717E]'}`}>
+                        ({job.deadlineNote})
+                      </p>
                     </td>
-                    <td className="px-3 py-4"><StatusBadge status={job.status} color={job.statusColor} /></td>
-                    <td className="px-3 py-4"><PriorityBadge priority={job.priority} color={job.priorityColor} /></td>
+                    <td className="px-3 py-4">
+                      <StatusBadge status={job.status} color={job.statusColor} />
+                    </td>
+                    <td className="px-3 py-4">
+                      <PriorityBadge priority={job.priority} color={job.priorityColor} />
+                    </td>
                     <td className="px-3 py-4 text-center">
-                      <button type="button" aria-label={`Actions for ${job.title}`} className="rounded-md p-1.5 text-[#8C716D] transition hover:bg-gray-100 hover:text-[#202938]">
-                        <EllipsisVertical aria-hidden="true" className="size-4" />
-                      </button>
+                      <AdminRowActions
+                        title={job.title}
+                        actions={[
+                          {
+                            label: 'Edit Job',
+                            icon: <Pencil className="size-4" />,
+                            disabled: pending || !permissions.canEdit,
+                            hint: job.isDummy ? 'Data demo tidak dapat diubah.' : 'Hanya PIC atau admin; Job yang selesai harus dibuka kembali.',
+                            onSelect: () => openAction(job, 'edit'),
+                          },
+                          {
+                            label: 'Change Status',
+                            icon: <ListChecks className="size-4" />,
+                            disabled: pending || !permissions.canChangeStatus,
+                            hint: 'Hanya PIC atau admin; Completed mengikuti workflow.',
+                            onSelect: () => openAction(job, 'status'),
+                          },
+                          {
+                            label: 'Delete Job',
+                            icon: <Trash2 className="size-4" />,
+                            disabled: pending || !permissions.canTrash,
+                            hint: 'Hanya admin. Job akan dipindahkan ke Trash.',
+                            destructive: true,
+                            onSelect: () => openAction(job, 'trash'),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
 
@@ -172,19 +258,22 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
                       <td colSpan={8} className="px-12 py-4">
                         <div className="grid gap-4 border-l-4 border-[#B85B5B] pl-8 text-xs sm:grid-cols-2 lg:grid-cols-[0.75fr_0.75fr_0.75fr_2.4fr]">
                           <div>
-                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Start Date</p>
+                            <p className="text-[9px] tracking-[0.05em] text-[#A0A0A0] uppercase">Start Date</p>
                             <p className="mt-1 text-[#333333]">{job.startDate}</p>
                           </div>
                           <div className="border-gray-200 lg:border-l lg:pl-4">
-                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Est. End Date</p>
+                            <p className="text-[9px] tracking-[0.05em] text-[#A0A0A0] uppercase">Est. End Date</p>
                             <p className="mt-1 text-[#333333]">{job.estimatedEndDate}</p>
                           </div>
                           <div className="border-gray-200 lg:border-l lg:pl-4">
-                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Est. Duration</p>
+                            <p className="text-[9px] tracking-[0.05em] text-[#A0A0A0] uppercase">Est. Duration</p>
                             <p className="mt-1 text-[#333333]">{job.estimatedDuration}</p>
                           </div>
                           <div className="border-gray-200 lg:border-l lg:pl-4">
-                            <p className="text-[9px] uppercase tracking-[0.05em] text-[#A0A0A0]">Latest Update{job.updatedBy ? ` · by ${job.updatedBy}` : ''}{job.updatedAgo ? ` · ${job.updatedAgo}` : ''}</p>
+                            <p className="text-[9px] tracking-[0.05em] text-[#A0A0A0] uppercase">
+                              Latest Update{job.updatedBy ? ` · by ${job.updatedBy}` : ''}
+                              {job.updatedAgo ? ` · ${job.updatedAgo}` : ''}
+                            </p>
                             <p className="mt-1 text-[#333333]">{job.latestUpdate}</p>
                           </div>
                         </div>
@@ -200,7 +289,25 @@ export function AllJobsTable({ jobs, groupBy, isLoading }: AllJobsTableProps) {
 
       {jobs.length === 0 ? <p className="border-t border-[#DEE2E7] px-6 py-16 text-center text-sm text-[#8A94A3]">Tidak ada job yang sesuai dengan filter.</p> : null}
 
-      <AllJobsPagination currentPage={currentPage} pageSize={PAGE_SIZE} totalItems={jobs.length} onPageChange={changePage} />
+      <AllJobsPagination currentPage={effectivePage} pageSize={PAGE_SIZE} totalItems={total} onPageChange={changePage} />
+      <AdminModal open={Boolean(loadingJob)} onClose={() => undefined} title="Loading Job" description={loadingJob ?? undefined} size="sm">
+        <p role="status" className="flex items-center justify-center gap-2 py-5 text-sm">
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> Loading...
+        </p>
+      </AdminModal>
+      {selection?.mode === 'edit' ? (
+        <EditJobButton
+          key={selection.detail.job.id}
+          detail={selection.detail}
+          options={options}
+          modalOpen
+          hideTrigger
+          onClose={() => setSelection(null)}
+          onSaved={() => saved('Job berhasil diperbarui.')}
+        />
+      ) : selection ? (
+        <JobActionModal key={`${selection.detail.job.id}-${selection.mode}`} detail={selection.detail} mode={selection.mode} onClose={() => setSelection(null)} onSaved={saved} />
+      ) : null}
     </section>
   );
 }

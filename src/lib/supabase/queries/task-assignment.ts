@@ -6,17 +6,26 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export async function getTaskAssignment(jobId: string) {
   const actor = await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
-  const [job, columns, tasks, statuses, priorities, profiles] = await Promise.all([
+  const [job, columns, tasks, statuses, priorities] = await Promise.all([
     supabase.from('jobs').select('id,pic_id,archived_at,status_id').eq('id', jobId).maybeSingle(),
     supabase.from('job_task_statuses').select('id,task_status_id,column_order').eq('job_id', jobId).order('column_order'),
-    supabase.from('tasks').select('id,job_task_status_id,title,description,assignee_id,priority_id,due_date,position,version,created_at').eq('job_id', jobId).is('deleted_at', null).order('position').order('created_at', { ascending: false }),
+    supabase
+      .from('tasks')
+      .select('id,job_task_status_id,title,description,assignee_id,priority_id,due_date,position,version,created_at', { count: 'exact' })
+      .eq('job_id', jobId)
+      .is('deleted_at', null)
+      .order('position')
+      .order('created_at', { ascending: false }),
     supabase.from('task_statuses').select('id,code,name,color,is_active').order('sort_order'),
     supabase.from('priorities').select('id,name,is_active').order('sort_order'),
-    supabase.rpc('list_assignable_profiles'),
   ]);
-  const error = [job, columns, tasks, statuses, priorities, profiles].find((result) => result.error)?.error;
+  const error = [job, columns, tasks, statuses, priorities].find((result) => result.error)?.error;
   if (error) throw new Error(`Unable to load Task Assignment: ${error.message}`);
   if (!job.data) return null;
+  if ((tasks.count ?? 0) > (tasks.data?.length ?? 0)) throw new Error('Task board exceeds the available page size. No incomplete board will be shown.');
+  const assigneeIds = [...new Set((tasks.data ?? []).flatMap((task) => (task.assignee_id ? [task.assignee_id] : [])))];
+  const profiles = assigneeIds.length ? await supabase.rpc('list_assignable_profiles').in('id', assigneeIds) : { data: [], error: null };
+  if (profiles.error) throw profiles.error;
 
   const { data: jobStatus, error: statusError } = await supabase.from('job_statuses').select('code').eq('id', job.data.status_id).single();
   if (statusError) throw new Error(`Unable to load Job status: ${statusError.message}`);
@@ -40,8 +49,8 @@ export async function getTaskAssignment(jobId: string) {
     })),
     tasks: (tasks.data ?? []).map((task) => ({
       ...task,
-      assigneeName: task.assignee_id ? profileMap.get(task.assignee_id)?.display_name ?? 'Pengguna tidak aktif' : 'Unassigned',
-      priorityName: task.priority_id ? priorityMap.get(task.priority_id)?.name ?? 'Prioritas tidak aktif' : null,
+      assigneeName: task.assignee_id ? (profileMap.get(task.assignee_id)?.display_name ?? 'Pengguna tidak aktif') : 'Unassigned',
+      priorityName: task.priority_id ? (priorityMap.get(task.priority_id)?.name ?? 'Prioritas tidak aktif') : null,
       canEdit: !readOnly && (canManage || task.assignee_id === actor.userId),
     })),
     availableStatuses: (statuses.data ?? []).filter((status) => status.is_active),

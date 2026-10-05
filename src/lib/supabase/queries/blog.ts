@@ -9,11 +9,24 @@ import { cacheLife, cacheTag } from 'next/cache';
 type BlogPostRecord = Tables<'blog_posts'>;
 
 export type BlogPostSummary = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'featured_image' | 'published_at' | 'updated_at'>;
-export type PublishedBlogPost = Pick<BlogPostRecord, 'slug' | 'title' | 'excerpt' | 'content_md' | 'author_name' | 'featured_image' | 'cover_alt' | 'published_at' | 'updated_at' | 'seo_title' | 'seo_description' | 'category' | 'tags' | 'reading_time_min'>;
-export type AdminBlogPostPreview = Pick<
+export type PublishedBlogPost = Pick<
   BlogPostRecord,
-  'title' | 'excerpt' | 'content_md' | 'featured_image' | 'status' | 'created_by' | 'archived_at'
+  | 'slug'
+  | 'title'
+  | 'excerpt'
+  | 'content_md'
+  | 'author_name'
+  | 'featured_image'
+  | 'cover_alt'
+  | 'published_at'
+  | 'updated_at'
+  | 'seo_title'
+  | 'seo_description'
+  | 'category'
+  | 'tags'
+  | 'reading_time_min'
 >;
+export type AdminBlogPostPreview = Pick<BlogPostRecord, 'title' | 'excerpt' | 'content_md' | 'featured_image' | 'status' | 'created_by' | 'archived_at'>;
 
 const ADMIN_COLUMNS = `
   id, slug, title, excerpt, content_md, author_name, reading_time_min,
@@ -73,12 +86,11 @@ export async function getBlogManagementData(filters: BlogFilters): Promise<BlogM
     if (safe) query = query.or(`title.ilike.%${safe}%,excerpt.ilike.%${safe}%,author_name.ilike.%${safe}%`);
   }
 
-  const countStatus = (status: 'draft' | 'pending' | 'published' | 'rejected') =>
-    supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', status).is('archived_at', null);
+  const countStatus = (status: 'draft' | 'pending' | 'published' | 'rejected') => supabase.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', status).is('archived_at', null);
 
   const [listResult, categoriesResult, draftResult, pendingResult, publishedResult, rejectedResult] = await Promise.all([
     query,
-    supabase.from('blog_posts').select('category').is('archived_at', null).order('category'),
+    supabase.rpc('admin_blog_categories'),
     countStatus('draft'),
     countStatus('pending'),
     countStatus('published'),
@@ -94,7 +106,7 @@ export async function getBlogManagementData(filters: BlogFilters): Promise<BlogM
     posts: ((listResult.data ?? []) as BlogPostRecord[]).map(mapManagedPost),
     total: listResult.count ?? 0,
     pageSize,
-    categories: Array.from(new Set((categoriesResult.data ?? []).map((row) => row.category))).filter(Boolean),
+    categories: (categoriesResult.data ?? []) as string[],
     summary: {
       draft: draftResult.count ?? 0,
       pending: pendingResult.count ?? 0,
@@ -107,11 +119,7 @@ export async function getBlogManagementData(filters: BlogFilters): Promise<BlogM
 export async function getAdminBlogPostBySlug(slug: string): Promise<AdminBlogPostPreview | null> {
   await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select('title, excerpt, content_md, featured_image, status, created_by, archived_at')
-    .eq('slug', slug)
-    .maybeSingle();
+  const { data, error } = await supabase.from('blog_posts').select('title, excerpt, content_md, featured_image, status, created_by, archived_at').eq('slug', slug).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -127,17 +135,10 @@ export async function getBlogPostForEdit(slug: string): Promise<ManagedBlogPost 
 export async function getBlogPostRevisions(postId: string): Promise<BlogRevision[]> {
   await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('blog_post_revisions')
-    .select('id, source_version, snapshot, created_at')
-    .eq('post_id', postId)
-    .order('source_version', { ascending: false })
-    .limit(30);
+  const { data, error } = await supabase.from('blog_post_revisions').select('id, source_version, snapshot, created_at').eq('post_id', postId).order('source_version', { ascending: false }).limit(30);
   if (error) throw error;
   return (data ?? []).map((revision) => {
-    const snapshot = revision.snapshot && typeof revision.snapshot === 'object' && !Array.isArray(revision.snapshot)
-      ? revision.snapshot as Record<string, unknown>
-      : {};
+    const snapshot = revision.snapshot && typeof revision.snapshot === 'object' && !Array.isArray(revision.snapshot) ? (revision.snapshot as Record<string, unknown>) : {};
     return {
       id: revision.id,
       sourceVersion: revision.source_version,

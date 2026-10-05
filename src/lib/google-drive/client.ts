@@ -6,7 +6,10 @@ const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 export class GoogleDriveApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
     super(message);
   }
 }
@@ -181,6 +184,15 @@ export async function trashDriveFile(fileId: string) {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ trashed: true }),
+  });
+}
+
+export async function restoreDriveFile(fileId: string) {
+  const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,trashed' });
+  return driveFetch<{ id: string; trashed: boolean }>(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?${params}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: false }),
   });
 }
 

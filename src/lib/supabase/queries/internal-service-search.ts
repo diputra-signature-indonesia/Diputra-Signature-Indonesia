@@ -10,6 +10,7 @@ type SearchRecord = {
   summary: string | null;
   category_id: string | null;
   category_name: string | null;
+  category_code?: string | null;
   workflow_template_id: string | null;
   workflow_name: string | null;
   step_count: number;
@@ -37,6 +38,7 @@ export async function getInternalServiceSearchPage(input: InternalServiceSearchI
     isActive: service.is_active,
     workflowTemplateId: service.workflow_template_id,
     internalCategoryId: service.category_id,
+    internalCategoryCode: service.category_code ?? null,
     referenceCount: service.reference_count,
     cells: [
       { type: 'text', value: service.name, secondary: service.summary ?? undefined },

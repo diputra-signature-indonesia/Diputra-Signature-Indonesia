@@ -25,7 +25,7 @@ export type AdminPublicServiceItem = Pick<
   | 'is_published'
   | 'version'
   | 'created_at'
-> & { details: AdminPublicServiceDetail[] };
+> & { details: AdminPublicServiceDetail[]; detailCount?: number };
 
 export type AdminPublicServiceCategory = Pick<
   Tables<'services_categories'>,
@@ -46,52 +46,46 @@ export type AdminPublicServiceCategory = Pick<
   | 'is_published'
   | 'version'
   | 'created_at'
-> & { items: AdminPublicServiceItem[] };
+> & { items: AdminPublicServiceItem[]; itemCount?: number };
 
-function fail(label: string, error: { message: string } | null) {
-  if (error) throw new Error(`Unable to load ${label}: ${error.message}`);
-}
+export type AdminPublicServicePage = {
+  categories: AdminPublicServiceCategory[];
+  categoryTotal: number;
+  categoryPage: number;
+  selected: AdminPublicServiceCategory | null;
+  itemTotal: number;
+  itemPage: number;
+  details: AdminPublicServiceDetail[];
+  detailTotal: number;
+  detailPage: number;
+  nextCategoryOrder: number;
+  nextItemOrder: number;
+  nextDetailOrder: number;
+  revision: string;
+};
 
-export async function getPublicServiceManagementData(): Promise<AdminPublicServiceCategory[]> {
+export async function getPublicServiceManagementData(
+  options: {
+    categoryId?: string;
+    itemId?: string;
+    categoryPage?: number;
+    itemPage?: number;
+    detailPage?: number;
+    query?: string;
+  } = {},
+  signal?: AbortSignal
+): Promise<AdminPublicServicePage> {
   const supabase = await createSupabaseServerClient();
-  const [categoriesResult, itemsResult, detailsResult] = await Promise.all([
-    supabase
-      .from('services_categories')
-      .select('id,slug,title,type,short_description,description,hero_heading,hero_image,card_image,card_icon_key,seo_title,seo_description,og_image,sort_order,is_published,version,created_at')
-      .is('deleted_at', null)
-      .order('sort_order')
-      .order('title'),
-    supabase
-      .from('services_items')
-      .select('id,category_id,slug,title,description,icon_key,cta_label,cta_type,seo_title,seo_description,og_image,sort_order,is_published,version,created_at')
-      .is('deleted_at', null)
-      .order('sort_order')
-      .order('title'),
-    supabase
-      .from('services_item_details')
-      .select('id,service_item_id,title,description,cta_description,sort_order,is_published,version,created_at')
-      .is('deleted_at', null)
-      .order('sort_order')
-      .order('title'),
-  ]);
-
-  fail('public Services', categoriesResult.error);
-  fail('public Sub-services', itemsResult.error);
-  fail('public Service details', detailsResult.error);
-
-  const detailsByItem = new Map<string, AdminPublicServiceDetail[]>();
-  for (const detail of detailsResult.data ?? []) {
-    const details = detailsByItem.get(detail.service_item_id) ?? [];
-    details.push(detail);
-    detailsByItem.set(detail.service_item_id, details);
-  }
-
-  const itemsByCategory = new Map<string, AdminPublicServiceItem[]>();
-  for (const item of itemsResult.data ?? []) {
-    const items = itemsByCategory.get(item.category_id) ?? [];
-    items.push({ ...item, details: detailsByItem.get(item.id) ?? [] });
-    itemsByCategory.set(item.category_id, items);
-  }
-
-  return (categoriesResult.data ?? []).map((category) => ({ ...category, items: itemsByCategory.get(category.id) ?? [] }));
+  let request = supabase.rpc('admin_public_service_page', {
+    p_category: options.categoryId,
+    p_item: options.itemId,
+    p_category_page: options.categoryPage ?? 1,
+    p_item_page: options.itemPage ?? 1,
+    p_detail_page: options.detailPage ?? 1,
+    p_query: options.query ?? '',
+  });
+  if (signal) request = request.abortSignal(signal);
+  const { data, error } = await request;
+  if (error) throw new Error('Unable to load Client Services.');
+  return { ...(data as unknown as AdminPublicServicePage), revision: String(Date.now()) };
 }

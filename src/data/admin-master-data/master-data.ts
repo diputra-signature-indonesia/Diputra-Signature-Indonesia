@@ -16,6 +16,7 @@ export type MasterDataRow = {
   isSystem?: boolean;
   workflowTemplateId?: string | null;
   internalCategoryId?: string | null;
+  internalCategoryCode?: string | null;
   referenceCount?: number;
   cells: MasterDataCell[];
 };
@@ -28,9 +29,11 @@ export type MasterDataCategory = {
   icon: MasterDataIconName;
   columns: string[];
   rows: MasterDataRow[];
+  // Total catalogue size, independent of a fetched page or active filters.
+  totalCount?: number;
 };
 
-export type MasterDataCategoryDefinition = Omit<MasterDataCategory, 'rows'>;
+export type MasterDataCategoryDefinition = Omit<MasterDataCategory, 'rows' | 'totalCount'>;
 
 export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
   {

@@ -12,7 +12,7 @@ export default async function AdminPublicServicesPage() {
   return (
     <div className="min-h-full bg-[#F8F9FA] text-[#202938]" style={{ fontFamily: 'var(--font-admin-sidebar), sans-serif' }}>
       <AdminPageHeader title="Client Services" description="Manage Services, Sub-services, and optional details displayed on the public website." />
-      <PublicServicesWorkspace initialCategories={categories} />
+      <PublicServicesWorkspace initialPage={categories} />
     </div>
   );
 }
