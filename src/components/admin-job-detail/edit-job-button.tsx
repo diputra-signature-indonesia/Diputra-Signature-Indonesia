@@ -116,7 +116,7 @@ export function EditJobButton({
       >
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <AdminRemoteSelect kind="clients" label="Client *" value={form.clientId} initialLabel={detail.summary.client} onChange={(value) => setField('clientId', value)} />
+            <AdminRemoteSelect size="md" kind="clients" label="Client *" value={form.clientId} initialLabel={detail.summary.client} onChange={(value) => setField('clientId', value)} />
           </div>
           <div>
             <label htmlFor="edit-job-title" className={labelClass}>
@@ -126,7 +126,14 @@ export function EditJobButton({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <AdminRemoteSelect kind="services" label="Internal Service *" value={form.serviceId} initialLabel={detail.summary.internalService} onChange={(value) => setField('serviceId', value)} />
+              <AdminRemoteSelect
+                size="md"
+                kind="services"
+                label="Internal Service *"
+                value={form.serviceId}
+                initialLabel={detail.summary.internalService}
+                onChange={(value) => setField('serviceId', value)}
+              />
             </div>
             <div>
               <label htmlFor="edit-job-priority" className={labelClass}>
@@ -155,7 +162,7 @@ export function EditJobButton({
           ) : null}
           {detail.canChangePic ? (
             <div>
-              <AdminRemoteSelect kind="profiles" label="PIC *" value={form.picId} initialLabel={detail.summary.pic} onChange={(value) => setField('picId', value)} />
+              <AdminRemoteSelect size="md" kind="profiles" label="PIC *" value={form.picId} initialLabel={detail.summary.pic} onChange={(value) => setField('picId', value)} />
             </div>
           ) : (
             <p className="text-xs text-[#68717E]">PIC: {detail.summary.pic}. Hanya admin yang dapat mengganti PIC.</p>

@@ -36,7 +36,15 @@ export function MyTasksFilters({ statuses, filters, onChange, onApply, onReset }
         />
       </label>
       <AdminSelectField label="Deadline" value={filters.deadline} options={['Any Time', 'Due Today', 'Next 7 Days', 'Overdue']} onChange={(value) => update('deadline', value)} />
-      <AdminRemoteSelect kind="service_filters" label="Internal Service" value={filters.internalService} placeholder="All Internal Services" onChange={(value) => update('internalService', value)} />
+      <AdminRemoteSelect
+        appearance="filter"
+        showDropdownIndicator
+        kind="service_filters"
+        label="Internal Service"
+        value={filters.internalService}
+        placeholder="All Internal Services"
+        onChange={(value) => update('internalService', value)}
+      />
       <AdminSelectField
         label="Status"
         value={filters.status}

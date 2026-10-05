@@ -424,12 +424,14 @@ export function ReviewManagementWorkspace({ data, filters, initialGenerateOpen }
             {clientMode === 'existing' ? (
               <>
                 <AdminRemoteSelect
+                  size="md"
                   label="Client *"
                   kind="clients"
                   value={generateForm.clientId ?? ''}
                   onChange={(value) => setGenerateForm((current) => ({ ...current, clientId: value || null, jobId: null }))}
                 />
                 <AdminRemoteSelect
+                  size="md"
                   label="Job (optional)"
                   kind="jobs"
                   parent={generateForm.clientId ?? undefined}

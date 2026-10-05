@@ -216,7 +216,7 @@ export function LiveRemarksCard({ detail }: { detail: LiveJobDetail }) {
               className="h-10 w-full rounded-lg border border-[#D6DAE0] px-3 text-sm"
             />
           </div>
-          <AdminRemoteSelect kind="profiles" label="Performed By (opsional)" value={performedBy} onChange={setPerformedBy} />
+          <AdminRemoteSelect size="md" kind="profiles" label="Performed By (opsional)" value={performedBy} onChange={setPerformedBy} />
           {error ? (
             <p role="alert" className="text-xs text-red-700">
               {error}

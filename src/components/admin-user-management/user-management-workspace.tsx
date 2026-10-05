@@ -11,6 +11,7 @@ import {
 } from '@/app/admin/access-requests/actions';
 import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
 import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
@@ -302,22 +303,19 @@ export function UserManagementWorkspace({
           ) : null}
         </header>
 
-        <div className="border-b p-4">
-          <label className="mb-1 block text-xs font-semibold" htmlFor="user-search">
-            Search Users
-          </label>
-          <input
-            id="user-search"
-            type="search"
-            maxLength={160}
-            value={userQuery}
-            onChange={(event) => {
-              setUserQuery(event.target.value);
-              setUserPage(1);
-            }}
-            placeholder="Name or email..."
-            className="h-10 w-full rounded-lg border px-3 text-sm"
-          />
+        <div className="border-b border-[#E4E7EB] p-4 sm:px-6">
+          <div className="rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4">
+            <AdminSearchField
+              id="user-search"
+              label="Search Users"
+              value={userQuery}
+              onChange={(value) => {
+                setUserQuery(value);
+                setUserPage(1);
+              }}
+              placeholder="Name or email..."
+            />
+          </div>
           {users.loading ? (
             <p role="status" className="mt-2 text-xs">
               Loading users...
@@ -693,12 +691,11 @@ export function UserManagementWorkspace({
             />
           </div>
           <div>
-            <label htmlFor="team-job-title" className="text-xs font-semibold text-[#303846]">
-              Job Title {teamIsVisible ? <span className="text-[#C32929]">*</span> : null}
-            </label>
             <AdminRemoteSelect
               kind="job_titles"
-              label="Select Job Title"
+              label="Job Title"
+              labelSuffix={teamIsVisible ? <span className="text-[#C32929]">*</span> : null}
+              size="md"
               value={teamJobTitleId}
               initialLabel={teamEditing?.teamMember?.jobTitleName ?? undefined}
               onChange={(value) => setTeamJobTitleId(value)}

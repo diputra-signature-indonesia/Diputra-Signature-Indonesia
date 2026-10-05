@@ -73,7 +73,7 @@ export function MyTasksWorkspace({ initialPage }: { initialPage: MyTaskPage }) {
             onSaved={() => setRevision((n) => n + 1)}
           />
         ) : (
-          <div className="rounded-xl border bg-white p-10 text-center text-sm">Tidak ada Job sesuai filter.</div>
+          <div className="rounded-xl border border-[#D9DDE3] bg-white p-10 text-center text-sm text-[#7B8491] shadow-[0_1px_3px_rgba(15,23,42,0.04)]">Tidak ada Job sesuai filter.</div>
         )}
         <div>
           <JobListCard
@@ -91,16 +91,18 @@ export function MyTasksWorkspace({ initialPage }: { initialPage: MyTaskPage }) {
               setStatus('All');
               setTaskPage(1);
             }}
-          />
-          <AllJobsPagination
-            currentPage={data.page}
-            pageSize={10}
-            totalItems={data.total}
-            onPageChange={(value) => {
-              setPage(value);
-              setTaskPage(1);
-              setStatus('All');
-            }}
+            pagination={
+              <AllJobsPagination
+                currentPage={data.page}
+                pageSize={10}
+                totalItems={data.total}
+                onPageChange={(value) => {
+                  setPage(value);
+                  setTaskPage(1);
+                  setStatus('All');
+                }}
+              />
+            }
           />
         </div>
       </section>

@@ -245,12 +245,11 @@ export function MasterDataFormModal({
         <fieldset disabled={isSaving} className="space-y-4 disabled:opacity-75">
           {isInternalService ? (
             <div>
-              <label htmlFor={formId + '-category'} className="mb-1.5 block text-xs font-semibold text-[#303846]">
-                Internal Category {mode === 'add' || row?.internalCategoryId ? <RequiredMark /> : null}
-              </label>
               <AdminRemoteSelect
                 kind="internal_categories"
-                label="Category"
+                label="Internal Category"
+                labelSuffix={mode === 'add' || row?.internalCategoryId ? <RequiredMark /> : null}
+                size="md"
                 value={values.internalCategoryId}
                 initialLabel={textValue(row, 2)}
                 disabled={isSaving}
@@ -313,12 +312,10 @@ export function MasterDataFormModal({
           {isInternalService ? (
             <>
               <div>
-                <label htmlFor={`${formId}-workflow`} className="mb-1.5 block text-xs font-semibold text-[#303846]">
-                  Workflow Template
-                </label>
                 <AdminRemoteSelect
                   kind="workflows"
-                  label="Workflow"
+                  label="Workflow Template"
+                  size="md"
                   value={values.workflowTemplateId}
                   initialLabel={textValue(row, 3)}
                   disabled={isSaving}

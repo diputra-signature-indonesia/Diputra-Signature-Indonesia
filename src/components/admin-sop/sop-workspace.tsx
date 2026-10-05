@@ -35,7 +35,9 @@ export function SopWorkspace({ data }: { data: SopWorkspaceData }) {
             <SopRequirementsTable key={`prices-${selectedService.id}-${selectedService.sop?.version ?? 0}`} service={selectedService} canManage={data.canManage} />
           </>
         ) : !details.loading && !details.error ? (
-          <div className="rounded-xl border bg-white p-10 text-center text-sm">Select an active Internal Service to view its SOP.</div>
+          <div className="rounded-xl border border-[#D9DDE3] bg-white p-10 text-center text-sm text-[#7B8491] shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            Select an active Internal Service to view its SOP.
+          </div>
         ) : null}
       </div>
       <SopServiceList selectedId={selectedId} onSelect={setSelectedId} />

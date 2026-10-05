@@ -10,6 +10,7 @@ import {
   type SavePublicServiceItemInput,
 } from '@/app/admin/public-services/actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
 import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
@@ -729,14 +730,14 @@ export function PublicServicesWorkspace({ initialPage }: { initialPage: AdminPub
             </button>
           </div>
           <div className="px-4 pb-3">
-            <input
-              aria-label="Search Client Services"
+            <AdminSearchField
+              label="Search Client Services"
+              compact
+              hideLabel
               placeholder="Search Services..."
-              maxLength={160}
-              className="h-10 w-full rounded-lg border px-3 text-sm"
               value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
+              onChange={(value) => {
+                setQuery(value);
                 setCategoryPage(1);
               }}
             />

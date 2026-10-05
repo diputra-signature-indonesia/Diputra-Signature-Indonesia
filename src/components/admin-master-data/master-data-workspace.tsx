@@ -3,12 +3,13 @@
 import { archiveMasterDataAction, saveMasterDataAction } from '@/app/admin/master-data/actions';
 import { AdminPendingOverlay } from '@/components/layout-admin/admin-route-loading';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
+import { AdminSearchField } from '@/components/layout-admin/admin-search-field';
 import { AdminRemoteSelect } from '@/components/layout-admin/admin-remote-select';
 import { useAdminPage } from '@/components/layout-admin/use-admin-page';
 import { AllJobsPagination } from '@/components/admin-all-jobs/all-jobs-pagination';
 import type { MasterPage } from '@/lib/supabase/queries/master-data';
 import type { MasterDataCategory, MasterDataCategoryId, MasterDataRow } from '@/data/admin-master-data/master-data';
-import { Archive, ArrowLeft, LoaderCircle, Plus, Search, Shapes } from 'lucide-react';
+import { Archive, ArrowLeft, LoaderCircle, Plus, Shapes } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { MasterDataCategoryList } from './master-data-category-list';
@@ -191,54 +192,37 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
             </div>
           </header>
 
-          <div className="p-4 sm:p-6">
+          <div className="@container p-4 sm:p-6">
             {isInternalServices ? (
-              <div className="mb-5 grid gap-3 rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4 sm:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] sm:items-end">
-                <div>
-                  <label htmlFor="internal-service-search" className="mb-1.5 block text-xs font-semibold text-[#303846]">
-                    Search Services
-                  </label>
-                  <div className="relative">
-                    <Search aria-hidden="true" className="pointer-events-none absolute top-3 left-3 size-4 text-[#8A94A3]" />
-                    <input
-                      id="internal-service-search"
-                      type="search"
-                      maxLength={160}
-                      value={search}
-                      onChange={(event) => {
-                        setSearch(event.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Service name, code, or category..."
-                      className="h-10 w-full rounded-lg border border-[#D6DAE0] bg-white pr-3 pl-9 text-sm text-[#303846] outline-none placeholder:text-[#A0A8B4] focus:border-[#8C1010] focus:ring-2 focus:ring-[#8C1010]/10"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="internal-service-category-filter" className="mb-1.5 block text-xs font-semibold text-[#303846]">
-                    Category
-                  </label>
-                  <AdminRemoteSelect
-                    kind="internal_categories"
-                    label="Filter category"
-                    value={categoryFilter === 'uncategorized' ? '' : categoryFilter}
-                    placeholder={categoryFilter === 'uncategorized' ? 'Uncategorized' : 'All Categories'}
+              <div className="mb-5 grid items-end gap-3 rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4 @sm:grid-cols-[minmax(0,1fr)_auto] @2xl:grid-cols-[minmax(0,1fr)_240px_auto]">
+                <div className="min-w-0 @sm:col-span-2 @2xl:col-span-1">
+                  <AdminSearchField
+                    id="internal-service-search"
+                    label="Search Services"
+                    value={search}
                     onChange={(value) => {
-                      setCategoryFilter(value);
+                      setSearch(value);
                       setPage(1);
                     }}
+                    placeholder="Service name, code, or category..."
                   />
-                  <button
-                    type="button"
-                    className="mt-1 text-xs underline"
-                    onClick={() => {
-                      setCategoryFilter('uncategorized');
-                      setPage(1);
-                    }}
-                  >
-                    Uncategorized
-                  </button>
                 </div>
+                <AdminRemoteSelect
+                  kind="internal_categories"
+                  label="Category"
+                  size="md"
+                  showDropdownIndicator
+                  value={categoryFilter}
+                  placeholder="All Categories"
+                  fixedOptions={[
+                    { value: '', label: 'All Categories' },
+                    { value: 'uncategorized', label: 'Uncategorized' },
+                  ]}
+                  onChange={(value) => {
+                    setCategoryFilter(value);
+                    setPage(1);
+                  }}
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -253,18 +237,15 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
               </div>
             ) : null}
             {!isInternalServices ? (
-              <div className="mb-4">
-                <input
-                  aria-label="Search Master Data"
-                  type="search"
-                  maxLength={160}
+              <div className="mb-5 rounded-xl border border-[#E4E7EB] bg-[#FAFBFC] p-4">
+                <AdminSearchField
+                  label={`Search ${selectedCategory.label}`}
                   value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
+                  onChange={(value) => {
+                    setSearch(value);
                     setPage(1);
                   }}
                   placeholder="Search name or code..."
-                  className="h-10 w-full rounded-lg border px-3 text-sm"
                 />
               </div>
             ) : null}

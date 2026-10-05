@@ -97,7 +97,7 @@ export function AddJobButton({ options }: { options: AddJobOptions }) {
           ) : null}
           <div>
             {form.clientId !== 'new' ? (
-              <AdminRemoteSelect kind="clients" label="Client *" value={form.clientId} onChange={(value) => setField('clientId', value)} />
+              <AdminRemoteSelect size="md" kind="clients" label="Client *" value={form.clientId} onChange={(value) => setField('clientId', value)} />
             ) : (
               <p className="text-sm">Client baru</p>
             )}
@@ -152,7 +152,7 @@ export function AddJobButton({ options }: { options: AddJobOptions }) {
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <AdminRemoteSelect kind="services" label="Internal Service *" value={form.serviceId} onChange={(value) => setField('serviceId', value)} />
+            <AdminRemoteSelect size="md" kind="services" label="Internal Service *" value={form.serviceId} onChange={(value) => setField('serviceId', value)} />
             <div>
               <label htmlFor="add-job-priority" className={labelClass}>
                 Priority *
@@ -179,7 +179,14 @@ export function AddJobButton({ options }: { options: AddJobOptions }) {
             </div>
           ) : null}
           {canAssignPic ? (
-            <AdminRemoteSelect kind="profiles" label="PIC *" value={form.picId ?? options.actor.id} initialLabel={options.actor.name} onChange={(value) => setField('picId', value || null)} />
+            <AdminRemoteSelect
+              size="md"
+              kind="profiles"
+              label="PIC *"
+              value={form.picId ?? options.actor.id}
+              initialLabel={options.actor.name}
+              onChange={(value) => setField('picId', value || null)}
+            />
           ) : (
             <p className="text-xs text-[#68717E]">PIC: {options.actor.name} (otomatis)</p>
           )}

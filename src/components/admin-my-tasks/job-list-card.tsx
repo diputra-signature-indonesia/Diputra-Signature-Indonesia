@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { MyTaskJob } from '@/types/admin-my-tasks';
 import { Clock3, Search, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
@@ -9,9 +10,10 @@ type JobListCardProps = {
   query: string;
   onQueryChange: (query: string) => void;
   onJobSelect: (jobId: string) => void;
+  pagination?: ReactNode;
 };
 
-export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSelect }: JobListCardProps) {
+export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSelect, pagination }: JobListCardProps) {
   const openTotal = jobs.reduce((sum, job) => sum + job.openCount, 0);
   const completedTotal = jobs.reduce((sum, job) => sum + job.completedCount, 0);
   const visibleJobs = jobs;
@@ -77,6 +79,7 @@ export function JobListCard({ jobs, selectedJobId, query, onQueryChange, onJobSe
         {visibleJobs.length === 0 ? <p className="px-5 py-12 text-center text-sm text-[#8A94A3]">Job tidak ditemukan.</p> : null}
       </div>
 
+      {pagination ? <div className="shrink-0">{pagination}</div> : null}
       <Link href="/admin/all-jobs" className="flex h-11 shrink-0 items-center justify-center border-t border-[#DEE2E7] text-xs font-semibold text-[#8C1010] transition hover:bg-[#FFF6F6]">
         View All Jobs
       </Link>

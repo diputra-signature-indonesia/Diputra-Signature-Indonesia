@@ -40,19 +40,20 @@ export function DashboardFilters({ options, onApply }: { options: DashboardFilte
       onSubmit={() => onApply(filters)}
       gridClassName="xl:grid-cols-[1.05fr_1.05fr_0.64fr_0.92fr_1.17fr]"
     >
-      <div>
-        <AdminRemoteSelect
-          kind="profiles"
-          label="PIC"
-          value={filters.pic === 'UNASSIGNED' ? '' : filters.pic}
-          placeholder={filters.pic === 'UNASSIGNED' ? 'Unassigned' : 'All PIC'}
-          onChange={(value) => updateFilter('pic', value)}
-        />
-        <button type="button" onClick={() => updateFilter('pic', 'UNASSIGNED')} className="mt-1 text-[10px] underline">
-          Unassigned tasks
-        </button>
-      </div>
-      <AdminRemoteSelect kind="clients" label="Client" value={filters.client} placeholder="All Client" onChange={(value) => updateFilter('client', value)} />
+      <AdminRemoteSelect
+        appearance="filter"
+        showDropdownIndicator
+        kind="profiles"
+        label="PIC"
+        value={filters.pic}
+        placeholder="All PIC"
+        fixedOptions={[
+          { value: '', label: 'All PIC' },
+          { value: 'UNASSIGNED', label: 'Unassigned tasks' },
+        ]}
+        onChange={(value) => updateFilter('pic', value)}
+      />
+      <AdminRemoteSelect appearance="filter" showDropdownIndicator kind="clients" label="Client" value={filters.client} placeholder="All Client" onChange={(value) => updateFilter('client', value)} />
       <AdminSelectField
         label="Status"
         value={filters.status}
@@ -61,6 +62,8 @@ export function DashboardFilters({ options, onApply }: { options: DashboardFilte
         onChange={(value) => updateFilter('status', value)}
       />
       <AdminRemoteSelect
+        appearance="filter"
+        showDropdownIndicator
         kind="service_filters"
         label="Internal Service"
         value={filters.internalService}

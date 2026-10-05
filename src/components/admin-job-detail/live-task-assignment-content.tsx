@@ -321,12 +321,10 @@ export function LiveTaskAssignmentContent({ data, initialTaskId }: { data: LiveT
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="task-assignee" className="mb-1 block text-xs font-semibold">
-                Assignee
-              </label>
               <AdminRemoteSelect
                 kind="profiles"
-                label="Assign to"
+                label="Assignee"
+                size="md"
                 value={form.assigneeId}
                 initialLabel={editing?.assigneeName}
                 disabled={!editing?.canEdit || !data.canManage}

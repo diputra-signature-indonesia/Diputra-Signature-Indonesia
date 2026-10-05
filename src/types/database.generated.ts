@@ -2855,6 +2855,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["admin_access_request_status"]
       }
+      get_own_account_details: { Args: never; Returns: Json }
       internal_service_catalogue_counts: { Args: never; Returns: Json }
       is_active_super_admin: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
@@ -3336,6 +3337,10 @@ export type Database = {
           p_is_active: boolean
         }
         Returns: number
+      }
+      set_own_display_name: {
+        Args: { p_display_name: string }
+        Returns: string
       }
       set_profile_active: {
         Args: { p_is_active: boolean; p_profile_id: string }

@@ -51,6 +51,8 @@ export function AllJobsFilters({ options, onApply }: { options: AddJobOptions; o
         />
       </label>
       <AdminRemoteSelect
+        appearance="filter"
+        showDropdownIndicator
         kind="profiles"
         label="PIC"
         value={filters.pic.startsWith('All ') ? '' : filters.pic}
@@ -58,6 +60,8 @@ export function AllJobsFilters({ options, onApply }: { options: AddJobOptions; o
         onChange={(value) => updateFilter('pic', value || 'All Assignees')}
       />
       <AdminRemoteSelect
+        appearance="filter"
+        showDropdownIndicator
         kind="service_filters"
         label="Internal Service"
         value={filters.internalService.startsWith('All ') ? '' : filters.internalService}
