@@ -17,6 +17,8 @@ type SearchRecord = {
   reference_count: number;
   is_active: boolean;
   version: number;
+  deletion_started_at?: string | null;
+  sop_file_count?: number;
 };
 
 export async function getInternalServiceSearchPage(input: InternalServiceSearchInput, signal?: AbortSignal): Promise<InternalServiceSearchPage> {
@@ -40,6 +42,8 @@ export async function getInternalServiceSearchPage(input: InternalServiceSearchI
     internalCategoryId: service.category_id,
     internalCategoryCode: service.category_code ?? null,
     referenceCount: service.reference_count,
+    deletionStartedAt: service.deletion_started_at,
+    sopFileCount: service.sop_file_count,
     cells: [
       { type: 'text', value: service.name, secondary: service.summary ?? undefined },
       { type: 'text', value: service.code, mono: true },
@@ -49,7 +53,11 @@ export async function getInternalServiceSearchPage(input: InternalServiceSearchI
         value: service.workflow_name ?? 'Not assigned',
         secondary: service.workflow_name ? service.step_count + ' ordered ' + (service.step_count === 1 ? 'step' : 'steps') : 'Required before use',
       },
-      { type: 'badge', value: service.is_active ? 'Active' : 'Inactive', tone: service.is_active ? 'green' : 'gray' },
+      {
+        type: 'badge',
+        value: service.deletion_started_at ? 'Deletion pending' : service.is_active ? 'Active' : 'Inactive',
+        tone: service.deletion_started_at ? 'red' : service.is_active ? 'green' : 'gray',
+      },
     ],
   }));
   const offset = (result.page - 1) * INTERNAL_SERVICE_PAGE_SIZE;

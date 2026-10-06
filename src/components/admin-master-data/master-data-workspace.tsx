@@ -48,7 +48,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
   const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(1);
   const [serviceRefreshKey, setServiceRefreshKey] = useState(0);
-  const [removeModal, setRemoveModal] = useState<{ categoryId: 'internal-services' | 'internal-service-categories'; row: MasterDataRow } | null>(null);
+  const [removeModal, setRemoveModal] = useState<{ categoryId: MasterDataCategoryId; row: MasterDataRow } | null>(null);
 
   const selectedCategory = initialCategories.find((category) => category.id === selectedId) ?? initialCategories[0];
   const isInternalServices = selectedCategory.id === 'internal-services';
@@ -64,7 +64,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
   );
   const otherBusy = otherSearch.loading || Boolean(otherSearch.error);
   const displayedCategory = { ...selectedCategory, rows: isInternalServices ? (servicePage?.rows ?? []) : otherBusy ? [] : (otherSearch.data?.rows ?? []) };
-  const removeIsPermanent = removeModal?.categoryId === 'internal-service-categories' || removeModal?.row.referenceCount === 0;
+  const removeIsPermanent = removeModal?.row.referenceCount === 0;
 
   const selectCategory = (categoryId: MasterDataCategoryId) => {
     setSelectedId(categoryId);
@@ -83,7 +83,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
 
   const openEditModal = (row: MasterDataRow) => {
     if (!canManage) return;
-    if (selectedCategory.id === 'internal-service-categories' && (row.referenceCount ?? 0) > 0) return;
+    if (row.deletionStartedAt) return;
     setNotice(null);
     setModal({ mode: 'edit', categoryId: selectedCategory.id, row });
   };
@@ -130,13 +130,8 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
   const archiveRow = (row: MasterDataRow) => {
     const categoryId = selectedCategory.id;
     if (!canManage) return;
-    if (categoryId === 'internal-services' || categoryId === 'internal-service-categories') {
-      if (categoryId === 'internal-service-categories' && (row.referenceCount ?? 0) > 0) return;
-      setNotice(null);
-      setRemoveModal({ categoryId, row });
-      return;
-    }
-    if (window.confirm(`Deactivate ${rowLabel(row)}? Existing historical references will be preserved.`)) removeRow(row, categoryId);
+    setNotice(null);
+    setRemoveModal({ categoryId, row });
   };
 
   return (
@@ -208,7 +203,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
                   />
                 </div>
                 <AdminRemoteSelect
-                  kind="internal_categories"
+                  kind="internal_category_filters"
                   label="Category"
                   size="md"
                   showDropdownIndicator
@@ -261,7 +256,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
             ) : null}
             {selectedCategory.id === 'internal-service-categories' ? (
               <p className="mb-4 rounded-lg border border-[#D9DDE3] bg-[#F7F8FA] px-4 py-3 text-xs leading-5 text-[#667181]">
-                Categories are internal only, unrelated to Client Services. Edit and delete are locked whenever any service uses the category, including inactive services.
+                Categories are internal only, unrelated to Client Services. Name and prefix are locked while used. Used categories can be deactivated; unused categories can be permanently deleted.
               </p>
             ) : null}
             {notice ? (
@@ -336,7 +331,7 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
           open
           size="sm"
           onClose={isPending ? () => undefined : () => setRemoveModal(null)}
-          title={removeIsPermanent ? 'Delete permanently?' : 'Deactivate service?'}
+          title={removeIsPermanent ? 'Delete permanently?' : 'Deactivate record?'}
           description={rowLabel(removeModal.row)}
           footer={
             <>
@@ -366,11 +361,13 @@ export function MasterDataWorkspace({ initialCategories, canManage }: MasterData
           ) : null}
           <p className="text-sm leading-6 text-[#586273]">
             {removeIsPermanent
-              ? 'This record is unused and will be permanently deleted. This cannot be undone.'
-              : 'This service is referenced by Jobs or SOPs. It will be deactivated instead of deleted, preserving all historical references.'}
+              ? removeModal.categoryId === 'internal-services'
+                ? `This service has no Job references. Its SOP description, price list, documents (${removeModal.row.sopFileCount ?? 0} registered files), and managed Drive folder with all contents will also be permanently deleted. This cannot be undone.`
+                : 'This record has no remaining references and will be permanently deleted. This cannot be undone.'
+              : 'This record is still used, including historical or inactive references. It will be deactivated instead of deleted, preserving those references.'}
           </p>
           <p className="mt-3 text-xs leading-5 text-[#8A94A3]">
-            Usage is checked again before saving. If a service has become used, it will be deactivated; a category that has become used cannot be deleted.
+            Usage is checked again on the server. If the record has become used, it will be deactivated instead. After all references are removed, Delete permanently becomes available again.
           </p>
         </AdminModal>
       ) : null}

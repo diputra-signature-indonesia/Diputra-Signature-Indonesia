@@ -4,6 +4,7 @@ import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import {
   createDrivePermission,
   createJobFolder,
+  createJobDocumentGroupFolder,
   createResumableUpload,
   deleteDrivePermission,
   findJobFolder,
@@ -19,6 +20,9 @@ import {
 import { getGoogleDriveConfig, GoogleDriveConfigurationError } from '@/lib/google-drive/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'node:crypto';
+import { getJobDocuments, type JobDocumentsData } from '@/lib/supabase/queries/job-documents';
+import type { Tables } from '@/types/database.generated';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,8 +72,9 @@ async function requireManager(jobId: string) {
   const actor = await requireActiveAdmin();
   if (!UUID.test(jobId)) return { ok: false, result: fail('Job tidak valid.') } as const;
   const supabase = await createSupabaseServerClient();
-  const job = await supabase.from('jobs').select('id,title,pic_id').eq('id', jobId).is('archived_at', null).maybeSingle();
+  const job = await supabase.from('jobs').select('id,title,pic_id,deletion_started_at').eq('id', jobId).is('archived_at', null).maybeSingle();
   if (job.error || !job.data) return { ok: false, result: fail('Job tidak ditemukan.') } as const;
+  if (job.data.deletion_started_at) return { ok: false, result: fail('Job sedang dihapus permanen. Upload dan perubahan akses dikunci.') } as const;
   const canManage = actor.role === 'admin' || actor.role === 'super_admin' || actor.userId === job.data.pic_id;
   if (!canManage) return { ok: false, result: fail('Hanya PIC Job, admin, atau super admin yang dapat mengelola dokumen.') } as const;
   return { ok: true, actor, supabase, job: job.data } as const;
@@ -132,6 +137,7 @@ export async function ensureJobDriveFolderAction(jobId: string): Promise<Result<
 
 export async function prepareJobDocumentUploadAction(input: {
   jobId: string;
+  groupId?: string | null;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -141,28 +147,28 @@ export async function prepareJobDocumentUploadAction(input: {
   if (!UUID.test(input.jobId) || !name || name.length > 500 || !Number.isSafeInteger(input.sizeBytes) || input.sizeBytes <= 0 || input.sizeBytes > MAX_UPLOAD_BYTES) {
     return fail('File tidak valid atau melebihi batas 100 MiB.');
   }
-  const result = await ensureFolder(input.jobId);
+  const result = await uploadDestination(input.jobId, input.groupId);
   if (!result.ok) return result.result;
   try {
     const googleFileId = await generateDriveFileId();
-    const uploadUrl = await createResumableUpload(result.folder.google_folder_id, googleFileId, name, mimeType, input.sizeBytes);
-    return { ok: true, message: 'Sesi upload siap.', data: { uploadUrl, googleFileId, folderId: result.folder.google_folder_id, maxUploadBytes: MAX_UPLOAD_BYTES } };
+    const uploadUrl = await createResumableUpload(result.targetFolderId, googleFileId, name, mimeType, input.sizeBytes);
+    return { ok: true, message: 'Sesi upload siap.', data: { uploadUrl, googleFileId, folderId: result.targetFolderId, maxUploadBytes: MAX_UPLOAD_BYTES } };
   } catch (error) {
     return driveFailure(error, 'Sesi upload Google Drive gagal dibuat.');
   }
 }
 
-export async function finalizeJobDocumentUploadAction(input: { jobId: string; googleFileId: string }): Promise<Result<{ documentId: string }>> {
+export async function finalizeJobDocumentUploadAction(input: { jobId: string; googleFileId: string; groupId?: string | null }): Promise<Result<{ documentId: string }>> {
   if (!UUID.test(input.jobId) || !input.googleFileId.trim()) return fail('Hasil upload tidak valid.');
-  const result = await ensureFolder(input.jobId);
+  const result = await uploadDestination(input.jobId, input.groupId);
   if (!result.ok) return result.result;
   try {
     const config = getGoogleDriveConfig();
     const file = await getDriveFile(input.googleFileId.trim());
-    if (file.trashed || file.driveId !== config.sharedDriveId || !file.parents?.includes(result.folder.google_folder_id) || !file.webViewLink) {
+    if (file.trashed || file.driveId !== config.sharedDriveId || !file.parents?.includes(result.targetFolderId) || !file.webViewLink) {
       return fail('File hasil upload tidak berada pada folder Job yang benar.');
     }
-    const saved = await result.supabase.rpc('save_job_document_metadata', {
+    const saved = await result.supabase.rpc('save_grouped_job_document_metadata', {
       p_job_id: input.jobId,
       p_job_drive_folder_id: result.folder.id,
       p_google_file_id: file.id,
@@ -171,10 +177,10 @@ export async function finalizeJobDocumentUploadAction(input: { jobId: string; go
       p_mime_type: file.mimeType,
       p_file_size_bytes: Number(file.size ?? 0),
       p_web_view_url: file.webViewLink,
+      p_group_id: input.groupId ?? undefined,
     });
     if (saved.error) {
-      await trashDriveFile(file.id).catch(() => undefined);
-      return fail('Metadata file gagal disimpan. File upload telah dipindahkan ke Trash.');
+      return fail('File sudah masuk Drive, tetapi metadata belum tersimpan. Periksa folder Drive atau coba finalisasi ulang; file tidak dihapus otomatis.');
     }
     refresh(input.jobId);
     return { ok: true, message: 'Dokumen berhasil diunggah.', data: { documentId: saved.data } };
@@ -199,6 +205,123 @@ export async function deleteJobDocumentAction(input: { jobId: string; documentId
     return { ok: true, message: 'Dokumen dipindahkan ke Google Drive Trash.', data: undefined };
   } catch (error) {
     return driveFailure(error, 'Dokumen gagal dipindahkan ke Trash.');
+  }
+}
+
+async function uploadDestination(jobId: string, groupId?: string | null) {
+  if (groupId && !UUID.test(groupId)) return { ok: false, result: fail('Folder tidak valid.') } as const;
+  const result = await ensureFolder(jobId);
+  if (!result.ok) return result;
+  if (!groupId) return { ...result, targetFolderId: result.folder.google_folder_id } as const;
+  const group = await result.supabase
+    .from('job_document_groups')
+    .select('google_folder_id,status')
+    .eq('id', groupId)
+    .eq('job_id', jobId)
+    .eq('job_drive_folder_id', result.folder.id)
+    .is('archived_at', null)
+    .maybeSingle();
+  if (group.error || !group.data || group.data.status !== 'READY') return { ok: false, result: fail('Folder belum siap atau sedang dihapus. Muat ulang halaman.') } as const;
+  try {
+    const file = await getDriveFile(group.data.google_folder_id);
+    if (file.trashed || file.driveId !== result.folder.google_drive_id || file.mimeType !== 'application/vnd.google-apps.folder' || !file.parents?.includes(result.folder.google_folder_id))
+      return { ok: false, result: fail('Folder group tidak berada di folder Job yang benar.') } as const;
+    return { ...result, targetFolderId: group.data.google_folder_id } as const;
+  } catch (error) {
+    return { ok: false, result: driveFailure(error, 'Folder group gagal diverifikasi.') } as const;
+  }
+}
+
+export async function loadJobDocumentsPageAction(input: { jobId: string; groupId?: string | null; page?: number; groupsPage?: number }): Promise<Result<JobDocumentsData>> {
+  await requireActiveAdmin();
+  if (
+    !UUID.test(input.jobId) ||
+    (input.groupId && !UUID.test(input.groupId)) ||
+    !Number.isSafeInteger(input.page ?? 1) ||
+    (input.page ?? 1) < 1 ||
+    !Number.isSafeInteger(input.groupsPage ?? 1) ||
+    (input.groupsPage ?? 1) < 1
+  )
+    return fail('Halaman dokumen tidak valid.');
+  try {
+    return { ok: true, message: 'Dokumen berhasil dimuat.', data: await getJobDocuments(input.jobId, input.groupId ?? null, input.page ?? 1, input.groupsPage ?? 1) };
+  } catch {
+    return fail('Daftar dokumen gagal dimuat.');
+  }
+}
+
+export async function createJobDocumentGroupAction(input: { jobId: string; name: string }): Promise<Result> {
+  const name = input.name.replace(/[\u0000-\u001f]/g, ' ').trim();
+  if (!UUID.test(input.jobId) || !name || name.length > 120) return fail('Nama folder wajib diisi (maksimal 120 karakter).');
+  const context = await ensureFolder(input.jobId);
+  if (!context.ok) return context.result;
+  try {
+    const prepared = await context.supabase.rpc('prepare_job_document_group', { p_job_id: input.jobId, p_name: name, p_google_folder_id: await generateDriveFileId(), p_request_id: randomUUID() });
+    if (prepared.error) return fail(prepared.error.code === '23505' ? 'Nama folder tersebut sudah digunakan.' : 'Folder group gagal disiapkan.');
+    const group = prepared.data as unknown as Tables<'job_document_groups'>;
+    let driveFolder;
+    try {
+      driveFolder = await getDriveFile(group.google_folder_id);
+    } catch (error) {
+      if (!(error instanceof GoogleDriveApiError && error.status === 404)) throw error;
+      try {
+        driveFolder = await createJobDocumentGroupFolder(context.folder.google_folder_id, group.google_folder_id, group.id, group.folder_name);
+      } catch (createError) {
+        if (!(createError instanceof GoogleDriveApiError && createError.status === 409)) throw createError;
+        driveFolder = await getDriveFile(group.google_folder_id);
+      }
+    }
+    if (
+      driveFolder.id !== group.google_folder_id ||
+      driveFolder.trashed ||
+      driveFolder.driveId !== context.folder.google_drive_id ||
+      driveFolder.mimeType !== 'application/vnd.google-apps.folder' ||
+      !driveFolder.parents?.includes(context.folder.google_folder_id)
+    )
+      return fail('Folder tidak cocok dengan mapping Job. Pembuatan dihentikan.');
+    const completed = await context.supabase.rpc('complete_job_document_group', { p_group_id: group.id });
+    if (completed.error) return fail('Folder ada di Drive, tetapi status database belum selesai. Gunakan Retry pada folder tersebut.');
+    return { ok: true, message: 'Folder group berhasil dibuat. Akses mengikuti folder Job.', data: undefined };
+  } catch (error) {
+    return driveFailure(error, 'Pembuatan folder belum selesai. Muat ulang dan gunakan Retry pada folder yang berstatus Pending.');
+  } finally {
+    refresh(input.jobId);
+  }
+}
+
+export async function deleteJobDocumentGroupAction(input: { jobId: string; groupId: string; version: number }): Promise<Result> {
+  if (!UUID.test(input.jobId) || !UUID.test(input.groupId) || !Number.isSafeInteger(input.version) || input.version < 1) return fail('Folder tidak valid.');
+  const context = await requireManager(input.jobId);
+  if (!context.ok) return context.result;
+  const mapping = await context.supabase.from('job_document_groups').select('id,job_id').eq('id', input.groupId).eq('job_id', input.jobId).maybeSingle();
+  if (mapping.error || !mapping.data) return fail('Folder tidak ditemukan di Job ini.');
+  try {
+    const prepared = await context.supabase.rpc('prepare_job_document_group_trash', { p_group_id: input.groupId, p_expected_version: input.version });
+    if (prepared.error) return fail('Folder sudah berubah atau tidak dapat dihapus. Muat ulang halaman.');
+    const group = prepared.data as unknown as Tables<'job_document_groups'>;
+    const parent = await context.supabase.from('job_drive_folders').select('google_folder_id,google_drive_id').eq('id', group.job_drive_folder_id).eq('job_id', input.jobId).single();
+    if (parent.error || !parent.data) return fail('Folder Job gagal diverifikasi.');
+    const config = getGoogleDriveConfig();
+    if (group.google_folder_id === parent.data.google_folder_id || [config.rootFolderId, config.sharedDriveId, process.env.GOOGLE_DRIVE_SOP_ROOT_FOLDER_ID].includes(group.google_folder_id))
+      return fail('Target folder tidak aman.');
+    const root = await getDriveFile(parent.data.google_folder_id);
+    if (root.trashed || root.driveId !== config.sharedDriveId || root.mimeType !== 'application/vnd.google-apps.folder' || !root.parents?.includes(config.rootFolderId))
+      return fail('Folder Job tidak berada pada root yang benar.');
+    try {
+      const file = await getDriveFile(group.google_folder_id);
+      if (file.driveId !== config.sharedDriveId || file.mimeType !== 'application/vnd.google-apps.folder' || !file.parents?.includes(root.id))
+        return fail('Folder group telah dipindahkan dari Job. Penghapusan dihentikan.');
+      if (!file.trashed) await trashDriveFile(file.id);
+    } catch (error) {
+      if (!(error instanceof GoogleDriveApiError && error.status === 404)) throw error;
+    }
+    const finished = await context.supabase.rpc('finish_job_document_group_trash', { p_group_id: input.groupId, p_expected_version: input.version });
+    if (finished.error) return fail('Folder sudah di Trash Drive, tetapi database belum selesai. Gunakan Delete lagi untuk melanjutkan.');
+    return { ok: true, message: 'Folder beserta isinya dipindahkan ke Trash Drive.', data: undefined };
+  } catch (error) {
+    return driveFailure(error, 'Penghapusan folder belum selesai. Folder terkunci; gunakan Delete lagi untuk melanjutkan.');
+  } finally {
+    refresh(input.jobId);
   }
 }
 

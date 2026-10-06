@@ -21,9 +21,9 @@ const active = (value: boolean): MasterDataCell => ({ type: 'badge', value: valu
 export function mapMasterRow(kind: MasterDataCategoryId, r: RecordRow): MasterDataRow {
   const isActive = r.is_active ?? true;
   let cells: MasterDataCell[];
-  if (kind === 'internal-service-categories') cells = [text(r.name), text(r.code, { mono: true }), text(String(r.referenceCount ?? 0))];
+  if (kind === 'internal-service-categories') cells = [text(r.name), text(r.code, { mono: true }), text(String(r.referenceCount ?? 0)), active(isActive)];
   else if (kind === 'workflow-templates')
-    cells = [text(r.name, { secondary: r.description }), { type: 'steps', items: r.stepNames ?? [] }, text(`${r.referenceCount ?? 0} services`), active(isActive)];
+    cells = [text(r.name, { secondary: r.description }), { type: 'steps', items: r.stepNames ?? [] }, text(`${r.referenceCount ?? 0} references`), active(isActive)];
   else if (kind === 'job-titles') cells = [text(r.name), text(r.code, { mono: true }), text(String(r.sort_order ?? 0)), active(isActive)];
   else {
     cells = [text(r.name), text(r.code, { mono: true }), { type: 'color', value: r.color ?? '#8C1010', color: r.color ?? '#8C1010' }, text(String(r.sort_order ?? 0)), active(isActive)];

@@ -18,6 +18,8 @@ export type MasterDataRow = {
   internalCategoryId?: string | null;
   internalCategoryCode?: string | null;
   referenceCount?: number;
+  deletionStartedAt?: string | null;
+  sopFileCount?: number;
   cells: MasterDataCell[];
 };
 
@@ -47,10 +49,10 @@ export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
   {
     id: 'internal-service-categories',
     label: 'Internal Service Categories',
-    description: 'Group internal services and define consistent code prefixes. Used categories cannot be edited or deleted.',
+    description: 'Group internal services and define consistent code prefixes. Unused categories can be deleted; used categories can be deactivated.',
     addLabel: 'Add Category',
     icon: 'category',
-    columns: ['Category', 'Code Prefix', 'Internal Services'],
+    columns: ['Category', 'Code Prefix', 'Internal Services', 'Status'],
   },
   {
     id: 'internal-services',
@@ -90,6 +92,6 @@ export const masterDataCategoryDefinitions: MasterDataCategoryDefinition[] = [
     description: 'Build ordered progress steps that can be assigned to internal services.',
     addLabel: 'Add Workflow',
     icon: 'workflow',
-    columns: ['Template', 'Ordered Steps', 'Assigned Services', 'Status'],
+    columns: ['Template', 'Ordered Steps', 'References', 'Status'],
   },
 ];

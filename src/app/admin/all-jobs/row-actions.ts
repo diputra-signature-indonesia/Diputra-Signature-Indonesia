@@ -73,8 +73,9 @@ async function trashContext(input: { jobId: string; version: number }) {
   const actor = await requireActiveAdmin();
   if ((actor.role !== 'admin' && actor.role !== 'super_admin') || !valid(input.jobId, input.version)) return { ok: false as const, message: 'Akses atau data Trash tidak valid.' };
   const supabase = await createSupabaseServerClient();
-  const job = await supabase.from('jobs').select('id,version').eq('id', input.jobId).not('archived_at', 'is', null).maybeSingle();
+  const job = await supabase.from('jobs').select('id,version,deletion_started_at').eq('id', input.jobId).not('archived_at', 'is', null).maybeSingle();
   if (job.error || !job.data || job.data.version !== input.version) return { ok: false as const, message: 'Job sudah berubah. Muat ulang daftar Trash.' };
+  if (job.data.deletion_started_at) return { ok: false as const, message: 'Job sedang dihapus permanen. Lanjutkan Delete Permanently, bukan Restore atau Retry Drive Trash.' };
   const folder = await supabase.from('job_drive_folders').select('google_folder_id').eq('job_id', input.jobId).not('archived_at', 'is', null).maybeSingle();
   if (folder.error) return { ok: false as const, message: 'Mapping folder Drive gagal dimuat.' };
   return { ok: true as const, supabase, folderId: folder.data?.google_folder_id };

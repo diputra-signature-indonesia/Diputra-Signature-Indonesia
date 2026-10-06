@@ -150,6 +150,7 @@ export function MasterDataFormModal({
   const isWorkflowTemplate = categoryId === 'workflow-templates';
   const isJobTitle = categoryId === 'job-titles';
   const isInternalCategory = categoryId === 'internal-service-categories';
+  const usedCategory = isInternalCategory && (row?.referenceCount ?? 0) > 0;
   const categoryLookup = useAdminPage<{ value: string; label: string; code: string }[]>(
     isInternalService && values.internalCategoryId ? `/api/admin/lookups?kind=internal_categories&id=${values.internalCategoryId}` : null
   );
@@ -277,7 +278,7 @@ export function MasterDataFormModal({
                 pattern={isInternalService ? '[A-Z0-9]+(_[A-Z0-9]+)*' : isInternalCategory ? '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*' : undefined}
                 value={values.code}
                 onChange={(event) => handleCodeChange(event.target.value)}
-                disabled={mode === 'edit' && !isInternalCategory}
+                disabled={usedCategory || (mode === 'edit' && !isInternalCategory)}
                 placeholder={isInternalCategory ? 'COMPANY / VISA' : isInternalService ? 'SETUP / EXTENSION' : 'EXAMPLE_CODE'}
                 className={fieldClassName + (isInternalService && codePrefix ? ' min-w-0 rounded-l-none font-mono' : '')}
               />
@@ -303,6 +304,7 @@ export function MasterDataFormModal({
               required
               maxLength={160}
               value={values.name}
+              disabled={usedCategory}
               onChange={(event) => updateValue('name', event.target.value)}
               placeholder={isInternalService ? 'Enter service name' : isWorkflowTemplate ? 'Enter workflow template name' : `Enter ${label.toLowerCase()} name`}
               className={fieldClassName}
@@ -399,21 +401,20 @@ export function MasterDataFormModal({
             </div>
           ) : null}
 
-          {!isInternalCategory ? (
-            <div className="rounded-lg border border-[#E1E4E8] bg-[#FAFBFC] px-3.5 py-3">
-              <label className={`flex items-center gap-2.5 text-xs font-semibold text-[#303846] ${isSystemRecord ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                <input
-                  type="checkbox"
-                  checked={values.isActive}
-                  disabled={isSystemRecord}
-                  onChange={(event) => updateValue('isActive', event.target.checked)}
-                  className="size-4 rounded border-[#B8C0CB] accent-[#8C1010]"
-                />
-                Active
-              </label>
-              {isSystemRecord ? <p className="mt-1.5 pl-6 text-[10px] leading-4 text-[#8A94A3]">System records must remain active to protect application workflows.</p> : null}
-            </div>
-          ) : null}
+          {usedCategory ? <p className="text-xs leading-5 text-[#707988]">Name and prefix are locked while this category is used. You can still change its availability.</p> : null}
+          <div className="rounded-lg border border-[#E1E4E8] bg-[#FAFBFC] px-3.5 py-3">
+            <label className={`flex items-center gap-2.5 text-xs font-semibold text-[#303846] ${isSystemRecord ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                checked={values.isActive}
+                disabled={isSystemRecord}
+                onChange={(event) => updateValue('isActive', event.target.checked)}
+                className="size-4 rounded border-[#B8C0CB] accent-[#8C1010]"
+              />
+              Active
+            </label>
+            {isSystemRecord ? <p className="mt-1.5 pl-6 text-[10px] leading-4 text-[#8A94A3]">System records must remain active to protect application workflows.</p> : null}
+          </div>
         </fieldset>
       </form>
     </AdminModal>

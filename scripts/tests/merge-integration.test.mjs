@@ -153,14 +153,18 @@ test('merge does not resurrect archived V2 migrations into the active chain', ()
   }
 });
 
-test('paged Job Trash keeps permanent deletion with typed confirmation', () => {
+test('paged Job Trash and active Jobs share impact then exact-title permanent deletion', () => {
   const modal = source('src/components/admin-all-jobs/job-trash-button.tsx');
   assert.match(modal, /listTrashJobsAction\(page\)/);
-  assert.match(modal, /permanentlyDeleteJobAction/);
-  assert.match(modal, /confirmation.trim\(\) !== deleting.title/);
-  assert.match(modal, /This cannot be undone/);
+  assert.match(modal, /JobDeletionModal/);
+  const confirmation = source('src/components/admin-all-jobs/job-deletion-modal.tsx');
+  assert.match(confirmation, /loadJobDeletionImpact/);
+  assert.match(confirmation, /stage !== 'confirm'/);
+  assert.match(confirmation, /confirmation !== impact.title/);
+  assert.match(confirmation, /Review tetap disimpan/);
   const action = source('src/app/admin/all-jobs/trash-actions.ts');
-  assert.match(action, /job.version !== input.version/);
-  assert.match(action, /confirmation !== job.title && confirmation !== client\?\.name/);
-  assert.match(action, /delete_job_permanently/);
+  assert.match(action, /deleteJobPermanently\(input, actor.userId\)/);
+  const workflow = source('src/lib/supabase/permanent-deletion.ts');
+  assert.match(workflow, /prepare_job_deletion/);
+  assert.match(workflow, /finish_job_deletion/);
 });
