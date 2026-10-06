@@ -73,11 +73,17 @@ select extensions.lives_ok(
 );
 select extensions.throws_ok(
   $$ select public.delete_job_permanently(current_setting('test.trash_job')::uuid,(select version from public.jobs where id=current_setting('test.trash_job')::uuid),'wrong') $$,
-  '22023','Confirmation must exactly match the Job title or client name.','permanent deletion requires exact confirmation'
+  '22023','Confirmation must exactly match the Job title.','permanent deletion requires exact title'
 );
+select set_config('test.trash_manifest',public.prepare_job_deletion(current_setting('test.trash_job')::uuid,(select version from public.jobs where id=current_setting('test.trash_job')::uuid),'Trash Lifecycle Job')::text,true);
+reset role;
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+select public.ack_deleted_drive_target('job',current_setting('test.trash_job')::uuid,(current_setting('test.trash_manifest')::jsonb->>'token')::uuid,'file-test',false);
+select public.ack_deleted_drive_target('job',current_setting('test.trash_job')::uuid,(current_setting('test.trash_manifest')::jsonb->>'token')::uuid,'folder-test',true);
 select extensions.lives_ok(
-  $$ select public.delete_job_permanently(current_setting('test.trash_job')::uuid,(select version from public.jobs where id=current_setting('test.trash_job')::uuid),'Trash Lifecycle Job') $$,
-  'admin can permanently delete a trashed Job'
+  $$ select public.finish_job_deletion(current_setting('test.trash_job')::uuid,(current_setting('test.trash_manifest')::jsonb->>'token')::uuid,'9a000000-0000-4000-8000-000000000001') $$,
+  'server finalizes deletion after mapped Drive resources are cleaned'
 );
 select extensions.is(
   (select count(*)::integer from public.jobs where id=current_setting('test.trash_job')::uuid)

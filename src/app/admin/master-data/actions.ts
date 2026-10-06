@@ -5,6 +5,7 @@ import type { MasterDataCategoryId } from '@/data/admin-master-data/master-data'
 import { requireActiveAdmin } from '@/lib/auth/admin-access';
 import { PUBLIC_CACHE_TAGS } from '@/lib/public-cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { deleteInternalService } from '@/lib/supabase/permanent-deletion';
 import type { Json } from '@/types/database.generated';
 import { revalidatePath, updateTag } from 'next/cache';
 
@@ -86,7 +87,7 @@ function validateSaveInput(input: SaveMasterDataInput): string | null {
 
 function actionError(error: { code?: string; message: string }): MasterDataActionResult {
   if (error.code === '23503' && error.message.startsWith('Category is used'))
-    return { ok: false, message: 'Kategori masih digunakan oleh Internal Service (termasuk yang inactive) dan tidak dapat diedit atau dihapus.' };
+    return { ok: false, message: 'Kategori masih digunakan oleh Internal Service. Nama dan prefix terkunci; availability tetap dapat diubah.' };
   if (error.code === '42501') return { ok: false, message: 'Hanya admin atau super admin aktif yang dapat mengubah Master Data.' };
   if (error.code === '23505') return { ok: false, message: 'Code atau nama tersebut sudah digunakan. Gunakan nilai lain.' };
   if (error.code === '40001') return { ok: false, message: 'Data sudah diubah oleh pengguna lain. Muat ulang halaman lalu coba kembali.' };
@@ -155,11 +156,12 @@ export async function saveMasterDataAction(rawInput: SaveMasterDataInput): Promi
       p_is_active: values.isActive,
     } as never));
   } else if (categoryId === 'internal-service-categories') {
-    ({ error } = await supabase.rpc('save_internal_service_category', {
+    ({ error } = await supabase.rpc('save_internal_service_category_state', {
       p_id: id ?? null,
       p_expected_version: expectedVersion ?? null,
       p_code: values.code,
       p_name: values.name,
+      p_is_active: values.isActive,
     } as never));
   } else if (categoryId === 'internal-services') {
     ({ error } = await supabase.rpc('save_categorized_internal_service', {
@@ -206,40 +208,36 @@ export async function archiveMasterDataAction(input: ArchiveMasterDataInput): Pr
     return { ok: false, message: 'Data yang akan dinonaktifkan tidak valid.' };
   }
 
-  if (input.categoryId === 'internal-service-categories' || input.categoryId === 'internal-services') {
+  try {
     const supabase = await createSupabaseServerClient();
-    const { data, error } =
-      input.categoryId === 'internal-service-categories'
-        ? await supabase.rpc('delete_internal_service_category', { p_id: input.id, p_expected_version: input.expectedVersion })
-        : await supabase.rpc('remove_internal_service', { p_id: input.id, p_expected_version: input.expectedVersion });
-    if (error) return actionError(error);
+    const result =
+      input.categoryId === 'internal-services'
+        ? await deleteInternalService(input, context.userId)
+        : await supabase.rpc('remove_master_data', { p_kind: input.categoryId, p_id: input.id, p_expected_version: input.expectedVersion }).then(({ data, error }) => ({ result: data, error }));
+    if (result.error) return actionError(result.error);
     revalidatePath('/admin/master-data');
     revalidatePath('/admin/all-jobs');
     revalidatePath('/admin/sop');
-    return { ok: true, message: data === 'deactivated' ? 'Service sudah digunakan: dinonaktifkan, histori Job/SOP tetap dipertahankan.' : 'Data yang belum digunakan berhasil dihapus permanen.' };
+    if (input.categoryId === 'job-titles') {
+      revalidatePath('/about');
+      updateTag(PUBLIC_CACHE_TAGS.team);
+    }
+    return {
+      ok: true,
+      message:
+        result.result === 'deactivated'
+          ? 'Data masih digunakan: dinonaktifkan, seluruh referensi tetap dipertahankan.'
+          : input.categoryId === 'internal-services'
+            ? 'Service beserta SOP dan file-nya berhasil dihapus permanen.'
+            : 'Data yang tidak digunakan berhasil dihapus permanen.',
+    };
+  } catch {
+    revalidatePath('/admin/master-data');
+    revalidatePath('/admin/sop');
+    return {
+      ok: false,
+      message:
+        'Penghapusan belum selesai. Data tidak dinyatakan berhasil dihapus. Jika proses sudah dimulai, service/SOP terkunci; gunakan Delete permanently lagi untuk melanjutkan. Periksa konfigurasi dan akses Manager pada Drive.',
+    };
   }
-
-  const entityByCategory: Record<Exclude<ArchiveMasterDataInput['categoryId'], 'internal-service-categories' | 'internal-services'>, string> = {
-    priorities: 'PRIORITY',
-    'job-statuses': 'JOB_STATUS',
-    'task-statuses': 'TASK_STATUS',
-    'job-titles': 'JOB_TITLE',
-    'workflow-templates': 'WORKFLOW_TEMPLATE',
-  };
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc('set_master_data_active', {
-    p_entity: entityByCategory[input.categoryId],
-    p_id: input.id,
-    p_expected_version: input.expectedVersion,
-    p_is_active: false,
-  } as never);
-
-  if (error) return actionError(error);
-
-  revalidatePath('/admin/master-data');
-  if (input.categoryId === 'job-titles') {
-    revalidatePath('/about');
-    updateTag(PUBLIC_CACHE_TAGS.team);
-  }
-  return { ok: true, message: 'Data berhasil dinonaktifkan dan histori tetap dipertahankan.' };
 }

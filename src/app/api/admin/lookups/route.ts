@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const parent = params.get('parent');
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (
-    !['profiles', 'clients', 'services', 'service_filters', 'internal_categories', 'workflows', 'job_titles', 'jobs'].includes(kind) ||
+    !['profiles', 'clients', 'services', 'service_filters', 'internal_categories', 'internal_category_filters', 'workflows', 'job_titles', 'jobs'].includes(kind) ||
     query.length > 160 ||
     (id && !uuid.test(id)) ||
     (parent && !uuid.test(parent))

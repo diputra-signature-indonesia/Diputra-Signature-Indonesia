@@ -92,6 +92,10 @@ export function AllJobsTable({ jobs, groupBy, isLoading, options, page, total, o
           setNotice({ message: result.message, warning: true });
           return;
         }
+        if (mode !== 'trash' && result.data.job.deletion_started_at) {
+          setNotice({ message: 'Job sedang dihapus dan terkunci. Gunakan Delete Job untuk melanjutkan pembersihan.', warning: true });
+          return;
+        }
         if (mode !== 'trash' && result.data.statusCode === 'COMPLETED') {
           setNotice({ message: 'Job sudah selesai. Buka detail Job untuk melakukan reopen terlebih dahulu.', warning: true });
           return;
@@ -244,7 +248,7 @@ export function AllJobsTable({ jobs, groupBy, isLoading, options, page, total, o
                             label: 'Delete Job',
                             icon: <Trash2 className="size-4" />,
                             disabled: pending || !permissions.canTrash,
-                            hint: 'Hanya admin. Job akan dipindahkan ke Trash.',
+                            hint: 'Hanya admin. Tinjau dampak, lalu konfirmasi judul untuk menghapus permanen.',
                             destructive: true,
                             onSelect: () => openAction(job, 'trash'),
                           },

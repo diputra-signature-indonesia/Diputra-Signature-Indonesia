@@ -84,6 +84,11 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
           action={editOptions ? <EditJobButton detail={detail} options={editOptions} /> : null}
         />
         <JobDetailTabs jobId={jobId} activeTab={activeTab} />
+        {detail.job.deletion_started_at ? (
+          <p role="status" className="mx-6 mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Penghapusan Job belum selesai. Perubahan dikunci. Buka All Jobs, lalu Delete Job untuk melanjutkan pembersihan permanen.
+          </p>
+        ) : null}
         {activeTab === 'detail' ? <LiveJobDetailContent detail={detail} /> : null}
         {activeTab === 'assignment' ? (
           <Suspense
@@ -107,7 +112,17 @@ export default async function AdminJobDetailPage({ params, searchParams }: { par
             <JobDocumentsSection jobId={jobId} canManage={detail.canManage} />
           </Suspense>
         ) : null}
-        {activeTab === 'logging' ? <Suspense fallback={<div className="flex min-h-48 items-center justify-center" role="status" aria-label="Loading Job Activity"><LoaderCircle className="size-7 animate-spin text-[#8C1010]" /></div>}><JobActivitySection jobId={jobId} /></Suspense> : null}
+        {activeTab === 'logging' ? (
+          <Suspense
+            fallback={
+              <div className="flex min-h-48 items-center justify-center" role="status" aria-label="Loading Job Activity">
+                <LoaderCircle className="size-7 animate-spin text-[#8C1010]" />
+              </div>
+            }
+          >
+            <JobActivitySection jobId={jobId} />
+          </Suspense>
+        ) : null}
       </div>
     );
   }

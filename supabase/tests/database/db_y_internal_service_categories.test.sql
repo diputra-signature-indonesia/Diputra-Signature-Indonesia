@@ -39,7 +39,7 @@ select extensions.throws_ok($$select public.save_internal_service_category(null,
 select extensions.throws_ok($$select public.save_internal_service_category(null,null,'COMPANY','Different name')$$,'23505',null,'category prefix must be unique');
 select extensions.lives_ok($$select public.save_internal_service_category(current_setting('test.cat_unused')::uuid,1,'UNUSED_CHANGED','Category Test Unused changed')$$,'unused category can change name and prefix');
 select extensions.throws_ok($$select public.save_internal_service_category(current_setting('test.cat_unused')::uuid,1,'OTHER','Stale')$$,'40001','Stale category version.','stale category edit rejected');
-select extensions.throws_ok($$select public.delete_internal_service_category(current_setting('test.cat_unused')::uuid,1)$$,'40001','Stale category version.','stale category removal rejected');
+select extensions.throws_ok($$select public.delete_internal_service_category(current_setting('test.cat_unused')::uuid,1)$$,'40001','Stale master data version.','stale category removal rejected');
 select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_unused')::uuid,2)$$,'unused category hard deleted');
 select extensions.is((select count(*)::integer from public.internal_service_categories where id=current_setting('test.cat_unused')::uuid),0,'unused category physically removed');
 
@@ -52,18 +52,19 @@ select extensions.is((select code from public.internal_services where id=current
 select extensions.is((select category_id from public.internal_services where id=current_setting('test.cat_service')::uuid),current_setting('test.cat_company')::uuid,'chosen category persisted');
 select extensions.throws_ok($$select public.save_categorized_internal_service(null,null,current_setting('test.cat_company')::uuid,'SETUP','Duplicate')$$,'23505',null,'duplicate full service code rejected');
 select extensions.throws_ok($$select public.save_internal_service_category(current_setting('test.cat_company')::uuid,1,'COMPANY2','Cannot edit')$$,'23503',null,'used category cannot be edited');
-select extensions.throws_ok($$select public.delete_internal_service_category(current_setting('test.cat_company')::uuid,1)$$,'23503',null,'used category cannot be removed');
+select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_company')::uuid,1)$$,'used category deactivates without deleting references');
+select extensions.lives_ok($$select public.save_internal_service_category_state(current_setting('test.cat_company')::uuid,2,'COMPANY','Category Test Company',true)$$,'reactivate used category availability');
 select extensions.throws_ok($$select public.save_categorized_internal_service(current_setting('test.cat_service')::uuid,1,current_setting('test.cat_company')::uuid,'CHANGED','Changed')$$,'55000','Service code suffix is permanent.','manual suffix immutable on edit');
 select extensions.throws_ok($$select public.save_categorized_internal_service(current_setting('test.cat_service')::uuid,1,null,'SETUP','Changed')$$,'22023',null,'categorized service cannot be uncategorized');
 select extensions.lives_ok($$select public.save_categorized_internal_service(current_setting('test.cat_service')::uuid,1,current_setting('test.cat_visa')::uuid,'SETUP','Moved service',null,null,false)$$,'service may move category without changing identity');
 select extensions.is((select code from public.internal_services where id=current_setting('test.cat_service')::uuid),'VISA_SETUP','prefix follows new category');
 select extensions.is((select version from public.internal_services where id=current_setting('test.cat_service')::uuid),2,'categorized save increments version once');
-select extensions.throws_ok($$select public.delete_internal_service_category(current_setting('test.cat_visa')::uuid,1)$$,'23503',null,'inactive service still locks its category');
-select extensions.throws_ok($$select public.save_internal_service_category(current_setting('test.cat_visa')::uuid,1,'NEW_VISA','Cannot edit inactive')$$,'23503',null,'inactive service also prevents category edit');
+select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_visa')::uuid,1)$$,'category used by inactive service deactivates');
+select extensions.throws_ok($$select public.save_internal_service_category(current_setting('test.cat_visa')::uuid,2,'NEW_VISA','Cannot edit inactive')$$,'23503',null,'inactive service also prevents category prefix edit');
 select extensions.throws_ok($$select public.remove_internal_service(current_setting('test.cat_service')::uuid,1)$$,'40001','Stale service version.','stale service delete rejected');
 select extensions.is(public.remove_internal_service(current_setting('test.cat_service')::uuid,2),'deleted','unused inactive service hard deletes');
 select extensions.is((select count(*)::integer from public.internal_services where id=current_setting('test.cat_service')::uuid),0,'unused service physically removed');
-select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_visa')::uuid,1)$$,'category unlocks after last service removal');
+select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_visa')::uuid,2)$$,'inactive category hard deletes after last service removal');
 
 select set_config('test.cat_legacy',public.save_internal_service(null,null,'LEGACY_TEST','Category Legacy')::text,true);
 select extensions.lives_ok($$select public.save_categorized_internal_service(current_setting('test.cat_legacy')::uuid,1,null,'LEGACY_TEST','Legacy renamed')$$,'legacy uncategorized service remains editable');
@@ -84,12 +85,13 @@ select extensions.lives_ok($$select public.trash_job(current_setting('test.cat_j
 select extensions.is((select job_count from public.list_internal_service_usage() where id=current_setting('test.cat_used')::uuid),1::bigint,'usage includes archived Jobs');
 select extensions.is((select sop_count from public.list_internal_service_usage() where id=current_setting('test.cat_used')::uuid),1::bigint,'usage includes SOP references');
 select extensions.is(public.remove_internal_service(current_setting('test.cat_used')::uuid,2),'deactivated','archived references continue blocking hard deletion');
-select extensions.throws_ok($$select public.delete_internal_service_category(current_setting('test.cat_company')::uuid,1)$$,'23503',null,'category remains locked by historically used inactive service');
+select extensions.lives_ok($$select public.delete_internal_service_category(current_setting('test.cat_company')::uuid,3)$$,'historically used category deactivates without breaking inactive references');
+select extensions.lives_ok($$select public.save_internal_service_category_state(current_setting('test.cat_company')::uuid,4,'COMPANY','Category Test Company',true)$$,'restore used category availability for remaining fixtures');
 
--- A SOP alone also prevents removal, even without any Job.
+-- A metadata-only SOP is owned by its service and no longer prevents removal.
 select set_config('test.cat_sop_only_service',public.save_categorized_internal_service(null,null,current_setting('test.cat_company')::uuid,'SOP_ONLY','SOP only service')::text,true);
 select public.save_sop(current_setting('test.cat_sop_only_service')::uuid,'SOP only',null);
-select extensions.is(public.remove_internal_service(current_setting('test.cat_sop_only_service')::uuid,1),'deactivated','SOP-only service cannot hard delete');
+select extensions.is(public.remove_internal_service(current_setting('test.cat_sop_only_service')::uuid,1),'deleted','service with metadata-only SOP hard deletes together');
 
 select set_config('request.jwt.claim.sub','f4100000-0000-4000-8000-000000000002',true);
 select extensions.is((select count(*)::integer from public.internal_service_categories where id=current_setting('test.cat_company')::uuid),1,'active staff can read internal categories');

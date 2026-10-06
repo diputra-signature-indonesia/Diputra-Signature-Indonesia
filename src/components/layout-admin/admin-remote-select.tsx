@@ -19,7 +19,7 @@ export function AdminRemoteSelect({
   appearance = 'field',
   labelSuffix,
 }: {
-  kind: 'profiles' | 'clients' | 'services' | 'service_filters' | 'internal_categories' | 'workflows' | 'job_titles' | 'jobs';
+  kind: 'profiles' | 'clients' | 'services' | 'service_filters' | 'internal_categories' | 'internal_category_filters' | 'workflows' | 'job_titles' | 'jobs';
   value: string;
   onChange: (value: string, label: string) => void;
   label: string;

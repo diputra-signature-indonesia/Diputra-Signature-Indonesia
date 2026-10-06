@@ -15,10 +15,12 @@ import {
 } from '@/app/admin/all-jobs/[jobId]/document-actions';
 import { AdminModal } from '@/components/layout-admin/admin-modal';
 import type { JobDocumentsData } from '@/lib/supabase/queries/job-documents';
-import { Check, ExternalLink, FileText, FolderOpen, HardDrive, LoaderCircle, LockKeyhole, MailPlus, RefreshCw, Search, ShieldCheck, Trash2, UploadCloud, UserRound } from 'lucide-react';
+import { Check, ExternalLink, FolderOpen, FolderPlus, HardDrive, LoaderCircle, LockKeyhole, MailPlus, RefreshCw, Search, ShieldCheck, Trash2, UploadCloud, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { uploadFileToGoogleDrive } from './job-document-upload-client';
+import { JobDocumentBrowser } from './job-document-browser';
+import type { DisplayJobDocument } from './job-document-list';
 
 export type DemoJobDocument = {
   id: string;
@@ -44,17 +46,6 @@ const roleLabels: Record<string, string> = {
   owner: 'Owner',
 };
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date(value));
-}
-
-function formatSize(value: number | null) {
-  if (value === null) return null;
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / 1024 ** 2).toFixed(1)} MB`;
-}
-
 function AccessAvatar({ permission }: { permission: JobFolderPermission }) {
   if (permission.photoLink) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -79,6 +70,8 @@ function AccessUserOptionAvatar({ user }: { user: JobAccessUserOption }) {
 export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: explicitJobId }: { data?: JobDocumentsData; canManage: boolean; demoDocuments?: DemoJobDocument[]; jobId?: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadGroupRef = useRef<string | null>(null);
+  const [addFolderOpen, setAddFolderOpen] = useState(false);
   const accessPickerRef = useRef<HTMLDivElement>(null);
   const documents = demoDocuments ?? data?.documents ?? [];
   const folder = data?.folder ?? null;
@@ -87,9 +80,10 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
   const [isPending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [pendingFinalize, setPendingFinalize] = useState<{ googleFileId: string; groupId: string | null; fileName: string } | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [deleting, setDeleting] = useState<(typeof documents)[number] | null>(null);
+  const [deleting, setDeleting] = useState<DisplayJobDocument | null>(null);
   const [permissions, setPermissions] = useState<JobFolderPermission[]>([]);
   const [accessLoading, setAccessLoading] = useState(false);
   const [accessLoaded, setAccessLoaded] = useState(false);
@@ -160,19 +154,23 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
     setError('');
     setMessage('');
     setUploadProgress(0);
+    setPendingFinalize(null);
+    const groupId = uploadGroupRef.current;
     try {
-      const prepared = await prepareJobDocumentUploadAction({ jobId, fileName: file.name, mimeType: file.type || 'application/octet-stream', sizeBytes: file.size });
+      const prepared = await prepareJobDocumentUploadAction({ jobId, groupId, fileName: file.name, mimeType: file.type || 'application/octet-stream', sizeBytes: file.size });
       if (!prepared.ok) {
         setError(prepared.message);
         return;
       }
       await uploadFileToGoogleDrive(prepared.data.uploadUrl, file, setUploadProgress);
-      const finalized = await finalizeJobDocumentUploadAction({ jobId, googleFileId: prepared.data.googleFileId });
+      setPendingFinalize({ googleFileId: prepared.data.googleFileId, groupId, fileName: file.name });
+      const finalized = await finalizeJobDocumentUploadAction({ jobId, groupId, googleFileId: prepared.data.googleFileId });
       if (!finalized.ok) {
         setError(finalized.message);
         return;
       }
       setMessage(finalized.message);
+      setPendingFinalize(null);
       router.refresh();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Upload Google Drive gagal.');
@@ -181,6 +179,25 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
       setUploadProgress(null);
       if (inputRef.current) inputRef.current.value = '';
     }
+  }
+
+  function retryFinalize() {
+    if (!jobId || !pendingFinalize || busy || isPending) return;
+    setError('');
+    startTransition(async () => {
+      try {
+        const result = await finalizeJobDocumentUploadAction({ jobId, googleFileId: pendingFinalize.googleFileId, groupId: pendingFinalize.groupId });
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setPendingFinalize(null);
+        setMessage(result.message);
+        router.refresh();
+      } catch {
+        setError('Finalisasi belum dapat dikonfirmasi. Coba Retry save tanpa mengunggah file ulang.');
+      }
+    });
   }
 
   function prepareFolder() {
@@ -301,11 +318,23 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
                 <button
                   type="button"
                   disabled={busy || isPending}
-                  onClick={() => inputRef.current?.click()}
+                  onClick={() => {
+                    uploadGroupRef.current = null;
+                    inputRef.current?.click();
+                  }}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#8C1010] px-4 text-xs font-semibold text-white hover:bg-[#730D0D] disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   {busy ? <LoaderCircle className="size-4 animate-spin" /> : <UploadCloud className="size-4" />}
                   {uploadProgress === null ? 'Upload Document' : `Uploading ${uploadProgress}%`}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || isPending}
+                  onClick={() => setAddFolderOpen(true)}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#CBD1D9] px-3 text-xs font-semibold text-[#485466] hover:border-[#8C1010] disabled:opacity-50"
+                >
+                  <FolderPlus className="size-4" />
+                  Add Folder
                 </button>
                 <input ref={inputRef} type="file" className="sr-only" onChange={(event) => void upload(event.target.files?.[0])} />
               </div>
@@ -313,6 +342,15 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
           </header>
 
           <div className="space-y-3 p-5 sm:p-6">
+            {pendingFinalize && !busy ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                <span>Finalisasi {pendingFinalize.fileName} belum selesai. Tidak perlu upload ulang.</span>
+                <button type="button" disabled={isPending || !canManage} onClick={retryFinalize} className="inline-flex items-center gap-1.5 font-semibold underline disabled:opacity-40">
+                  <RefreshCw className="size-3.5" />
+                  Retry save
+                </button>
+              </div>
+            ) : null}
             {error ? (
               <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
                 {error}
@@ -323,74 +361,21 @@ export function JobDocumentsPanel({ data, canManage, demoDocuments, jobId: expli
                 {message}
               </p>
             ) : null}
-            {documents.map((document) => {
-              const size = formatSize(document.file_size_bytes);
-              const summary = (
-                <>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <FileText className="size-5 shrink-0 text-[#022448]" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#282323]">{document.file_name}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-[#657080]">
-                        {document.mime_type || 'Google Drive file'}
-                        {size ? ` · ${size}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-4">
-                    <div className="hidden text-right sm:block">
-                      <p className="text-[10px] text-[#6B7480]">Tanggal Unggah</p>
-                      <p className="mt-0.5 text-[11px] text-[#685754]">{formatDate(document.uploaded_at)}</p>
-                    </div>
-                    {document.web_view_url ? <ExternalLink className="size-4 text-[#8C1010]" /> : null}
-                  </div>
-                </>
-              );
-              return (
-                <article key={document.id} className="flex items-center gap-2 rounded-lg border border-[#C8CDD5] bg-[#F2F4F7] transition hover:border-[#9FA8B5] hover:bg-[#ECEFF3]">
-                  {document.web_view_url ? (
-                    <a
-                      href={document.web_view_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-4 py-3.5 focus-visible:ring-2 focus-visible:ring-[#8C1010]/20 focus-visible:outline-none"
-                    >
-                      {summary}
-                    </a>
-                  ) : (
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-3.5">{summary}</div>
-                  )}
-                  {canManage && document.version ? (
-                    <button
-                      type="button"
-                      disabled={isPending || busy}
-                      onClick={() => setDeleting(document)}
-                      aria-label={`Delete ${document.file_name}`}
-                      className="mr-3 flex size-8 items-center justify-center rounded-lg text-[#8C1010] hover:bg-red-50 disabled:opacity-40"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  ) : null}
-                </article>
-              );
-            })}
-            {!documents.length ? (
-              <div
-                onDragOver={(event) => canManage && event.preventDefault()}
-                onDrop={(event) => {
-                  if (!canManage) return;
-                  event.preventDefault();
-                  void upload(event.dataTransfer.files[0]);
-                }}
-                className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#C8CDD5] bg-[#FAFBFC] px-6 text-center"
-              >
-                <UploadCloud className="size-9 text-[#A5ADB8]" />
-                <h3 className="mt-3 text-sm font-semibold text-[#303846]">Belum ada dokumen Job</h3>
-                <p className="mt-1 max-w-md text-xs leading-5 text-[#7B8491]">
-                  {canManage ? 'Klik Upload Document atau tarik file ke area ini. Ukuran maksimal 100 MiB.' : 'Dokumen akan muncul setelah PIC atau admin mengunggah file.'}
-                </p>
-              </div>
-            ) : null}
+            <JobDocumentBrowser
+              data={data}
+              demoDocuments={demoDocuments}
+              jobId={jobId}
+              canManage={canManage}
+              disabled={busy || isPending}
+              onUpload={(groupId, file) => {
+                uploadGroupRef.current = groupId;
+                if (file) void upload(file);
+                else inputRef.current?.click();
+              }}
+              onDelete={setDeleting}
+              addFolderOpen={addFolderOpen}
+              onCloseAddFolder={() => setAddFolderOpen(false)}
+            />
           </div>
         </section>
 

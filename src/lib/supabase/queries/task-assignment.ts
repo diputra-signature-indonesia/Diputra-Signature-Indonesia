@@ -7,7 +7,7 @@ export async function getTaskAssignment(jobId: string) {
   const actor = await requireActiveAdmin();
   const supabase = await createSupabaseServerClient();
   const [job, columns, tasks, statuses, priorities] = await Promise.all([
-    supabase.from('jobs').select('id,pic_id,archived_at,status_id').eq('id', jobId).maybeSingle(),
+    supabase.from('jobs').select('id,pic_id,archived_at,status_id,deletion_started_at').eq('id', jobId).maybeSingle(),
     supabase.from('job_task_statuses').select('id,task_status_id,column_order').eq('job_id', jobId).order('column_order'),
     supabase
       .from('tasks')
@@ -33,7 +33,7 @@ export async function getTaskAssignment(jobId: string) {
   const priorityMap = new Map((priorities.data ?? []).map((priority) => [priority.id, priority]));
   const profileMap = new Map((profiles.data ?? []).map((profile) => [profile.id, profile]));
   const canManage = actor.role === 'admin' || actor.role === 'super_admin' || actor.userId === job.data.pic_id;
-  const readOnly = Boolean(job.data.archived_at) || jobStatus?.code === 'COMPLETED';
+  const readOnly = Boolean(job.data.archived_at || job.data.deletion_started_at) || jobStatus?.code === 'COMPLETED';
 
   return {
     jobId,

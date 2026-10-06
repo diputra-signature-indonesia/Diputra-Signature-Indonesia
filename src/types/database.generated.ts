@@ -335,6 +335,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_active: boolean
           name: string
           updated_at: string
           updated_by: string | null
@@ -345,6 +346,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
           name: string
           updated_at?: string
           updated_by?: string | null
@@ -355,6 +357,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           updated_at?: string
           updated_by?: string | null
@@ -383,6 +386,8 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
+          deletion_started_at: string | null
+          deletion_token: string | null
           id: string
           is_active: boolean
           name: string
@@ -397,6 +402,8 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          deletion_started_at?: string | null
+          deletion_token?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -411,6 +418,8 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          deletion_started_at?: string | null
+          deletion_token?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -586,6 +595,97 @@ export type Database = {
           },
         ]
       }
+      job_document_groups: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string
+          created_by: string
+          folder_name: string
+          google_folder_id: string
+          id: string
+          job_drive_folder_id: string
+          job_id: string
+          status: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by: string
+          folder_name: string
+          google_folder_id: string
+          id?: string
+          job_drive_folder_id: string
+          job_id: string
+          status?: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string
+          created_by?: string
+          folder_name?: string
+          google_folder_id?: string
+          id?: string
+          job_drive_folder_id?: string
+          job_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_document_groups_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_document_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_document_groups_folder_fkey"
+            columns: ["job_id", "job_drive_folder_id"]
+            isOneToOne: false
+            referencedRelation: "job_drive_folders"
+            referencedColumns: ["job_id", "id"]
+          },
+          {
+            foreignKeyName: "job_document_groups_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_document_groups_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_document_groups_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_documents: {
         Row: {
           archived_at: string | null
@@ -596,6 +696,7 @@ export type Database = {
           file_size_bytes: number | null
           google_file_id: string
           google_resource_key: string | null
+          group_id: string | null
           id: string
           job_drive_folder_id: string
           job_id: string
@@ -619,6 +720,7 @@ export type Database = {
           file_size_bytes?: number | null
           google_file_id: string
           google_resource_key?: string | null
+          group_id?: string | null
           id?: string
           job_drive_folder_id: string
           job_id: string
@@ -642,6 +744,7 @@ export type Database = {
           file_size_bytes?: number | null
           google_file_id?: string
           google_resource_key?: string | null
+          group_id?: string | null
           id?: string
           job_drive_folder_id?: string
           job_id?: string
@@ -677,6 +780,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "job_drive_folders"
             referencedColumns: ["job_id", "id"]
+          },
+          {
+            foreignKeyName: "job_documents_group_fkey"
+            columns: ["job_id", "job_drive_folder_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "job_document_groups"
+            referencedColumns: ["job_id", "job_drive_folder_id", "id"]
           },
           {
             foreignKeyName: "job_documents_job_id_fkey"
@@ -1174,6 +1284,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          deletion_started_at: string | null
+          deletion_token: string | null
           description: string | null
           estimated_end_date: string | null
           id: string
@@ -1197,6 +1309,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by: string
+          deletion_started_at?: string | null
+          deletion_token?: string | null
           description?: string | null
           estimated_end_date?: string | null
           id?: string
@@ -1220,6 +1334,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string
+          deletion_started_at?: string | null
+          deletion_token?: string | null
           description?: string | null
           estimated_end_date?: string | null
           id?: string
@@ -2637,6 +2753,25 @@ export type Database = {
       }
     }
     Functions: {
+      ack_deleted_drive_target: {
+        Args: {
+          p_google_id: string
+          p_id: string
+          p_is_folder: boolean
+          p_kind: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      ack_deleted_sop_storage_target: {
+        Args: {
+          p_bucket: string
+          p_id: string
+          p_path: string
+          p_token: string
+        }
+        Returns: undefined
+      }
       add_job_contributor: {
         Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
@@ -2704,6 +2839,10 @@ export type Database = {
       check_review_request_status: {
         Args: { p_token: string }
         Returns: string
+      }
+      complete_job_document_group: {
+        Args: { p_group_id: string }
+        Returns: undefined
       }
       complete_job_step: {
         Args: { p_expected_version: number; p_job_step_id: string }
@@ -2855,6 +2994,22 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["admin_access_request_status"]
       }
+      finish_expired_job_deletion: {
+        Args: { p_job_id: string; p_token: string }
+        Returns: undefined
+      }
+      finish_internal_service_deletion: {
+        Args: { p_actor: string; p_id: string; p_token: string }
+        Returns: undefined
+      }
+      finish_job_deletion: {
+        Args: { p_actor: string; p_job_id: string; p_token: string }
+        Returns: string
+      }
+      finish_job_document_group_trash: {
+        Args: { p_expected_version: number; p_group_id: string }
+        Returns: undefined
+      }
       get_own_account_details: { Args: never; Returns: Json }
       internal_service_catalogue_counts: { Args: never; Returns: Json }
       is_active_super_admin: { Args: never; Returns: boolean }
@@ -2862,6 +3017,10 @@ export type Database = {
       is_admin_role: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_staff_role: { Args: never; Returns: boolean }
+      job_deletion_impact: {
+        Args: { p_expected_version: number; p_job_id: string }
+        Returns: Json
+      }
       list_active_clients_for_job: {
         Args: never
         Returns: {
@@ -2977,6 +3136,35 @@ export type Database = {
         }
         Returns: number
       }
+      prepare_expired_job_deletion: {
+        Args: { p_job_id: string }
+        Returns: Json
+      }
+      prepare_internal_service_deletion: {
+        Args: { p_expected_version: number; p_id: string }
+        Returns: Json
+      }
+      prepare_job_deletion: {
+        Args: {
+          p_confirmation: string
+          p_expected_version: number
+          p_job_id: string
+        }
+        Returns: Json
+      }
+      prepare_job_document_group: {
+        Args: {
+          p_google_folder_id: string
+          p_job_id: string
+          p_name: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      prepare_job_document_group_trash: {
+        Args: { p_expected_version: number; p_group_id: string }
+        Returns: Json
+      }
       purge_expired_job: { Args: { p_job_id: string }; Returns: string }
       reject_admin_access_request: {
         Args: { p_rejection_reason?: string; p_user_id: string }
@@ -2989,6 +3177,10 @@ export type Database = {
       remove_job_contributor: {
         Args: { p_job_id: string; p_profile_id: string }
         Returns: undefined
+      }
+      remove_master_data: {
+        Args: { p_expected_version: number; p_id: string; p_kind: string }
+        Returns: string
       }
       reopen_job: {
         Args: { p_expected_version: number; p_job_id: string; p_reason: string }
@@ -3036,6 +3228,20 @@ export type Database = {
         }
         Returns: string
       }
+      save_grouped_job_document_metadata: {
+        Args: {
+          p_file_name: string
+          p_file_size_bytes: number
+          p_google_file_id: string
+          p_google_resource_key: string
+          p_group_id?: string
+          p_job_drive_folder_id: string
+          p_job_id: string
+          p_mime_type: string
+          p_web_view_url: string
+        }
+        Returns: string
+      }
       save_internal_service: {
         Args: {
           p_code: string
@@ -3053,6 +3259,16 @@ export type Database = {
           p_code: string
           p_expected_version: number
           p_id: string
+          p_name: string
+        }
+        Returns: string
+      }
+      save_internal_service_category_state: {
+        Args: {
+          p_code: string
+          p_expected_version: number
+          p_id: string
+          p_is_active: boolean
           p_name: string
         }
         Returns: string
@@ -3294,6 +3510,15 @@ export type Database = {
           email: string
           id: string
         }[]
+      }
+      search_job_documents: {
+        Args: {
+          p_group_id?: string
+          p_groups_page?: number
+          p_job_id: string
+          p_page?: number
+        }
+        Returns: Json
       }
       search_job_remarks: {
         Args: { p_job_id: string; p_page?: number }

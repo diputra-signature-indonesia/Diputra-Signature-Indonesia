@@ -99,6 +99,16 @@ export async function createJobFolder(jobId: string, folderName: string) {
   });
 }
 
+export async function createJobDocumentGroupFolder(parentFolderId: string, folderId: string, groupId: string, name: string) {
+  const params = new URLSearchParams({ supportsAllDrives: 'true', fields: 'id,name,mimeType,webViewLink,parents,driveId,trashed' });
+  return driveFetch<GoogleDriveFile>(`${DRIVE_API}/files?${params}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // Reserved ID makes retries idempotent. Inherit access; never copy ACLs.
+    body: JSON.stringify({ id: folderId, name, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId], appProperties: { dsiDocumentGroupId: groupId, managedBy: 'diputra-admin' } }),
+  });
+}
+
 export async function findSopFolder(sopId: string) {
   const { sharedDriveId } = getGoogleDriveConfig();
   const rootFolderId = getGoogleDriveSopRootFolderId();

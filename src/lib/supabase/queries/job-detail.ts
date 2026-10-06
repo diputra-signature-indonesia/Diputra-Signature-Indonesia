@@ -10,7 +10,7 @@ export async function getJobDetail(jobId: string, includePanels = true) {
   const supabase = await createSupabaseServerClient();
   const { data: job, error: jobError } = await supabase
     .from('jobs')
-    .select('id,client_id,pic_id,title,description,internal_service_id,priority_id,status_id,status_reason,start_date,estimated_end_date,updated_at,version,archived_at')
+    .select('id,client_id,pic_id,title,description,internal_service_id,priority_id,status_id,status_reason,start_date,estimated_end_date,updated_at,version,archived_at,deletion_started_at')
     .eq('id', jobId)
     .is('archived_at', null)
     .maybeSingle();
@@ -43,7 +43,7 @@ export async function getJobDetail(jobId: string, includePanels = true) {
     job,
     summary,
     statusCode: status.data?.code ?? 'UNKNOWN',
-    canManage: actor.role === 'admin' || actor.role === 'super_admin' || actor.userId === job.pic_id,
+    canManage: !job.deletion_started_at && (actor.role === 'admin' || actor.role === 'super_admin' || actor.userId === job.pic_id),
     canChangePic: actor.role === 'admin' || actor.role === 'super_admin',
     steps: steps.data ?? [],
     remarks: remarkPage.rows,

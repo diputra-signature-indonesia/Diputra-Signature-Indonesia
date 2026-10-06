@@ -95,9 +95,9 @@ export function MasterDataTable({ category, canManage, pendingRowId, emptyMessag
               const label = rowLabel(row);
               const isPending = pendingRowId === row.id;
               const usedCategory = category.id === 'internal-service-categories' && (row.referenceCount ?? 0) > 0;
-              const hardDelete = category.id === 'internal-service-categories' || (category.id === 'internal-services' && row.referenceCount === 0);
-              const editDisabled = !canManage || !onEdit || isPending || usedCategory;
-              const archiveDisabled = !canManage || !onArchive || row.isSystem || (!row.isActive && !hardDelete) || isPending || usedCategory;
+              const hardDelete = row.referenceCount === 0;
+              const editDisabled = !canManage || !onEdit || isPending || Boolean(row.deletionStartedAt);
+              const archiveDisabled = !canManage || !onArchive || row.isSystem || (!row.isActive && !hardDelete) || isPending;
               const removeLabel = hardDelete ? 'Delete permanently' : 'Deactivate';
 
               return (
@@ -138,7 +138,7 @@ export function MasterDataTable({ category, canManage, pendingRowId, emptyMessag
                         onClick={() => onEdit?.(row)}
                         disabled={editDisabled}
                         aria-label={`Edit ${label}`}
-                        title={usedCategory ? 'Category is used by internal services (including inactive services)' : canManage ? 'Edit' : 'Only admin and super admin can edit'}
+                        title={usedCategory ? 'Change availability (name and prefix are locked while used)' : canManage ? 'Edit' : 'Only admin and super admin can edit'}
                         className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FDEBEB] hover:text-[#8C1010] focus-visible:ring-2 focus-visible:ring-[#8C1010]/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
                       >
                         <Pencil aria-hidden="true" className="size-4" strokeWidth={1.7} />
@@ -153,15 +153,7 @@ export function MasterDataTable({ category, canManage, pendingRowId, emptyMessag
                           onClick={() => onArchive?.(row)}
                           disabled={archiveDisabled}
                           aria-label={`${removeLabel} ${label}`}
-                          title={
-                            usedCategory
-                              ? 'Category is used by internal services (including inactive services)'
-                              : !row.isActive && !hardDelete
-                                ? 'Already inactive'
-                                : canManage
-                                  ? removeLabel
-                                  : 'Only admin and super admin can change Master Data'
-                          }
+                          title={!row.isActive && !hardDelete ? 'Already inactive' : canManage ? removeLabel : 'Only admin and super admin can change Master Data'}
                           className="flex size-8 items-center justify-center rounded-lg text-[#6F7D90] transition hover:bg-[#FFF0F0] hover:text-[#C32929] focus-visible:ring-2 focus-visible:ring-[#C32929]/25 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-[#6F7D90]"
                         >
                           {hardDelete ? <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.7} /> : <Archive aria-hidden="true" className="size-4" strokeWidth={1.7} />}
