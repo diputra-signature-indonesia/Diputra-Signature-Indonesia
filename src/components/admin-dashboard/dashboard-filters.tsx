@@ -49,7 +49,7 @@ export function DashboardFilters({ options, onApply }: { options: DashboardFilte
         placeholder="All PIC"
         fixedOptions={[
           { value: '', label: 'All PIC' },
-          { value: 'UNASSIGNED', label: 'Unassigned tasks' },
+          { value: 'UNASSIGNED', label: 'Unassigned' },
         ]}
         onChange={(value) => updateFilter('pic', value)}
       />

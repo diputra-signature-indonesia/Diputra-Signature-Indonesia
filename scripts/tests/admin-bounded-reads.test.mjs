@@ -100,7 +100,11 @@ test('paged query modules make a fixed one data RPC regardless of catalogue size
 test('Dashboard aggregates and Client Service projections each make one data RPC', async () => {
   for (const total of [1, 70, 1075]) {
     const dashboard = rpcHarness({ counts: { active: total }, taskLoads: [], internalServices: [], attention: [], statuses: [] });
-    const dq = compile('../../src/lib/supabase/queries/dashboard.ts', { 'server-only': {}, '@/lib/supabase/server': { createSupabaseServerClient: async () => dashboard.client } });
+    const dq = compile('../../src/lib/supabase/queries/dashboard.ts', {
+      'server-only': {},
+      '@/lib/supabase/server': { createSupabaseServerClient: async () => dashboard.client },
+      '@/lib/admin-deadline': { makassarToday },
+    });
     assert.equal((await dq.getDashboardData({ pic: 'pic' })).metrics[0].value, total);
     assert.equal(dashboard.calls.length, 1);
     const content = rpcHarness({

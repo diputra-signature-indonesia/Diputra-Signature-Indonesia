@@ -31,7 +31,7 @@ export function DashboardWorkspace({ data }: { data: DashboardData }) {
           <DashboardPicLoadCard taskLoads={current.taskLoads} />
           <DashboardCategoryCard internalServices={current.internalServices} />
         </section>
-        <DashboardAttentionTable tasks={current.attentionTasks} />
+        <DashboardAttentionTable jobs={current.attentionJobs} />
       </div>
     </>
   );

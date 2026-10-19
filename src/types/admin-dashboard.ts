@@ -17,18 +17,17 @@ export type PicTaskLoad = {
   delayed: number;
 };
 
-export type TaskInternalServiceSummary = {
+export type JobInternalServiceSummary = {
   id: string;
   label: string;
   value: number;
   color: string;
 };
 
-export type AttentionTask = {
+export type AttentionJob = {
   id: string;
-  jobId: string;
   client: string;
-  task: string;
+  title: string;
   pic: string;
   internalService: string;
   priority: string;
@@ -38,26 +37,6 @@ export type AttentionTask = {
   progress: number;
   deadline: string;
   deadlineTone: 'urgent' | 'warning' | 'normal';
-};
-
-export type DashboardTaskRecord = {
-  id: string;
-  jobId: string;
-  title: string;
-  dueDate: string | null;
-  assigneeId: string | null;
-  assigneeName: string;
-  clientId: string;
-  clientName: string;
-  internalServiceId: string;
-  internalServiceName: string;
-  priorityName: string;
-  priorityColor: string;
-  statusId: string;
-  statusName: string;
-  statusCode: string;
-  statusColor: string;
-  progress: number;
 };
 
 export type DashboardFilterOption = { value: string; label: string };
@@ -72,8 +51,8 @@ export type DashboardFilterOptions = {
 export type DashboardData = {
   metrics: DashboardMetric[];
   taskLoads: PicTaskLoad[];
-  internalServices: TaskInternalServiceSummary[];
-  attentionTasks: AttentionTask[];
+  internalServices: JobInternalServiceSummary[];
+  attentionJobs: AttentionJob[];
   revision: string;
   filterOptions: DashboardFilterOptions;
 };

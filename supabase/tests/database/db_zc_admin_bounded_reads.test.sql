@@ -62,9 +62,10 @@ select extensions.is(jsonb_array_length(public.search_my_tasks('{"query":"BPR JO
 select extensions.is((public.search_my_tasks('{"query":"BPR Task 21"}')->>'taskTotal')::integer,1,'Task search includes tasks outside first page');
 select extensions.is((select sum((s->>'count')::integer)::integer from jsonb_array_elements(public.search_my_tasks('{"query":"BPR JOB 0000"}')->'statuses') s),21,'Status badges aggregate entire selected job');
 select extensions.is((public.search_my_tasks('{"query":"BPR JOB 0000"}')->'tasks'->0->>'assignee_name'),'BPR Staff','Assignee name is joined in task page');
-select extensions.is((public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'counts'->>'active')::integer,21,'Dashboard computes metrics in SQL, not from ten visible tasks');
+select extensions.is((public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'counts'->>'active')::integer,1076,'Dashboard counts all Jobs, including those without Tasks, rather than visible Tasks');
 select extensions.ok(jsonb_array_length(public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'attention')<=10,'Dashboard raw attention list is bounded');
-select extensions.is((public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'internalServices'->0->>'value')::integer,21,'Dashboard service aggregate is accurate');
+select extensions.is((public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'internalServices'->0->>'value')::integer,1076,'Dashboard service aggregate counts Jobs without a result cap');
+select extensions.is((public.search_admin_dashboard('{"internalService":"f6300000-0000-4000-8000-000000000004"}')->'taskLoads'->0->>'notStarted')::integer,21,'PIC workload still counts Tasks independently from Jobs');
 select extensions.throws_ok($$select public.search_managed_profiles()$$,'42501','Active admin access required.','Staff cannot read User Management projection');
 select extensions.throws_ok($$select public.admin_public_service_page()$$,'42501','Active admin access required.','Staff cannot read private Client Service admin data');
 select set_config('request.jwt.claim.sub','f6300000-0000-4000-8000-000000000003',true);
