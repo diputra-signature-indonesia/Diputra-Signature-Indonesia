@@ -21,6 +21,8 @@ const localStorageRemotePatterns =
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // Preserve the existing navigation behavior while upgrading Cache Components.
+  partialPrefetching: false,
   reactCompiler: true,
   images: {
     remotePatterns: [
