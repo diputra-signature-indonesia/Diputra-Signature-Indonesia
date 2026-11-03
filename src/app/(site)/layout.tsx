@@ -1,6 +1,7 @@
 import { SiteFooter, SiteFooterFallback } from '@/components/layout/site-footer';
 import { HomeFloatingContact } from '@/components/layout/home-floating-contact';
 import { SiteNavbar, SiteNavbarFallback } from '@/components/layout/site-navbar';
+import { SiteGoogleAnalytics } from '@/components/layout/site-google-analytics';
 import RootClient from '@/components/root-client';
 import { CONTACT_LINK, NAV_ITEMS } from '@/data/navigation';
 import { dsiLocalBusinessJsonLd } from '@/lib/schema-dsi';
@@ -36,6 +37,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} currentYear={currentYear} />
         </Suspense>
       </RootClient>
+      {process.env.NODE_ENV === 'production' && (!process.env.VERCEL_ENV || process.env.VERCEL_ENV === 'production') ? (
+        <Suspense fallback={null}>
+          <SiteGoogleAnalytics />
+        </Suspense>
+      ) : null}
     </>
   );
 }
