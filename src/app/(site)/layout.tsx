@@ -37,11 +37,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <SiteFooter navItems={NAV_ITEMS} contactLink={CONTACT_LINK} currentYear={currentYear} />
         </Suspense>
       </RootClient>
-      {process.env.NODE_ENV === 'production' && (!process.env.VERCEL_ENV || process.env.VERCEL_ENV === 'production') ? (
-        <Suspense fallback={null}>
-          <SiteGoogleAnalytics />
-        </Suspense>
-      ) : null}
+      <SiteGoogleAnalytics trackingEnabled={process.env.NODE_ENV === 'production' && (!process.env.VERCEL_ENV || process.env.VERCEL_ENV === 'production')} />
     </>
   );
 }

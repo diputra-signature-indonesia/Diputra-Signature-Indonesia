@@ -7,6 +7,7 @@ import IconPhone from '@/icons/BrandIconPhone';
 import IconWhatsapp from '@/icons/BrandIconWhatsapp';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { CookiePreferencesButton } from './cookie-preferences-button';
 
 type SiteFooterProps = {
   navItems: NavItem[];
@@ -103,6 +104,12 @@ function SiteFooterContent({ navItems, contactLink, currentYear, pathname }: Sit
         </div>
       </div>
       <div className="border-brand-gray brand-p mt-7 border-t pt-2.5">
+        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <Link href="/cookie-policy" className="underline underline-offset-4">
+            Cookie Policy
+          </Link>
+          <CookiePreferencesButton className="underline underline-offset-4" />
+        </div>
         <p>© {currentYear} Diputra Signature Indonesia. All rights reserved.</p>
       </div>
     </footer>

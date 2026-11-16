@@ -47,6 +47,15 @@ For a disposable database with demo/test fixtures, use `npm run db:reset:fixture
 
 See [V2.1 remote baseline](V2_1_Remote_Baseline.md) for backup and deployment rules.
 
+For the regional cookie banner/Consent Mode implementation, see
+[Site consent](Site_Consent.md). Start the existing local Supabase stack with
+`npx supabase start` before `npm run build`; **do not reset or seed the database
+just to build**. The consent interface works locally, but Google measurement is
+disabled on localhost and Preview. Local country headers are intentionally
+untrusted and resolve to the protected unknown-region fallback. Controlled region
+tests run with `node --test scripts/tests/site-consent.test.mjs`; there is no
+public country or consent bypass for testing.
+
 All local fixture accounts use the intentionally public development-only password:
 
 ```text

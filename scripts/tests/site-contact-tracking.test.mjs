@@ -47,7 +47,8 @@ class ContactClick extends Event {
     return this.path;
   }
 }
-const analytics = compile('src/lib/site-analytics.ts');
+const consent = compile('src/lib/site-consent.ts');
+const analytics = compile('src/lib/site-analytics.ts', { './site-consent': consent });
 const { contactEventForUrl, attachContactClickTracking } = compile('src/lib/site-contact-tracking.ts', { './site-analytics': analytics }, { Element: TestElement });
 const whatsapp = 'https://wa.me/6287851021080?text=Private%20message';
 const email = 'mailto:info@diputrasignature.com?subject=Private&body=visitor%40example.com';
@@ -55,6 +56,7 @@ const email = 'mailto:info@diputrasignature.com?subject=Private&body=visitor%40e
 function fixture() {
   const doc = new TestDocument();
   const target = { location: { hostname: 'diputrasignature.com', pathname: '/' } };
+  analytics.applySiteConsent(target, { analytics: true, advertising: true });
   analytics.initializeSiteAnalytics(target);
   const events = () => target.dataLayer.map((args) => Array.from(args)).filter((args) => args[0] === 'event');
   const click = (href, options = {}) => {

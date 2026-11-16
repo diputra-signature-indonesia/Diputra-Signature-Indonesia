@@ -28,7 +28,7 @@ export function attachContactClickTracking(target: Window & AnalyticsWindow, doc
       try {
         // Read the current path on every click, including during SPA transitions.
         if (!isAnalyticsProductionHost(target.location.hostname) || !isPublicAnalyticsPath(target.location.pathname)) return;
-        if (target[GOOGLE_ANALYTICS_OPT_OUT] === true || typeof target.gtag !== 'function') return;
+        if (target[GOOGLE_ANALYTICS_OPT_OUT] === true || !target.dsiContactMeasurementAllowed || typeof target.gtag !== 'function') return;
 
         // composedPath also covers icons, text nodes and composed shadow content.
         const anchor = event.composedPath().find((node): node is HTMLAnchorElement => node instanceof Element && node.matches('a[href]'));

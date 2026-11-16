@@ -2,15 +2,18 @@
 
 Measurement ID: `G-35HJ3QBMKJ` (a public identifier, not a secret).
 
-The public `(site)` layout mounts the Google tag through `next/script` with
-`afterInteractive`. No additional npm package, database change, or environment
-variable is required. Layout, H1s, metadata and existing UI remain unchanged.
+The public `(site)` layout mounts the regional consent interface. It loads the
+existing Google tag through `next/script` with `afterInteractive` only when the
+regional decision and preferences permit Analytics. No additional npm package,
+database change or environment variable is required. See [Regional consent](Site_Consent.md)
+for the current behavior, consent matrix, technical policy notice and release checks.
 
 ## Scope
 
 - Production builds on `diputrasignature.com` / `www.diputrasignature.com` only.
 - Vercel Preview/development builds and localhost do not load the tag.
-- Home, About, Contact, Services and Blog (including child pages) are tracked.
+- Home, About, Contact, Services, Blog and Cookie Policy are eligible for tracking
+  according to the regional decision and stored choice.
 - Admin, login/auth, access requests and private review-token pages do not mount
   the tag. Leaving the public layout enables Google's `ga-disable` flag because
   an already downloaded third-party script can survive client-side navigation.
@@ -19,7 +22,7 @@ variable is required. Layout, H1s, metadata and existing UI remain unchanged.
 
 ## Pageviews and account settings
 
-The config command sends the initial pageview. Further client-side pageviews
+After permission, the config command sends the initial pageview. Further client-side pageviews
 use GA4 Enhanced Measurement's History API tracking; the app deliberately does
 not send additional manual `page_view` events that would double-count them.
 
@@ -33,8 +36,11 @@ Production domain and navigating between public pages. Browser ad blockers or
 tracking protections can block collection. Local/Preview intentionally do not
 send visits, so they cannot confirm live delivery to the Analytics property.
 
-No cookie-consent UI or consent-management platform was added by this change.
-Consent/privacy-policy integration, if needed, remains a separate requirement.
+An English banner and Google Consent Mode v2 now implement Basic Consent Mode
+for the EEA, UK, Switzerland and unknown locations. Other regions retain existing
+tracking defaults, while explicit rejections are respected everywhere. Ad
+personalisation remains denied. A complete organization-approved Privacy Policy
+is still needed; the new `/cookie-policy` page describes the technical implementation.
 Automated tests mock Google commands and do not send live Analytics hits.
 
 ## Contact conversions (2026-11-16)
@@ -51,6 +57,8 @@ unpublished while this direct implementation is in use.
 | `mailto:` link click | Email Click             | `conversion_event_contact_1` |
 
 Each command is `gtag('event', eventName, { send_to: 'G-35HJ3QBMKJ' })`.
+Contact conversions now require both Analytics and advertising-measurement
+permission; clicks before permission are dropped, never queued or replayed.
 The destination is explicit; there is no parallel GTM custom event. The property
 name **Website Diputra Signature Indonesia** and the conversion imports were
 supplied by the user. Their account settings and property/stream association
@@ -85,11 +93,10 @@ after SPA navigation or rendered from content are also covered.
 - The existing Production/public-route gates remain. The handler also checks
   the current hostname/path and the `ga-disable` flag at click time, including
   during transitions to private routes.
-- **No cookie consent/CMP or Consent Mode configuration was found in the
-  repository. Consent has not been established or assumed.** This change adds
-  no `consent` command and does not grant, update or bypass consent. Commands go
-  through the existing Google tag, which must honor any account/CMP consent
-  configuration. A consent UI/default policy is not implemented by this task.
+- The consent controller sets all four Consent Mode v2 defaults to denied before
+  any Google tag is loaded, then updates them according to the regional decision
+  and explicit preferences. See [Site_Consent.md](Site_Consent.md) for storage,
+  withdrawal, cookie cleanup and current verification limits.
 
 ### Local verification and limits
 
@@ -101,7 +108,7 @@ preservation, modifiers/middle click, private routes, opt-out, and blocked or
 throwing tags. Component tests check that the existing Analytics component
 attaches and detaches the handler only when enabled.
 
-Checks run locally for this change:
+Initial contact-tracking checks (before the regional-consent implementation):
 
 - `node --test scripts/tests/*.test.mjs`: **118 passed**, including 10 new
   contact-tracking tests and the updated Analytics component tests.
@@ -120,6 +127,10 @@ Checks run locally for this change:
 - No database reset, seeding, migration, environment-file change, switch to
   Production data, or prerender/error-handling workaround was needed.
 
+The subsequent regional-consent change passed **141 tests** and a **49/49 page**
+build. See [Site_Consent.md](Site_Consent.md) for current scope, HTTP checks and
+the still-unverified real-browser/GA4 checks.
+
 These are **not real-browser tests**. No browser automation, Tag Assistant
 session, GA4 DebugView inspection, live event delivery, Google Ads import
 verification, GTM publishing, campaign activation or deployment was performed
@@ -133,10 +144,10 @@ verification. The project documentation uses GitHub and Vercel, and its history
 includes `dev` pull requests into `main`. The actual Vercel Production Branch
 and dashboard settings have not been independently verified.
 
-1. Commit the five scoped tracking files: `src/lib/site-contact-tracking.ts`,
-   `src/components/layout/site-google-analytics.tsx`,
-   `scripts/tests/site-contact-tracking.test.mjs`,
-   `scripts/tests/site-analytics.test.mjs`, and this document. Keep `.env`,
+1. Review and commit scoped tracking/consent files, including the region endpoint,
+   consent controller/banner, footer controls, Cookie Policy, tests and documentation.
+   The original five contact-tracking files were committed in `37d10ae`; regional
+   consent is a subsequent change for review. Keep `.env`,
    `.env.local`, backups, dependencies and build outputs out of the commit.
    If continuing the `dev` -> `main` review workflow, carry the change onto the
    working branch before committing; do not overwrite the local changes.
@@ -155,6 +166,10 @@ and dashboard settings have not been independently verified.
    draft or activate an Ads campaign as part of this release.
 
 ### Manual acceptance test after deployment
+
+First run the regional consent acceptance matrix in [Site_Consent.md](Site_Consent.md).
+For the positive contact-event checks below, allow both optional categories when
+the banner is displayed. Do not bypass consent to obtain a test event.
 
 1. Use a Production deployment on `https://diputrasignature.com` (or `www`).
    Localhost, development and Vercel Preview intentionally do not load Analytics.
