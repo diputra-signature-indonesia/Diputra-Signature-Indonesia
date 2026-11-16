@@ -1,6 +1,7 @@
 'use client';
 
 import { GOOGLE_ANALYTICS_ID, GOOGLE_ANALYTICS_OPT_OUT, initializeSiteAnalytics, isAnalyticsProductionHost, isPublicAnalyticsPath, type AnalyticsWindow } from '@/lib/site-analytics';
+import { attachContactClickTracking } from '@/lib/site-contact-tracking';
 import { usePathname } from 'next/navigation';
 import Script from 'next/script';
 import { useEffect, useSyncExternalStore } from 'react';
@@ -16,11 +17,15 @@ export function SiteGoogleAnalytics() {
 
   useEffect(() => {
     const analyticsWindow = window as Window & AnalyticsWindow;
-    if (enabled) initializeSiteAnalytics(analyticsWindow);
-    else analyticsWindow[GOOGLE_ANALYTICS_OPT_OUT] = true;
+    let detachContactTracking: (() => void) | undefined;
+    if (enabled) {
+      initializeSiteAnalytics(analyticsWindow);
+      detachContactTracking = attachContactClickTracking(analyticsWindow, document);
+    } else analyticsWindow[GOOGLE_ANALYTICS_OPT_OUT] = true;
 
     // Scripts survive layout unmounts. Stop collection when leaving public pages.
     return () => {
+      detachContactTracking?.();
       analyticsWindow[GOOGLE_ANALYTICS_OPT_OUT] = true;
     };
   }, [enabled]);

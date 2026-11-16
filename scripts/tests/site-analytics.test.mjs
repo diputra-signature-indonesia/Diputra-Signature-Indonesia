@@ -58,11 +58,20 @@ test('Existing dataLayer and gtag are preserved rather than overwritten', () => 
 
 function renderAnalytics({ host = 'diputrasignature.com', pathname = '/' } = {}) {
   const effects = [],
+    trackingCalls = [],
     target = { location: { hostname: host } };
   const { SiteGoogleAnalytics } = compile(
     'src/components/layout/site-google-analytics.tsx',
     {
       '@/lib/site-analytics': analytics,
+      '@/lib/site-contact-tracking': {
+        attachContactClickTracking: (analyticsWindow, doc) => {
+          assert.equal(analyticsWindow, target);
+          assert.ok(doc);
+          trackingCalls.push('attach');
+          return () => trackingCalls.push('detach');
+        },
+      },
       'next/navigation': { usePathname: () => pathname },
       'next/script': { default: (props) => React.createElement('script', { id: props.id, src: props.src, 'data-strategy': props.strategy }) },
       react: {
@@ -73,28 +82,31 @@ function renderAnalytics({ host = 'diputrasignature.com', pathname = '/' } = {})
         useEffect: (callback) => effects.push(callback),
       },
     },
-    { window: target }
+    { window: target, document: {} }
   );
   const html = renderToStaticMarkup(React.createElement(SiteGoogleAnalytics));
   const cleanup = effects.map((effect) => effect());
-  return { html, target, cleanup };
+  return { html, target, cleanup, trackingCalls };
 }
 
 test('GA script is non-blocking and public-layout cleanup opts out on leaving the site', () => {
-  const { html, target, cleanup } = renderAnalytics();
+  const { html, target, cleanup, trackingCalls } = renderAnalytics();
   assert.match(html, /googletagmanager\.com\/gtag\/js\?id=G-35HJ3QBMKJ/);
   assert.match(html, /data-strategy="afterInteractive"/);
   assert.equal(target.dataLayer.length, 2);
+  assert.deepEqual(trackingCalls, ['attach']);
   cleanup.forEach((fn) => fn());
+  assert.deepEqual(trackingCalls, ['attach', 'detach']);
   assert.equal(target[analytics.GOOGLE_ANALYTICS_OPT_OUT], true);
 });
 
 test('Local/preview hosts and private routes never load or configure the GA script', () => {
   for (const options of [{ host: 'localhost' }, { host: '127.0.0.1' }, { host: 'preview.vercel.app' }, { pathname: '/admin/dashboard' }, { pathname: '/auth/callback' }]) {
-    const { html, target } = renderAnalytics(options);
+    const { html, target, trackingCalls } = renderAnalytics(options);
     assert.equal(html, '');
     assert.equal(target.dataLayer, undefined);
     assert.equal(target[analytics.GOOGLE_ANALYTICS_OPT_OUT], true);
+    assert.deepEqual(trackingCalls, []);
   }
 });
 
